@@ -2,7 +2,14 @@
 
 ## What this is
 
-This is the internal business-management app for Francis Web Agency (FWA), a solo web design agency. It runs the whole business in one place — leads, clients, projects, sales, billing, and delivery — and I'm the only user. It's a fully custom build with no CMS layer.
+This is the business-management app for Francis Web Agency (FWA), a solo web design agency. It runs the whole business in one place — leads, clients, projects, sales, billing, and delivery. It's a fully custom build with no CMS layer.
+
+The app is **two-sided**:
+
+- **Admin app** — the internal side, used only by me. This is the entire current build target (see Scope). Everything described in this doc — the shell, dashboard, leads, clients, receptionist, and all the deferred internal pages — is the admin side.
+- **Client portal** — an external-facing side for FWA's clients, **deferred to a later phase**. It introduces non-admin users, so it isn't a single-user tool overall even though the admin side is.
+
+Because a second user type is coming, keep the auth model and routing ready for an **admin vs. client account-type distinction** and a **separate portal route area** — but don't build any portal functionality until that phase. The login screen built so far is the **admin** login.
 
 Note: this is **not** the FWA marketing website (that's a separate Nuxt 4 + Directus project). This repo is the internal ops tool only.
 
@@ -19,6 +26,8 @@ Only a subset of the app has been designed so far, and that subset is the entire
 - AI Receptionist (call inbox)
 
 **Deferred (built later, directly in Claude Code):** Projects, Tasks, Proposals, Contracts, Invoices, Payments, Files, Calendar, Websites, Support Tickets, Settings.
+
+**Deferred to a later phase entirely:** the **client portal** (the external-facing side — see What this is). Not part of this admin-app build.
 
 The nav shell is designed with the full structure, so keep all groups and items in place — the deferred destinations are placeholder/stub routes for now and get fleshed out later, following the same design system. Don't build the deferred pages this phase unless I ask.
 
