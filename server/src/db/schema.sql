@@ -1,0 +1,94 @@
+-- =====================================================================
+-- FWA Ops — core schema
+-- Two tables drive the app (see CLAUDE.md "Core data model"):
+--   contacts  — one row backs a lead AND a client; conversion is a stage
+--               change on this row, never a copy between tables.
+--   calls     — append-only event log of receptionist calls; links to a
+--               contact via a NULLABLE contact_id (set only when relevant).
+-- Run with `npm run migrate` (creates the database if absent).
+-- =====================================================================
+
+-- ---------------------------------------------------------------------
+-- contacts — leads and clients, unified. Filtered into views by `stage`.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS contacts (
+  id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+
+  -- How the contact entered. Drives the Leads page split:
+  --   website + call = Inbound,  manual = Outreach.
+  source             ENUM('website', 'call', 'manual', 'referral') NOT NULL,
+
+  -- Unified lifecycle across both motions:
+  --   Inbound early:  new -> qualifying
+  --   Outreach early: to_contact -> contacted -> engaged
+  --   Converge:       qualified -> proposal
+  --   Client:         active (proposal won) -> past ;  lost = dead/declined
+  -- Leads page = pre-client stages; Clients page = active/past.
+  stage              ENUM('new', 'qualifying', 'to_contact', 'contacted',
+                          'engaged', 'qualified', 'proposal', 'active',
+                          'past', 'lost') NOT NULL DEFAULT 'new',
+
+  name               VARCHAR(160) NOT NULL,
+  email              VARCHAR(254) NULL,
+  phone              VARCHAR(32)  NULL,
+  company            VARCHAR(160) NULL,
+
+  -- Inbound inquiry text (website form message); call inquiries surface via `calls`.
+  message            TEXT NULL,
+
+  -- Outreach follow-up cadence. next_action_at in the past = overdue touch.
+  last_contacted_at  DATETIME NULL,
+  next_action_at     DATETIME NULL,
+
+  created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                       ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+
+  -- Clients view (stage IN active/past) and any stage filter.
+  KEY idx_contacts_stage (stage),
+  -- Leads views: Inbound/Outreach are (source) + (stage) filters.
+  KEY idx_contacts_source_stage (source, stage),
+  -- Outreach cadence: surface overdue/upcoming touches cheaply.
+  KEY idx_contacts_next_action (next_action_at),
+  KEY idx_contacts_email (email),
+  KEY idx_contacts_phone (phone)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- calls — every receptionist (Vapi) call, linked or not. Append-only.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS calls (
+  id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+
+  -- Set only when a call becomes / belongs to a contact (inquiry or existing
+  -- client). Everything else (spam, wrong_number, other) stays unlinked.
+  contact_id         BIGINT UNSIGNED NULL,
+
+  classification     ENUM('inquiry', 'client', 'spam', 'wrong_number', 'other') NOT NULL,
+
+  caller_number      VARCHAR(32)  NOT NULL,
+  caller_name        VARCHAR(160) NULL,
+  summary            TEXT NULL,
+  transcript         MEDIUMTEXT NULL,
+  recording_url      VARCHAR(1024) NULL,
+  duration_seconds   INT UNSIGNED NULL,
+
+  -- Structured fields the receptionist extracted (intent, budget, etc.).
+  extracted          JSON NULL,
+
+  occurred_at        DATETIME NOT NULL,
+  created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+
+  KEY idx_calls_contact (contact_id),
+  KEY idx_calls_classification (classification),
+  -- Receptionist inbox is ordered by recency.
+  KEY idx_calls_occurred_at (occurred_at),
+
+  -- Deleting a contact must NOT delete its call history — keep the event log.
+  CONSTRAINT fk_calls_contact FOREIGN KEY (contact_id)
+    REFERENCES contacts (id) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
