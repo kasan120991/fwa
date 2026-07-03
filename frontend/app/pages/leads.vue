@@ -325,7 +325,7 @@ const peekCall = computed(() => callPeek.value ? CALLS[callPeek.value] : null)
                     <UIcon name="i-lucide-phone" class="size-3.5" />Call<UIcon name="i-lucide-arrow-up-right" class="size-3 opacity-55" />
                   </button>
                   <span v-else class="inline-flex items-center gap-1.5 text-[13px] text-default">
-                    <UIcon name="i-lucide-layout-panel-top" class="size-3.5 text-muted" />Website form
+                    <UIcon name="i-lucide-layout-panel-top" class="size-3.5 text-muted" />Website
                   </span>
                 </td>
                 <td class="hidden max-w-[320px] px-4 py-3 lg:table-cell"><span class="block truncate text-[13px] text-default">{{ row.inquiry }}</span></td>
@@ -358,7 +358,7 @@ const peekCall = computed(() => callPeek.value ? CALLS[callPeek.value] : null)
                 <td class="hidden px-4 py-3 lg:table-cell">
                   <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold" :class="row.source === 'manual' ? 'bg-muted text-default' : 'bg-info/10 text-info'">{{ row.source === 'manual' ? 'Outreach' : 'Inbound' }}</span>
                 </td>
-                <td class="hidden whitespace-nowrap px-4 py-3 text-[13px] text-default lg:table-cell">{{ row.source === 'manual' ? (row.list || 'Manual') : (row.source === 'call' ? 'Call' : 'Website form') }}</td>
+                <td class="hidden whitespace-nowrap px-4 py-3 text-[13px] text-default lg:table-cell">{{ row.source === 'manual' ? (row.list || 'Manual') : (row.source === 'call' ? 'Call' : 'Website') }}</td>
                 <td class="px-4 py-3">
                   <UDropdownMenu :items="stageItems(row)">
                     <button class="inline-flex items-center gap-1.5 rounded-full py-1 pl-3 pr-2 text-xs font-semibold" :class="stageChipClass(effStage(row))">{{ STAGE_LABEL[effStage(row)] }}<UIcon name="i-lucide-chevron-down" class="size-3 opacity-60" /></button>
