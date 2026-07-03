@@ -28,13 +28,33 @@ CREATE TABLE IF NOT EXISTS contacts (
                           'engaged', 'qualified', 'proposal', 'active',
                           'past', 'lost') NOT NULL DEFAULT 'new',
 
+  -- `name` = primary contact person; `company` = the business.
   name               VARCHAR(160) NOT NULL,
   email              VARCHAR(254) NULL,
   phone              VARCHAR(32)  NULL,
   company            VARCHAR(160) NULL,
+  title              VARCHAR(120) NULL,   -- contact's role, e.g. "Marketing Director"
+  website            VARCHAR(255) NULL,   -- site/domain, e.g. "northwind.com"
 
   -- Inbound inquiry text (website form message); call inquiries surface via `calls`.
   message            TEXT NULL,
+
+  -- Freeform internal notes (client detail notes box).
+  notes              TEXT NULL,
+
+  -- Tags — JSON array of strings (e.g. ["Retainer","E-commerce"]).
+  tags               JSON NULL,
+
+  -- Billing address (structured, for invoicing).
+  address_line1      VARCHAR(255) NULL,
+  address_line2      VARCHAR(255) NULL,
+  city               VARCHAR(120) NULL,
+  region             VARCHAR(120) NULL,   -- state / province
+  postal_code        VARCHAR(20)  NULL,
+  country            VARCHAR(120) NULL,
+
+  -- Date the contact became a client (stage -> active).
+  client_since       DATE NULL,
 
   -- Outreach follow-up cadence. next_action_at in the past = overdue touch.
   last_contacted_at  DATETIME NULL,
