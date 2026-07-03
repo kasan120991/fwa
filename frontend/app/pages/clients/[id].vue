@@ -354,7 +354,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                   </div>
                   <StatusChip status="info">Sent</StatusChip>
                 </div>
-                <div class="my-3.5 h-px bg-default" />
+                <div class="my-3.5 border-t border-default" />
                 <div class="flex items-center justify-between">
                   <span class="text-[13px] text-muted">Outstanding</span>
                   <span class="text-[15px] font-bold text-error tabular-nums">{{ money(client.outstanding) }}</span>
@@ -466,7 +466,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                   <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="ghost" size="xs" aria-label="Website actions" />
                 </UDropdownMenu>
               </div>
-              <div class="my-4 h-px bg-default" />
+              <div class="my-4 border-t border-default" />
               <div v-if="w.connected">
                 <div class="flex items-center justify-between gap-2.5">
                   <StatusChip status="success">Analytics connected</StatusChip>
