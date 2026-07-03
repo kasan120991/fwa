@@ -9,6 +9,7 @@ export function errorHandler(err, req, res, next) {
   const status = err.status || err.statusCode || 500
   const body = { error: { message: err.message || 'Internal server error' } }
 
+  if (err.fields) body.error.fields = err.fields
   if (status >= 500) console.error(err)
   if (!isProd && err.stack) body.error.stack = err.stack
 
