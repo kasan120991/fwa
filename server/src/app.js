@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import morgan from 'morgan'
+import cookieParser from 'cookie-parser'
 import { config } from './config/env.js'
 import { apiRouter } from './routes/index.js'
 import { notFound } from './middleware/notFound.js'
@@ -10,8 +11,13 @@ import { errorHandler } from './middleware/errorHandler.js'
 export function createApp() {
   const app = express()
 
+  // Behind a proxy in prod, so req.ip / secure cookies resolve correctly.
+  app.set('trust proxy', 1)
+
   app.use(express.json())
-  app.use(cors({ origin: config.corsOrigin }))
+  app.use(cookieParser())
+  // credentials:true so the session cookie flows on cross-origin XHR from the frontend.
+  app.use(cors({ origin: config.corsOrigin, credentials: true }))
   if (config.nodeEnv !== 'test') app.use(morgan('dev'))
 
   app.use('/api', apiRouter)

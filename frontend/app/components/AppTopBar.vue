@@ -1,6 +1,23 @@
 <script setup lang="ts">
 const collapsed = useSidebarCollapsed()
 const route = useRoute()
+const { user, logout } = useAuth()
+
+const displayName = computed(() => user.value?.name || 'Account')
+const initials = computed(() => {
+  const parts = (user.value?.name || '').trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return '—'
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase()
+})
+const roleLabel = computed(() => {
+  const r = user.value?.role
+  return r ? r.charAt(0).toUpperCase() + r.slice(1) : ''
+})
+
+async function onSignOut() {
+  await logout()
+  await navigateTo('/login')
+}
 
 // Header is derived from the route so SSR and client agree. A page may override
 // the title via `definePageMeta({ title, breadcrumb })` (e.g. a dynamic detail page).
@@ -11,18 +28,18 @@ const header = computed<PageMeta>(() => {
   return resolvePageMeta(route.path)
 })
 
-const accountItems = [
+const accountItems = computed(() => [
   [
-    { label: 'Jordan Rivera', slot: 'account' as const, type: 'label' as const }
+    { label: displayName.value, slot: 'account' as const, type: 'label' as const }
   ],
   [
     { label: 'Profile', icon: 'i-lucide-user' },
     { label: 'Settings', icon: 'i-lucide-settings', to: '/settings' }
   ],
   [
-    { label: 'Sign out', icon: 'i-lucide-log-out', onSelect: () => navigateTo('/login') }
+    { label: 'Sign out', icon: 'i-lucide-log-out', onSelect: onSignOut }
   ]
-]
+])
 </script>
 
 <template>
@@ -72,14 +89,16 @@ const accountItems = [
           aria-label="Account menu"
           class="flex items-center gap-1.5 rounded-[10px] p-0.5 transition-colors hover:bg-muted"
         >
-          <span class="inline-flex size-[34px] flex-none items-center justify-center rounded-full bg-teal-600 text-[13px] font-semibold text-white">JR</span>
+          <span class="inline-flex size-[34px] flex-none items-center justify-center rounded-full bg-teal-600 text-[13px] font-semibold text-white">
+            <ClientOnly fallback="—">{{ initials }}</ClientOnly>
+          </span>
           <UIcon name="i-lucide-chevron-down" class="size-4 text-muted" />
         </button>
 
         <template #account>
           <div class="flex flex-col">
-            <span class="text-sm font-semibold text-highlighted">Jordan Rivera</span>
-            <span class="text-xs text-muted">Owner · Francis Web Agency</span>
+            <span class="text-sm font-semibold text-highlighted">{{ displayName }}</span>
+            <span class="text-xs text-muted">{{ roleLabel }} · Francis Web Agency</span>
           </div>
         </template>
       </UDropdownMenu>

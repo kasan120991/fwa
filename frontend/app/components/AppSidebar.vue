@@ -4,6 +4,18 @@ interface NavGroup { label?: string, items: NavItem[] }
 
 const collapsed = useSidebarCollapsed()
 const route = useRoute()
+const { user } = useAuth()
+
+const displayName = computed(() => user.value?.name || 'Account')
+const initials = computed(() => {
+  const parts = (user.value?.name || '').trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return '—'
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase()
+})
+const roleLabel = computed(() => {
+  const r = user.value?.role
+  return r ? r.charAt(0).toUpperCase() + r.slice(1) : ''
+})
 
 // Nav follows CLAUDE.md (source of truth), which includes Leads and AI Receptionist
 // that the original dashboard prototype omitted. ✓ items are in scope this phase;
@@ -125,10 +137,16 @@ function itemClass(to: string) {
 
       <div class="mx-0.5 my-3 h-px bg-[#1C2422]" />
       <div class="flex items-center gap-2.5 px-2 py-1.5">
-        <span class="inline-flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-teal-600 text-[13px] font-semibold text-white">JR</span>
+        <span class="inline-flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-teal-600 text-[13px] font-semibold text-white">
+          <ClientOnly fallback="—">{{ initials }}</ClientOnly>
+        </span>
         <div v-if="!collapsed" class="overflow-hidden leading-tight">
-          <div class="whitespace-nowrap text-[13px] font-semibold text-white">Jordan Rivera</div>
-          <div class="whitespace-nowrap text-xs text-teal-200">Owner</div>
+          <div class="whitespace-nowrap text-[13px] font-semibold text-white">
+            <ClientOnly fallback="—">{{ displayName }}</ClientOnly>
+          </div>
+          <div class="whitespace-nowrap text-xs text-teal-200">
+            <ClientOnly fallback="—">{{ roleLabel }}</ClientOnly>
+          </div>
         </div>
       </div>
     </div>

@@ -6,20 +6,27 @@ definePageMeta({
 
 useHead({ title: 'Sign in · Francis Web Agency' })
 
+const { login } = useAuth()
+
 const email = ref('')
 const password = ref('')
 const remember = ref(true)
 const showPass = ref(false)
 const loading = ref(false)
+const errorMessage = ref('')
 
 const year = new Date().getFullYear()
 
 async function onSubmit() {
-  // Auth is wired in a later phase; this is the designed screen only.
+  if (loading.value) return
+  errorMessage.value = ''
   loading.value = true
   try {
-    // TODO: POST to /api/auth/login once the backend exists.
-    await new Promise(r => setTimeout(r, 400))
+    await login(email.value.trim(), password.value)
+    await navigateTo('/')
+  } catch (err: unknown) {
+    const e = err as { data?: { error?: { message?: string } } }
+    errorMessage.value = e?.data?.error?.message || 'Couldn\'t sign in. Check your connection and try again.'
   } finally {
     loading.value = false
   }
@@ -81,6 +88,15 @@ async function onSubmit() {
         </div>
 
         <form class="flex flex-col gap-[18px]" @submit.prevent="onSubmit">
+          <UAlert
+            v-if="errorMessage"
+            color="error"
+            variant="soft"
+            icon="i-lucide-circle-alert"
+            :title="errorMessage"
+            :ui="{ root: 'items-center' }"
+          />
+
           <!-- Email -->
           <UFormField label="Email" name="email">
             <UInput
