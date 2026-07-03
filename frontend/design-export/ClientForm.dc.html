@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/styles.css">
+  <script src="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/_ds_bundle.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    .cf-input{width:100%;box-sizing:border-box;padding:10px 13px;border-radius:10px;border:1px solid var(--hairline);background:var(--canvas);font-family:var(--font-sans);font-size:14px;color:var(--ink);outline:none;transition:border-color .12s ease,box-shadow .12s ease}
+    .cf-input::placeholder{color:var(--text-muted)}
+    .cf-input:focus{border-color:var(--focus-ring);box-shadow:0 0 0 3px rgba(37,187,164,.15)}
+    .cf-input:disabled{background:var(--cloud);color:var(--text-muted);cursor:not-allowed}
+    .cf-err{border-color:var(--error) !important;background:var(--error-bg) !important}
+    .cf-err:focus{box-shadow:0 0 0 3px rgba(197,58,50,.14) !important}
+    select.cf-input{appearance:none;-webkit-appearance:none;cursor:pointer;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B7370' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 12px center;padding-right:38px}
+    @keyframes cfSpin{to{transform:rotate(360deg)}}
+    @keyframes cfPop{from{transform:translateY(6px) scale(.98);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+    @keyframes cfScrim{from{opacity:0}to{opacity:1}}
+    @keyframes cfToast{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+  </style>
+</helmet>
+
+<div style="display:flex;flex-direction:column;min-height:100%;background:var(--cloud);font-family:var(--font-sans);color:var(--text-body)">
+  <div style="flex:1;padding:26px 26px 120px">
+    <div style="max-width:720px;margin:0 auto">
+
+      <!-- breadcrumb + header -->
+      <nav style="display:flex;align-items:center;gap:7px;font-size:13px;color:var(--text-muted);margin-bottom:14px;flex-wrap:wrap">
+        <a href="Clients.dc.html" style="color:var(--text-muted);text-decoration:none;font-weight:500" style-hover="color:var(--teal-700)">Clients</a>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><path d="m9 18 6-6-6-6"></path></svg>
+        <sc-if value="{{ isEdit }}" hint-placeholder-val="{{ false }}"><a href="ClientDetail.dc.html" style="color:var(--text-muted);text-decoration:none;font-weight:500" style-hover="color:var(--teal-700)">{{ crumbName }}</a><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><path d="m9 18 6-6-6-6"></path></svg></sc-if>
+        <span style="color:var(--ink);font-weight:600">{{ crumbLeaf }}</span>
+      </nav>
+
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:26px">
+        <div>
+          <h1 style="font-family:var(--font-display);font-weight:500;font-size:28px;letter-spacing:-.6px;color:var(--ink);margin:0">{{ title }}</h1>
+          <p style="font-size:14px;color:var(--text-muted);margin:7px 0 0">{{ subtitle }}</p>
+        </div>
+        <sc-if value="{{ isEdit }}" hint-placeholder-val="{{ false }}"><span style="{{ statusChip }}"><span style="{{ statusDot }}"></span>{{ statusLabel }}</span></sc-if>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- ============ COMPANY ============ -->
+        <section style="background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;padding:24px">
+          <div style="margin-bottom:20px">
+            <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--teal-700);margin-bottom:6px">Company</div>
+            <p style="font-size:13.5px;color:var(--text-muted);margin:0">The business you're working with and how it shows up across the app.</p>
+          </div>
+
+          <!-- name -->
+          <div style="margin-bottom:18px">
+            <label style="{{ lbl }}">Client name <span style="color:var(--error)">*</span></label>
+            <input value="{{ F.company.value }}" onInput="{{ F.company.onInput }}" placeholder="Acme Studio" class="{{ F.company.cls }}" style="max-width:100%">
+            <sc-if value="{{ F.company.showError }}" hint-placeholder-val="{{ false }}"><div style="{{ errTxt }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>{{ F.company.errorMsg }}</div></sc-if>
+          </div>
+
+          <!-- logo -->
+          <div style="margin-bottom:18px">
+            <label style="{{ lbl }}">Logo</label>
+            <div style="display:flex;align-items:center;gap:16px">
+              <sc-if value="{{ hasLogo }}" hint-placeholder-val="{{ false }}"><span style="{{ logoAvatar }}">{{ logoInitials }}</span></sc-if>
+              <sc-if value="{{ noLogo }}" hint-placeholder-val="{{ true }}"><button onClick="{{ pickLogo }}" style="width:56px;height:56px;flex:none;border-radius:12px;border:1.5px dashed var(--border-strong);background:var(--cloud);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--text-muted);transition:all .12s ease" style-hover="border-color:var(--teal-500);color:var(--teal-700);background:var(--mist)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path></svg></button></sc-if>
+              <div style="min-width:0">
+                <sc-if value="{{ hasLogo }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;gap:8px">
+                    <button onClick="{{ pickLogo }}" style="{{ miniBtn }}">Replace</button>
+                    <button onClick="{{ removeLogo }}" style="{{ miniBtnGhost }}">Remove</button>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ noLogo }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ pickLogo }}" style="background:none;border:none;padding:0;cursor:pointer;font-family:var(--font-sans);font-size:14px;font-weight:600;color:var(--teal-700);text-align:left" style-hover="color:var(--teal-800)">Upload logo</button>
+                  <div style="font-size:12.5px;color:var(--text-muted);margin-top:3px">PNG or SVG, square works best. Drag and drop or browse.</div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+
+          <!-- domain + status -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">
+            <div>
+              <label style="{{ lbl }}">Website domain</label>
+              <div style="position:relative">
+                <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg></span>
+                <input value="{{ F.domain.value }}" onInput="{{ F.domain.onInput }}" placeholder="example.com" class="{{ F.domain.cls }}" style="padding-left:36px">
+              </div>
+              <div style="{{ help }}">No http:// needed — just the domain.</div>
+            </div>
+            <div>
+              <label style="{{ lbl }}">Status</label>
+              <select value="{{ F.status.value }}" onChange="{{ F.status.onInput }}" class="cf-input">
+                <option value="active">Active</option>
+                <option value="lead">Lead</option>
+                <option value="paused">Paused</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- tags -->
+          <div>
+            <label style="{{ lbl }}">Tags</label>
+            <div onClick="{{ focusTag }}" style="{{ tagWrap }}">
+              <sc-for list="{{ tags }}" as="t" hint-placeholder-count="2">
+                <span style="display:inline-flex;align-items:center;gap:6px;background:var(--mist);color:var(--teal-800);font-size:12.5px;font-weight:600;padding:4px 6px 4px 11px;border-radius:9999px">{{ t.label }}<button onClick="{{ t.remove }}" aria-label="Remove tag" style="width:16px;height:16px;border:none;background:rgba(11,127,112,.14);border-radius:50%;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--teal-800);padding:0" style-hover="background:rgba(11,127,112,.28)"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></span>
+              </sc-for>
+              <input id="{{ tagInputId }}" value="{{ tagDraft }}" onInput="{{ onTagInput }}" onKeyDown="{{ onTagKey }}" placeholder="{{ tagPlaceholder }}" style="flex:1;min-width:120px;border:none;outline:none;background:transparent;font-family:var(--font-sans);font-size:14px;color:var(--ink);padding:4px 2px">
+            </div>
+            <div style="{{ help }}">Press Enter or comma to add. Used for filtering and grouping clients.</div>
+          </div>
+        </section>
+
+        <!-- ============ PRIMARY CONTACT ============ -->
+        <section style="background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;padding:24px">
+          <div style="margin-bottom:20px">
+            <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--teal-700);margin-bottom:6px">Primary contact</div>
+            <p style="font-size:13.5px;color:var(--text-muted);margin:0">Your main point of contact. Add others below if the account has more than one.</p>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">
+            <div>
+              <label style="{{ lbl }}">Contact name</label>
+              <input value="{{ F.contactName.value }}" onInput="{{ F.contactName.onInput }}" placeholder="Jordan Lee" class="cf-input">
+            </div>
+            <div>
+              <label style="{{ lbl }}">Role / title</label>
+              <input value="{{ F.role.value }}" onInput="{{ F.role.onInput }}" placeholder="Marketing Lead" class="cf-input">
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div>
+              <label style="{{ lbl }}">Email <span style="color:var(--error)">*</span></label>
+              <input value="{{ F.email.value }}" onInput="{{ F.email.onInput }}" placeholder="name@company.com" class="{{ F.email.cls }}">
+              <sc-if value="{{ F.email.showError }}" hint-placeholder-val="{{ false }}"><div style="{{ errTxt }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>{{ F.email.errorMsg }}</div></sc-if>
+            </div>
+            <div>
+              <label style="{{ lbl }}">Phone</label>
+              <input value="{{ F.phone.value }}" onInput="{{ F.phone.onInput }}" placeholder="(555) 000-0000" class="cf-input">
+            </div>
+          </div>
+
+          <!-- extra contacts -->
+          <sc-for list="{{ extraContacts }}" as="c" hint-placeholder-count="0">
+            <div style="border-top:1px solid var(--hairline);margin-top:20px;padding-top:18px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                <span style="font-size:13px;font-weight:600;color:var(--ink)">Additional contact {{ c.n }}</span>
+                <button onClick="{{ c.remove }}" style="display:inline-flex;align-items:center;gap:5px;background:none;border:none;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:600;color:var(--text-muted);padding:2px 4px" style-hover="color:var(--error)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>Remove</button>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+                <input value="{{ c.name }}" onInput="{{ c.onName }}" placeholder="Contact name" class="cf-input">
+                <input value="{{ c.role }}" onInput="{{ c.onRole }}" placeholder="Role / title" class="cf-input">
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                <input value="{{ c.email }}" onInput="{{ c.onEmail }}" placeholder="name@company.com" class="cf-input">
+                <input value="{{ c.phone }}" onInput="{{ c.onPhone }}" placeholder="(555) 000-0000" class="cf-input">
+              </div>
+            </div>
+          </sc-for>
+
+          <button onClick="{{ addContact }}" style="display:inline-flex;align-items:center;gap:7px;margin-top:18px;background:none;border:none;cursor:pointer;font-family:var(--font-sans);font-size:14px;font-weight:600;color:var(--teal-700);padding:2px 0" style-hover="color:var(--teal-800)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add another contact</button>
+        </section>
+
+        <!-- ============ BILLING ============ -->
+        <section style="background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;padding:24px">
+          <div style="margin-bottom:20px">
+            <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--teal-700);margin-bottom:6px">Billing</div>
+            <p style="font-size:13.5px;color:var(--text-muted);margin:0">Where invoices are addressed. Leave the billing email blank to use the contact email.</p>
+          </div>
+
+          <div style="margin-bottom:16px">
+            <label style="{{ lbl }}">Street address</label>
+            <input value="{{ F.billStreet.value }}" onInput="{{ F.billStreet.onInput }}" placeholder="123 Main St, Suite 200" class="cf-input">
+          </div>
+
+          <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px;margin-bottom:16px">
+            <div>
+              <label style="{{ lbl }}">City</label>
+              <input value="{{ F.billCity.value }}" onInput="{{ F.billCity.onInput }}" placeholder="Portland" class="cf-input">
+            </div>
+            <div>
+              <label style="{{ lbl }}">State</label>
+              <input value="{{ F.billState.value }}" onInput="{{ F.billState.onInput }}" placeholder="OR" class="cf-input">
+            </div>
+            <div>
+              <label style="{{ lbl }}">ZIP</label>
+              <input value="{{ F.billZip.value }}" onInput="{{ F.billZip.onInput }}" placeholder="97209" class="cf-input">
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div>
+              <label style="{{ lbl }}">Country</label>
+              <select value="{{ F.billCountry.value }}" onChange="{{ F.billCountry.onInput }}" class="cf-input">
+                <option value="United States">United States</option>
+                <option value="Canada">Canada</option>
+                <option value="United Kingdom">United Kingdom</option>
+                <option value="Australia">Australia</option>
+              </select>
+            </div>
+            <div>
+              <label style="{{ lbl }}">Billing email</label>
+              <input value="{{ F.billEmail.value }}" onInput="{{ F.billEmail.onInput }}" placeholder="billing@company.com" class="{{ F.billEmail.cls }}">
+              <sc-if value="{{ F.billEmail.showError }}" hint-placeholder-val="{{ false }}"><div style="{{ errTxt }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>{{ F.billEmail.errorMsg }}</div></sc-if>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ INTERNAL ============ -->
+        <section style="background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;padding:24px">
+          <div style="margin-bottom:20px">
+            <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--teal-700);margin-bottom:6px">Internal</div>
+            <p style="font-size:13.5px;color:var(--text-muted);margin:0">Only your team sees this. Notes never appear on invoices or the client portal.</p>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">
+            <div>
+              <label style="{{ lbl }}">Account owner</label>
+              <select value="{{ F.owner.value }}" onChange="{{ F.owner.onInput }}" class="cf-input">
+                <option value="jordan">Jordan Rivera</option>
+                <option value="alex">Alex Kim</option>
+                <option value="sam">Sam Torres</option>
+              </select>
+            </div>
+            <div>
+              <label style="{{ lbl }}">Client since</label>
+              <input type="date" value="{{ F.since.value }}" onInput="{{ F.since.onInput }}" class="cf-input">
+            </div>
+          </div>
+
+          <div>
+            <label style="{{ lbl }}">Internal notes</label>
+            <textarea value="{{ F.notes.value }}" onInput="{{ F.notes.onInput }}" placeholder="Context, preferences, anything the team should know…" rows="4" class="cf-input" style="resize:vertical;min-height:96px;line-height:1.5"></textarea>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ STICKY ACTION BAR ============ -->
+  <div style="position:sticky;bottom:0;z-index:20;background:var(--canvas);border-top:1px solid var(--hairline);box-shadow:0 -1px 2px rgba(18,24,23,.04)">
+    <div style="max-width:720px;margin:0 auto;padding:14px 26px;display:flex;align-items:center;gap:12px">
+      <sc-if value="{{ dirty }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--text-muted)"><span style="width:7px;height:7px;border-radius:50%;background:var(--warning)"></span>Unsaved changes</span></sc-if>
+      <sc-if value="{{ savedFlag }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--success);font-weight:600"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"></path></svg>{{ savedLabel }}</span></sc-if>
+      <div style="flex:1"></div>
+      <button onClick="{{ cancel }}" style="display:inline-flex;align-items:center;justify-content:center;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:10px 20px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;color:var(--ink);transition:background .12s ease" style-hover="background:var(--cloud)">Cancel</button>
+      <sc-if value="{{ isCreate }}" hint-placeholder-val="{{ true }}"><button onClick="{{ submitAnother }}" style="display:inline-flex;align-items:center;justify-content:center;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:10px 18px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;color:var(--ink);transition:background .12s ease;white-space:nowrap" style-hover="background:var(--cloud)">Create &amp; add another</button></sc-if>
+      <button onClick="{{ submit }}" disabled="{{ primaryDisabled }}" style="{{ primaryStyle }}">
+        <sc-if value="{{ saving }}" hint-placeholder-val="{{ false }}"><span style="width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:cfSpin .7s linear infinite;flex:none"></span></sc-if>
+        {{ primaryLabel }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- cancel confirm -->
+<sc-if value="{{ cancelConfirm }}" hint-placeholder-val="{{ false }}">
+  <div style="position:absolute;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:24px">
+    <div onClick="{{ keepEditing }}" style="position:absolute;inset:0;background:var(--scrim);animation:cfScrim .15s ease"></div>
+    <div style="position:relative;width:420px;max-width:100%;background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;box-shadow:var(--shadow-pop);padding:24px;animation:cfPop .16s ease">
+      <span style="width:44px;height:44px;border-radius:12px;background:var(--warning-bg);color:var(--warning);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></span>
+      <h3 style="font-family:var(--font-display);font-weight:500;font-size:20px;letter-spacing:-.3px;color:var(--ink);margin:0 0 8px">Discard your changes?</h3>
+      <p style="font-size:14px;line-height:1.6;color:var(--text-body);margin:0">You've made changes that haven't been saved. Leaving now will lose them.</p>
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:22px">
+        <button onClick="{{ keepEditing }}" style="background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:9px 18px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;color:var(--ink)" style-hover="background:var(--cloud)">Keep editing</button>
+        <button onClick="{{ discard }}" style="background:var(--error);border:none;border-radius:9999px;padding:9px 18px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;color:#fff" style-hover="filter:brightness(.94)">Discard changes</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:760,&quot;height&quot;:900},&quot;mode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;create&quot;,&quot;edit&quot;],&quot;default&quot;:&quot;create&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { values: null, initial: null, errors: {}, submitted: false, tagDraft: '', saving: false, saved: false, cancelConfirm: false, uid: Math.random().toString(36).slice(2, 8) };
+
+  seed() {
+    if ((this.props.mode ?? 'create') === 'edit') {
+      return { company: 'Northwind Co.', domain: 'northwind.co', status: 'active', tags: ['Retainer', 'Priority'],
+        contactName: 'Dana Cole', role: 'Operations Lead', email: 'dana@northwind.co', phone: '(503) 555-0110',
+        billStreet: '2200 NW Front Ave', billCity: 'Portland', billState: 'OR', billZip: '97209', billCountry: 'United States', billEmail: '',
+        owner: 'jordan', since: '2024-11-03', notes: 'Migrated from Squarespace. Prefers async updates over calls. Renewal discussion set for Q1.',
+        logo: 'NC', contacts: [] };
+    }
+    return { company: '', domain: '', status: 'lead', tags: [],
+      contactName: '', role: '', email: '', phone: '',
+      billStreet: '', billCity: '', billState: '', billZip: '', billCountry: 'United States', billEmail: '',
+      owner: 'jordan', since: '2026-07-03', notes: '', logo: null, contacts: [] };
+  }
+  vals() { return this.state.values || this.seed(); }
+  init() { return this.state.initial || this.seed(); }
+
+  ensure(patch) {
+    this.setState(s => {
+      const base = s.values || this.seed();
+      const initial = s.initial || this.seed();
+      return { values: { ...base, ...patch(base) }, initial, saved: false };
+    });
+  }
+  setVal(name, v) { this.ensure(() => ({ [name]: v })); }
+
+  emailOk(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+  computeErrors(v) {
+    const e = {};
+    if (!v.company.trim()) e.company = 'Client name is required.';
+    if (!v.email.trim()) e.email = 'A contact email is required.';
+    else if (!this.emailOk(v.email.trim())) e.email = 'Enter a valid email address.';
+    if (v.billEmail.trim() && !this.emailOk(v.billEmail.trim())) e.billEmail = 'Enter a valid email address.';
+    return e;
+  }
+
+  isDirty() { return JSON.stringify(this.vals()) !== JSON.stringify(this.init()); }
+
+  doSave(reset) {
+    const v = this.vals();
+    const errors = this.computeErrors(v);
+    this.setState({ submitted: true, errors });
+    if (Object.keys(errors).length) return;
+    this.setState({ saving: true });
+    setTimeout(() => {
+      if (reset) {
+        this.setState({ values: this.seed(), initial: this.seed(), saving: false, saved: true, submitted: false, errors: {} });
+      } else {
+        this.setState(s => ({ initial: JSON.parse(JSON.stringify(s.values)), saving: false, saved: true }));
+      }
+    }, 1500);
+  }
+
+  field(name, opts) {
+    opts = opts || {};
+    const v = this.vals();
+    const show = this.state.submitted && !!this.state.errors[name];
+    return {
+      value: v[name],
+      onInput: (e) => { this.setVal(name, e.target.value); if (this.state.submitted) this.setState(s => ({ errors: this.computeErrors({ ...this.vals() }) })); },
+      cls: 'cf-input' + (show ? ' cf-err' : ''),
+      showError: show, errorMsg: this.state.errors[name] || '',
+    };
+  }
+
+  statusMeta(k) {
+    const M = { active: ['Active', 'var(--success-bg)', 'var(--success)', 'var(--success)'],
+      lead: ['Lead', 'var(--mist)', 'var(--teal-700)', 'var(--teal-600)'],
+      paused: ['Paused', 'var(--warning-bg)', 'var(--warning)', 'var(--warning)'],
+      archived: ['Archived', 'var(--cloud)', 'var(--text-body)', 'var(--text-muted)'] };
+    return M[k] || M.lead;
+  }
+
+  renderVals() {
+    const mode = this.props.mode ?? 'create';
+    const isEdit = mode === 'edit';
+    const v = this.vals();
+    const F = {};
+    ['company','domain','status','contactName','role','email','phone','billStreet','billCity','billState','billZip','billCountry','billEmail','owner','since','notes'].forEach(n => { F[n] = this.field(n); });
+
+    const dirty = this.isDirty();
+    const sm = this.statusMeta(v.status);
+
+    // tags
+    const tags = v.tags.map((t, i) => ({ label: t, remove: (e) => { e.stopPropagation(); this.ensure(b => ({ tags: b.tags.filter((_, j) => j !== i) })); } }));
+
+    // extra contacts
+    const extraContacts = v.contacts.map((c, i) => ({
+      n: i + 1, name: c.name, role: c.role, email: c.email, phone: c.phone,
+      onName: (e) => this.ensure(b => ({ contacts: b.contacts.map((x, j) => j === i ? { ...x, name: e.target.value } : x) })),
+      onRole: (e) => this.ensure(b => ({ contacts: b.contacts.map((x, j) => j === i ? { ...x, role: e.target.value } : x) })),
+      onEmail: (e) => this.ensure(b => ({ contacts: b.contacts.map((x, j) => j === i ? { ...x, email: e.target.value } : x) })),
+      onPhone: (e) => this.ensure(b => ({ contacts: b.contacts.map((x, j) => j === i ? { ...x, phone: e.target.value } : x) })),
+      remove: () => this.ensure(b => ({ contacts: b.contacts.filter((_, j) => j !== i) })),
+    }));
+
+    const primaryDisabled = this.state.saving || (isEdit && !dirty);
+    const primaryStyle = 'display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:9999px;padding:10px 22px;font-family:var(--font-sans);font-weight:600;font-size:14px;white-space:nowrap;transition:background .12s ease;color:#fff;' + (primaryDisabled ? 'background:var(--border-strong);cursor:not-allowed' : 'background:var(--action);cursor:pointer');
+
+    return {
+      isEdit, isCreate: !isEdit,
+      crumbName: 'Northwind Co.',
+      crumbLeaf: isEdit ? 'Edit' : 'New client',
+      title: isEdit ? 'Edit client' : 'New client',
+      subtitle: isEdit ? 'Update this client\u2019s details. Changes save across the workspace.' : 'Add a business to your workspace. You can fill in the rest later.',
+
+      statusChip: 'display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;padding:5px 13px 5px 11px;border-radius:9999px;flex:none;background:' + sm[1] + ';color:' + sm[2],
+      statusDot: 'width:7px;height:7px;border-radius:50%;background:' + sm[3],
+      statusLabel: sm[0],
+
+      lbl: 'display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:7px',
+      help: 'font-size:12.5px;color:var(--text-muted);margin-top:6px',
+      errTxt: 'display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--error);margin-top:6px;font-weight:500',
+
+      F,
+
+      // logo
+      hasLogo: !!v.logo, noLogo: !v.logo,
+      logoInitials: v.logo || '',
+      logoAvatar: 'width:56px;height:56px;flex:none;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;background:var(--teal-800);color:#fff',
+      pickLogo: () => this.ensure(b => ({ logo: (b.company.trim().split(/\s+/).map(w => w[0]).slice(0,2).join('').toUpperCase()) || 'NC' })),
+      removeLogo: () => this.ensure(() => ({ logo: null })),
+      miniBtn: 'background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:6px 14px;font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;color:var(--ink)',
+      miniBtnGhost: 'background:none;border:none;padding:6px 8px;font-family:var(--font-sans);font-size:13px;font-weight:600;cursor:pointer;color:var(--text-muted)',
+
+      // tags
+      tags,
+      tagDraft: this.state.tagDraft,
+      tagInputId: 'tag-' + this.state.uid,
+      tagPlaceholder: v.tags.length ? 'Add tag…' : 'Retainer, Priority…',
+      tagWrap: 'display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:7px 10px;border-radius:10px;border:1px solid var(--hairline);background:var(--canvas);cursor:text;min-height:44px',
+      focusTag: () => { const el = document.getElementById('tag-' + this.state.uid); if (el) el.focus(); },
+      onTagInput: (e) => this.setState({ tagDraft: e.target.value }),
+      onTagKey: (e) => {
+        if ((e.key === 'Enter' || e.key === ',') && this.state.tagDraft.trim()) {
+          e.preventDefault();
+          const t = this.state.tagDraft.trim().replace(/,$/, '');
+          this.ensure(b => ({ tags: b.tags.includes(t) ? b.tags : [...b.tags, t] }));
+          this.setState({ tagDraft: '' });
+        } else if (e.key === 'Backspace' && !this.state.tagDraft) {
+          this.ensure(b => ({ tags: b.tags.slice(0, -1) }));
+        }
+      },
+
+      // contacts
+      extraContacts,
+      addContact: () => this.ensure(b => ({ contacts: [...b.contacts, { name: '', role: '', email: '', phone: '' }] })),
+
+      // action bar
+      dirty,
+      saving: this.state.saving,
+      savedFlag: this.state.saved && !dirty,
+      savedLabel: isEdit ? 'All changes saved' : 'Client created',
+      primaryDisabled, primaryStyle,
+      primaryLabel: this.state.saving ? (isEdit ? 'Saving…' : 'Creating…') : (isEdit ? 'Save changes' : 'Create client'),
+      submit: () => this.doSave(false),
+      submitAnother: () => this.doSave(true),
+      cancel: () => { if (this.isDirty()) this.setState({ cancelConfirm: true }); else { window.location.href = isEdit ? 'ClientDetail.dc.html' : 'Clients.dc.html'; } },
+      cancelConfirm: this.state.cancelConfirm,
+      keepEditing: () => this.setState({ cancelConfirm: false }),
+      discard: () => { this.setState({ values: this.seed(), initial: this.seed(), cancelConfirm: false, submitted: false, errors: {}, saved: false }); },
+    };
+  }
+}
+</script>
+</body>
+</html>

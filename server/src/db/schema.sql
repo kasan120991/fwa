@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS contacts (
   title              VARCHAR(120) NULL,   -- contact's role, e.g. "Marketing Director"
   website            VARCHAR(255) NULL,   -- site/domain, e.g. "northwind.com"
 
+  -- Client logo — a data: URL (small uploaded image) or external image URL.
+  logo_url           MEDIUMTEXT NULL,
+
   -- Inbound inquiry text (website form message); call inquiries surface via `calls`.
   message            TEXT NULL,
 
@@ -52,6 +55,9 @@ CREATE TABLE IF NOT EXISTS contacts (
   region             VARCHAR(120) NULL,   -- state / province
   postal_code        VARCHAR(20)  NULL,
   country            VARCHAR(120) NULL,
+
+  -- Billing email (invoices). Falls back to the contact email when blank.
+  billing_email      VARCHAR(254) NULL,
 
   -- Date the contact became a client (stage -> active).
   client_since       DATE NULL,

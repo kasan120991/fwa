@@ -17,6 +17,7 @@ const ADDITIVE_COLUMNS = {
   contacts: [
     ['title', 'VARCHAR(120) NULL AFTER company'],
     ['website', 'VARCHAR(255) NULL AFTER title'],
+    ['logo_url', 'MEDIUMTEXT NULL AFTER website'],
     ['notes', 'TEXT NULL AFTER message'],
     ['tags', 'JSON NULL AFTER notes'],
     ['address_line1', 'VARCHAR(255) NULL'],
@@ -25,6 +26,7 @@ const ADDITIVE_COLUMNS = {
     ['region', 'VARCHAR(120) NULL'],
     ['postal_code', 'VARCHAR(20) NULL'],
     ['country', 'VARCHAR(120) NULL'],
+    ['billing_email', 'VARCHAR(254) NULL AFTER country'],
     ['client_since', 'DATE NULL']
   ],
   calls: [

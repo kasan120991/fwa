@@ -2,9 +2,9 @@ import { query } from '../db/pool.js'
 
 // Writable columns (id/created_at/updated_at are managed by the DB).
 export const WRITABLE = [
-  'source', 'stage', 'name', 'email', 'phone', 'company', 'title', 'website',
+  'source', 'stage', 'name', 'email', 'phone', 'company', 'title', 'website', 'logo_url',
   'message', 'notes', 'tags',
-  'address_line1', 'address_line2', 'city', 'region', 'postal_code', 'country',
+  'address_line1', 'address_line2', 'city', 'region', 'postal_code', 'country', 'billing_email',
   'client_since', 'last_contacted_at', 'next_action_at'
 ]
 

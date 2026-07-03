@@ -20,6 +20,15 @@ export function createApp() {
   app.use(cors({ origin: config.corsOrigin, credentials: true }))
   if (config.nodeEnv !== 'test') app.use(morgan('dev'))
 
+  // Uploaded files, served publicly by their unguessable random name. Kept
+  // outside the auth-gated /api tree so <img>/downloads work cross-origin
+  // without the session cookie. Writes still go through POST /api/uploads.
+  app.use('/uploads', express.static(config.uploads.dir, {
+    index: false,
+    maxAge: '1y',
+    immutable: true
+  }))
+
   app.use('/api', apiRouter)
 
   app.use(notFound)

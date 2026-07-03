@@ -10,6 +10,7 @@ interface Client {
   name: string
   domain: string
   initials: string
+  logo: string
   stage: Stage
   contact: string
   email: string
@@ -27,12 +28,14 @@ interface ApiContact {
   name: string
   email: string | null
   website: string | null
+  logo_url: string | null
   stage: string
   updated_at: string
   last_contacted_at: string | null
 }
 
 const api = useApi()
+const { resolveUrl } = useUploads()
 const clients = ref<Client[]>([])
 const pending = ref(true)
 
@@ -43,6 +46,7 @@ function mapContact(c: ApiContact, i: number): Client {
     name: c.company || c.name,
     domain: c.website || '',
     initials: initials(c.company || c.name),
+    logo: c.logo_url || '',
     stage: c.stage === 'past' ? 'past' : 'active',
     contact: c.name,
     email: c.email || '',
@@ -207,7 +211,7 @@ function openClient(id: number) {
       <UDropdownMenu :items="overflowItems">
         <UButton icon="i-lucide-ellipsis" color="neutral" variant="outline" square aria-label="More actions" />
       </UDropdownMenu>
-      <UButton icon="i-lucide-plus" color="primary">Add client</UButton>
+      <UButton to="/clients/new" icon="i-lucide-plus" color="primary">Add client</UButton>
     </div>
   </div>
 
@@ -315,7 +319,8 @@ function openClient(id: number) {
               </td>
               <td class="px-4 py-3">
                 <div class="flex items-center gap-3">
-                  <span class="inline-flex size-9 flex-none items-center justify-center rounded-[9px] text-[13px] font-semibold" :class="AVATAR[row.color]">
+                  <img v-if="row.logo" :src="resolveUrl(row.logo)" alt="" class="size-9 flex-none rounded-[9px] object-cover ring ring-default">
+                  <span v-else class="inline-flex size-9 flex-none items-center justify-center rounded-[9px] text-[13px] font-semibold" :class="AVATAR[row.color]">
                     {{ row.initials }}
                   </span>
                   <div class="min-w-0">

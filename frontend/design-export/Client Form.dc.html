@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/styles.css">
+  <script src="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/_ds_bundle.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#DEDCD4;font-family:var(--font-sans);color:var(--text-body);-webkit-font-smoothing:antialiased}
+    .cfs-input{width:100%;box-sizing:border-box;padding:10px 13px;border-radius:10px;border:1px solid var(--hairline);background:var(--canvas);font-family:var(--font-sans);font-size:14px;color:var(--ink);outline:none}
+    .cfs-input::placeholder{color:var(--text-muted)}
+  </style>
+</helmet>
+
+<div style="padding:40px;display:flex;flex-direction:column;gap:32px;min-width:min-content">
+
+  <!-- caption -->
+  <div style="max-width:760px">
+    <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--teal-700);margin-bottom:8px">Client form · one component, two modes</div>
+    <h1 style="font-family:var(--font-display);font-weight:500;font-size:30px;letter-spacing:-.6px;color:var(--ink);margin:0 0 8px">A single ClientForm, driven by mode</h1>
+    <p style="font-size:15px;line-height:1.6;color:var(--text-body);margin:0;max-width:640px">The same layout and fields power both routes — only the title, prefilled values, and primary button change. Everything is live: type to trigger the dirty state, submit an empty form to see validation, edit the prefilled client to enable <em>Save changes</em>.</p>
+  </div>
+
+  <!-- both modes side by side -->
+  <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:nowrap">
+
+    <!-- CREATE -->
+    <div id="1a" style="flex:none;width:820px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:.4px;color:#fff;background:var(--ink);border-radius:9999px;padding:3px 11px">1a</span>
+        <span style="font-size:15px;font-weight:600;color:var(--ink)">Create — empty form</span>
+        <span style="font-size:13px;color:var(--text-muted)">· primary “Create client”, plus “Create &amp; add another”</span>
+      </div>
+      <div style="height:900px;border-radius:18px;overflow:hidden;border:1px solid rgba(18,24,23,.14);box-shadow:0 12px 40px rgba(18,24,23,.10);background:var(--cloud)">
+        <div style="height:100%;overflow-y:auto">
+          <dc-import name="ClientForm" mode="create" hint-size="820px,900px"></dc-import>
+        </div>
+      </div>
+    </div>
+
+    <!-- EDIT -->
+    <div id="1b" style="flex:none;width:820px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:.4px;color:#fff;background:var(--ink);border-radius:9999px;padding:3px 11px">1b</span>
+        <span style="font-size:15px;font-weight:600;color:var(--ink)">Edit — prefilled</span>
+        <span style="font-size:13px;color:var(--text-muted)">· primary “Save changes”, disabled until dirty</span>
+      </div>
+      <div style="height:900px;border-radius:18px;overflow:hidden;border:1px solid rgba(18,24,23,.14);box-shadow:0 12px 40px rgba(18,24,23,.10);background:var(--cloud)">
+        <div style="height:100%;overflow-y:auto">
+          <dc-import name="ClientForm" mode="edit" hint-size="820px,900px"></dc-import>
+        </div>
+      </div>
+    </div>
+
+    <!-- FIELD STATES REFERENCE -->
+    <div id="1c" style="flex:none;width:360px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <span style="font-family:var(--font-mono);font-size:12px;font-weight:600;letter-spacing:.4px;color:#fff;background:var(--ink);border-radius:9999px;padding:3px 11px">1c</span>
+        <span style="font-size:15px;font-weight:600;color:var(--ink)">Field states</span>
+      </div>
+      <div style="background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;padding:22px;display:flex;flex-direction:column;gap:20px">
+
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:7px">Default</div>
+          <input class="cfs-input" placeholder="Acme Studio">
+        </div>
+
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:7px">Focus</div>
+          <input class="cfs-input" value="Acme Studio" style="border-color:var(--focus-ring);box-shadow:0 0 0 3px rgba(37,187,164,.15)">
+        </div>
+
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:7px">Filled</div>
+          <input class="cfs-input" value="Northwind Co.">
+        </div>
+
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:7px">Required · error</div>
+          <input class="cfs-input" placeholder="Client name" style="border-color:var(--error);background:var(--error-bg)">
+          <div style="display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--error);margin-top:6px;font-weight:500"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>Client name is required.</div>
+        </div>
+
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:7px">With helper</div>
+          <input class="cfs-input" placeholder="example.com">
+          <div style="font-size:12.5px;color:var(--text-muted);margin-top:6px">No http:// needed — just the domain.</div>
+        </div>
+
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:7px">Disabled</div>
+          <input class="cfs-input" value="Read only" disabled style="background:var(--cloud);color:var(--text-muted);cursor:not-allowed">
+        </div>
+
+        <div style="border-top:1px solid var(--hairline);padding-top:18px">
+          <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:9px">Buttons</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <button style="display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--action);color:#fff;border:none;border-radius:9999px;padding:10px 22px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer">Create client</button>
+            <button style="display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--border-strong);color:#fff;border:none;border-radius:9999px;padding:10px 22px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:not-allowed">Save changes</button>
+            <button style="display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--action);color:#fff;border:none;border-radius:9999px;padding:10px 22px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:default;opacity:.92"><span style="width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;display:inline-block"></span>Saving…</button>
+            <button style="display:inline-flex;align-items:center;justify-content:center;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:10px 20px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;color:var(--ink)">Cancel</button>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid var(--hairline);padding-top:18px">
+          <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:9px">Status chips</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 11px 4px 9px;border-radius:9999px;background:var(--success-bg);color:var(--success)"><span style="width:6px;height:6px;border-radius:50%;background:var(--success)"></span>Active</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 11px 4px 9px;border-radius:9999px;background:var(--mist);color:var(--teal-700)"><span style="width:6px;height:6px;border-radius:50%;background:var(--teal-600)"></span>Lead</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 11px 4px 9px;border-radius:9999px;background:var(--warning-bg);color:var(--warning)"><span style="width:6px;height:6px;border-radius:50%;background:var(--warning)"></span>Paused</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 11px 4px 9px;border-radius:9999px;background:var(--cloud);color:var(--text-body)"><span style="width:6px;height:6px;border-radius:50%;background:var(--text-muted)"></span>Archived</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

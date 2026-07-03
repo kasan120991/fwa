@@ -2,6 +2,7 @@
 const route = useRoute()
 const { user } = useAuth()
 const api = useApi()
+const { resolveUrl } = useUploads()
 
 // Identity/profile comes from GET /api/contacts/:id. The tabs below (projects,
 // invoices, websites, …) stay representative sample data until those tables exist.
@@ -10,6 +11,7 @@ interface ClientIdentity {
   name: string
   initials: string
   avatar: string
+  logo: string
   domain: string
   stage: Stage
   contact: string
@@ -31,6 +33,7 @@ interface ApiContact {
   email: string | null
   phone: string | null
   website: string | null
+  logo_url: string | null
   stage: string
   tags: string[] | null
   notes: string | null
@@ -54,6 +57,7 @@ function buildClient(c: ApiContact): ClientIdentity {
     name: c.company || c.name,
     initials: initials(c.company || c.name),
     avatar: AVATAR[c.id % AVATAR.length],
+    logo: c.logo_url || '',
     domain: c.website || '',
     stage: c.stage === 'past' ? 'past' : 'active',
     contact: c.name,
@@ -257,7 +261,8 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
     <!-- header identity -->
     <div class="flex flex-wrap items-start justify-between gap-5">
       <div class="flex min-w-0 items-center gap-4">
-        <span class="inline-flex size-[58px] flex-none items-center justify-center rounded-[14px] font-display text-2xl font-medium tracking-tight" :class="client.avatar">{{ client.initials }}</span>
+        <img v-if="client.logo" :src="resolveUrl(client.logo)" alt="" class="size-[58px] flex-none rounded-[14px] object-cover ring ring-default">
+        <span v-else class="inline-flex size-[58px] flex-none items-center justify-center rounded-[14px] font-display text-2xl font-medium tracking-tight" :class="client.avatar">{{ client.initials }}</span>
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-3">
             <h1 class="font-display text-[28px] font-medium tracking-tight text-highlighted">{{ client.name }}</h1>
@@ -272,7 +277,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
         </div>
       </div>
       <div class="flex flex-none items-center gap-2.5">
-        <UButton icon="i-lucide-pencil" color="neutral" variant="outline" class="rounded-full">Edit</UButton>
+        <UButton :to="`/clients/${route.params.id}/edit`" icon="i-lucide-pencil" color="neutral" variant="outline" class="rounded-full">Edit</UButton>
         <UButton icon="i-lucide-plus" color="primary">New project</UButton>
         <UDropdownMenu :items="headerMenu">
           <UButton icon="i-lucide-ellipsis" color="neutral" variant="outline" square aria-label="More actions" />

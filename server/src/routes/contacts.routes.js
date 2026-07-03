@@ -11,7 +11,8 @@ const STAGES = ['new', 'qualifying', 'to_contact', 'contacted', 'engaged', 'qual
 const LEAD_STAGES = ['new', 'qualifying', 'to_contact', 'contacted', 'engaged', 'qualified', 'proposal']
 const CLIENT_STAGES = ['active', 'past']
 
-const STRING_FIELDS = ['name', 'email', 'phone', 'company', 'title', 'website', 'message', 'notes', 'address_line1', 'address_line2', 'city', 'region', 'postal_code', 'country']
+const STRING_FIELDS = ['name', 'email', 'phone', 'company', 'title', 'website', 'logo_url', 'message', 'notes', 'address_line1', 'address_line2', 'city', 'region', 'postal_code', 'country', 'billing_email']
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 const DATE_FIELDS = ['client_since', 'last_contacted_at', 'next_action_at']
 
 function badRequest(message, fields) {
@@ -52,8 +53,12 @@ function validateContact(body, { partial } = {}) {
     data[f] = body[f].trim() || null
   }
 
-  if (body.email != null && data.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email)) {
+  if (body.email != null && data.email && !EMAIL_RE.test(data.email)) {
     fields.email = 'must be a valid email'
+  }
+
+  if (body.billing_email != null && data.billing_email && !EMAIL_RE.test(data.billing_email)) {
+    fields.billing_email = 'must be a valid email'
   }
 
   if (body.tags !== undefined) {

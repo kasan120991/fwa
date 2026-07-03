@@ -1,0 +1,3 @@
+# Uploaded files (local disk storage) — keep the dir, ignore contents.
+uploads/*
+!uploads/.gitkeep
