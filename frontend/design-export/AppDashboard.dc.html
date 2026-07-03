@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/styles.css">
+  <script src="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/_ds_bundle.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--cloud);font-family:var(--font-sans);color:var(--text-body);-webkit-font-smoothing:antialiased;animation:fwaFade .4s ease}
+    @keyframes fwaFade{from{opacity:0}to{opacity:1}}
+    @media (max-width:1080px){
+      .fwa-grid{grid-template-columns:1fr !important}
+      .fwa-kpi{grid-template-columns:repeat(2,1fr) !important}
+    }
+    @media (max-width:820px){
+      .fwa-search{display:none !important}
+      .fwa-crumb{display:none !important}
+    }
+    @media (max-width:560px){
+      .fwa-kpi{grid-template-columns:1fr !important}
+    }
+  </style>
+</helmet>
+
+<div style="display:flex;min-height:100vh;width:100%">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside style="{{ asideStyle }}">
+    <!-- logo -->
+    <div style="display:flex;align-items:center;gap:11px;padding:4px 6px 20px">
+      <span style="width:34px;height:34px;flex:none;border-radius:9px;background:var(--teal-600);display:inline-flex;align-items:center;justify-content:center">
+        <img src="assets/fwa-mark-white.svg" alt="FWA" style="width:18px;height:18px;display:block">
+      </span>
+      <span style="{{ logoWordStyle }}">Francis</span>
+    </div>
+
+    <!-- scrollable nav -->
+    <nav style="display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;flex:1;margin:0 -4px;padding:0 4px">
+
+      <!-- Dashboard (ungrouped) -->
+      <a href="#" title="Dashboard" onClick="{{ pick.dashboard }}" onMouseEnter="{{ enter.dashboard }}" onMouseLeave="{{ leave.dashboard }}" style="{{ nav.dashboard }}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
+        <span style="{{ navLabelStyle }}">Dashboard</span>
+      </a>
+
+      <!-- Clients & Work -->
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Clients &amp; Work</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="#" title="Clients" onClick="{{ pick.clients }}" onMouseEnter="{{ enter.clients }}" onMouseLeave="{{ leave.clients }}" style="{{ nav.clients }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <span style="{{ navLabelStyle }}">Clients</span>
+          </a>
+          <a href="#" title="Projects" onClick="{{ pick.projects }}" onMouseEnter="{{ enter.projects }}" onMouseLeave="{{ leave.projects }}" style="{{ nav.projects }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path><path d="M8 10v4"></path><path d="M12 10v2"></path><path d="M16 10v6"></path></svg>
+            <span style="{{ navLabelStyle }}">Projects</span>
+          </a>
+          <a href="#" title="Tasks" onClick="{{ pick.tasks }}" onMouseEnter="{{ enter.tasks }}" onMouseLeave="{{ leave.tasks }}" style="{{ nav.tasks }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="m3 17 2 2 4-4"></path><path d="m3 7 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>
+            <span style="{{ navLabelStyle }}">Tasks</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Sales -->
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Sales</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="#" title="Proposals" onClick="{{ pick.proposals }}" onMouseEnter="{{ enter.proposals }}" onMouseLeave="{{ leave.proposals }}" style="{{ nav.proposals }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>
+            <span style="{{ navLabelStyle }}">Proposals</span>
+          </a>
+          <a href="#" title="Contracts" onClick="{{ pick.contracts }}" onMouseEnter="{{ enter.contracts }}" onMouseLeave="{{ leave.contracts }}" style="{{ nav.contracts }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg>
+            <span style="{{ navLabelStyle }}">Contracts</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Billing -->
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Billing</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="#" title="Invoices" onClick="{{ pick.invoices }}" onMouseEnter="{{ enter.invoices }}" onMouseLeave="{{ leave.invoices }}" style="{{ nav.invoices }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 17.5v-11"></path></svg>
+            <span style="{{ navLabelStyle }}">Invoices</span>
+          </a>
+          <a href="#" title="Payments" onClick="{{ pick.payments }}" onMouseEnter="{{ enter.payments }}" onMouseLeave="{{ leave.payments }}" style="{{ nav.payments }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect width="20" height="14" x="2" y="5" rx="2"></rect><line x1="2" x2="22" y1="10" y2="10"></line></svg>
+            <span style="{{ navLabelStyle }}">Payments</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Workspace -->
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Workspace</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="#" title="Files" onClick="{{ pick.files }}" onMouseEnter="{{ enter.files }}" onMouseLeave="{{ leave.files }}" style="{{ nav.files }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>
+            <span style="{{ navLabelStyle }}">Files</span>
+          </a>
+          <a href="#" title="Calendar" onClick="{{ pick.calendar }}" onMouseEnter="{{ enter.calendar }}" onMouseLeave="{{ leave.calendar }}" style="{{ nav.calendar }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>
+            <span style="{{ navLabelStyle }}">Calendar</span>
+          </a>
+          <a href="#" title="Websites" onClick="{{ pick.websites }}" onMouseEnter="{{ enter.websites }}" onMouseLeave="{{ leave.websites }}" style="{{ nav.websites }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+            <span style="{{ navLabelStyle }}">Websites</span>
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- pinned bottom -->
+    <div style="flex:none">
+      <div style="height:1px;background:var(--ink-soft);margin:12px 2px"></div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <a href="#" title="Support Tickets" onClick="{{ pick.support }}" onMouseEnter="{{ enter.support }}" onMouseLeave="{{ leave.support }}" style="{{ nav.support }}">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24"></path><path d="m14.83 9.17 4.24-4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="m9.17 14.83-4.24 4.24"></path><circle cx="12" cy="12" r="4"></circle></svg>
+          <span style="{{ navLabelStyle }}">Support tickets</span>
+        </a>
+        <a href="#" title="Settings" onClick="{{ pick.settings }}" onMouseEnter="{{ enter.settings }}" onMouseLeave="{{ leave.settings }}" style="{{ nav.settings }}">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          <span style="{{ navLabelStyle }}">Settings</span>
+        </a>
+      </div>
+      <div style="height:1px;background:var(--ink-soft);margin:12px 2px"></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 8px">
+        <span style="width:34px;height:34px;flex:none;border-radius:50%;background:var(--teal-600);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">JR</span>
+        <div style="{{ userTextStyle }}">
+          <div style="font-size:13px;font-weight:600;color:#fff;white-space:nowrap">Jordan Rivera</div>
+          <div style="font-size:12px;color:var(--on-dark-muted);white-space:nowrap">Owner</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+
+    <!-- top bar -->
+    <header style="height:64px;flex:none;background:var(--canvas);border-bottom:1px solid var(--hairline);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 26px;position:sticky;top:0;z-index:20">
+      <div style="display:flex;align-items:center;gap:14px;min-width:0">
+        <button aria-label="Toggle sidebar" onClick="{{ toggle }}" style="width:38px;height:38px;flex:none;border-radius:10px;border:1px solid var(--hairline);background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);transition:background .15s ease" style-hover="background:var(--cloud)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg>
+        </button>
+        <div style="min-width:0">
+          <div class="fwa-crumb" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted)">Workspace · Overview</div>
+          <h1 style="font-family:var(--font-display);font-weight:500;font-size:22px;letter-spacing:-.4px;color:var(--ink);margin:1px 0 0;white-space:nowrap">Dashboard</h1>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;flex:none">
+        <div class="fwa-search" style="display:flex;align-items:center;gap:9px;background:var(--cloud);border:1px solid var(--hairline);border-radius:9999px;padding:8px 10px 8px 14px;width:260px;cursor:text;transition:border-color .15s ease" style-hover="border-color:var(--border-strong)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <span style="flex:1;font-size:14px;color:var(--text-muted)">Search clients, projects…</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);border:1px solid var(--hairline);border-radius:6px;padding:1px 6px;background:var(--canvas)">⌘K</span>
+        </div>
+
+        <button style="display:inline-flex;align-items:center;gap:7px;background:var(--action);color:#fff;border:none;border-radius:9999px;padding:9px 16px 9px 13px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;transition:background .15s ease;white-space:nowrap" style-hover="background:var(--action-hover)">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+          Create
+        </button>
+
+        <button aria-label="Notifications" style="position:relative;width:40px;height:40px;flex:none;border-radius:10px;border:1px solid var(--hairline);background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);transition:background .15s ease" style-hover="background:var(--cloud)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+          <span style="position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--error);border:1.5px solid var(--canvas)"></span>
+        </button>
+
+        <button aria-label="Account menu" style="display:flex;align-items:center;gap:7px;background:transparent;border:none;cursor:pointer;padding:3px 4px 3px 3px;border-radius:10px;transition:background .15s ease" style-hover="background:var(--cloud)">
+          <span style="width:34px;height:34px;flex:none;border-radius:50%;background:var(--teal-600);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">JR</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- dashboard content -->
+    <main style="flex:1;padding:26px;overflow-y:auto">
+      <div style="max-width:1260px;margin:0 auto;display:flex;flex-direction:column;gap:20px">
+
+        <!-- KPI row -->
+        <div class="fwa-kpi" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+          <x-import component-from-global-scope="FWADesignSystem_49b56b.StatCard" label="Active clients" value="12" delta="+2" hint-size="100%,100px"></x-import>
+          <x-import component-from-global-scope="FWADesignSystem_49b56b.StatCard" label="Active projects" value="14" delta="+3" hint-size="100%,100px"></x-import>
+          <x-import component-from-global-scope="FWADesignSystem_49b56b.StatCard" label="Open tasks" value="28" delta="5 due today" delta-tone="muted" hint-size="100%,100px"></x-import>
+          <x-import component-from-global-scope="FWADesignSystem_49b56b.StatCard" label="Outstanding invoices" value="$18.4k" delta="6 unpaid" delta-tone="muted" hint-size="100%,100px"></x-import>
+        </div>
+
+        <!-- two-column region -->
+        <div class="fwa-grid" style="display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start">
+
+          <!-- LEFT: chart + projects -->
+          <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+
+            <!-- revenue snapshot -->
+            <x-import component-from-global-scope="FWADesignSystem_49b56b.Card" hint-size="100%,300px">
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px">
+                <div>
+                  <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--action);margin-bottom:8px">Revenue booked</div>
+                  <div style="display:flex;align-items:baseline;gap:10px">
+                    <span style="font-family:var(--font-display);font-weight:500;font-size:30px;letter-spacing:-.5px;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums">$210k</span>
+                    <span style="font-size:13px;font-weight:600;color:var(--success)">+12%</span>
+                  </div>
+                  <div style="font-size:13px;color:var(--text-muted);margin-top:6px">Last 6 months · vs. prior period</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:14px">
+                  <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)"><span style="width:9px;height:9px;border-radius:2px;background:var(--teal-400)"></span>Booked</span>
+                  <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)"><span style="width:9px;height:9px;border-radius:2px;background:var(--action)"></span>This month</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:flex-end;gap:16px;height:172px">
+                <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:10px;height:100%"><div style="width:100%;max-width:44px;height:52%;background:var(--teal-400);border-radius:7px 7px 0 0"></div><span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">Jan</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:10px;height:100%"><div style="width:100%;max-width:44px;height:61%;background:var(--teal-400);border-radius:7px 7px 0 0"></div><span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">Feb</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:10px;height:100%"><div style="width:100%;max-width:44px;height:50%;background:var(--teal-400);border-radius:7px 7px 0 0"></div><span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">Mar</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:10px;height:100%"><div style="width:100%;max-width:44px;height:72%;background:var(--teal-400);border-radius:7px 7px 0 0"></div><span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">Apr</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:10px;height:100%"><div style="width:100%;max-width:44px;height:80%;background:var(--teal-400);border-radius:7px 7px 0 0"></div><span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">May</span></div>
+                <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:10px;height:100%"><div style="width:100%;max-width:44px;height:95%;background:var(--action);border-radius:7px 7px 0 0"></div><span style="font-family:var(--font-mono);font-size:11px;color:var(--ink);font-weight:600">Jun</span></div>
+              </div>
+            </x-import>
+
+            <!-- recent projects table -->
+            <x-import component-from-global-scope="FWADesignSystem_49b56b.Card" padding="{{ 0 }}" style="overflow:hidden" hint-size="100%,360px">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--hairline)">
+                <div>
+                  <h2 style="font-family:var(--font-sans);font-weight:600;font-size:16px;color:var(--ink);margin:0">Recent projects</h2>
+                  <p style="font-size:13px;color:var(--text-muted);margin:3px 0 0">5 active · 2 need attention</p>
+                </div>
+                <a href="#" style="font-size:13px;font-weight:600;color:var(--action);text-decoration:none">View all</a>
+              </div>
+              <table style="width:100%;border-collapse:collapse;font-family:var(--font-sans)">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);font-weight:500;padding:11px 22px">Project</th>
+                    <th style="text-align:left;font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);font-weight:500;padding:11px 22px">Client</th>
+                    <th style="text-align:left;font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);font-weight:500;padding:11px 22px">Stage</th>
+                    <th style="text-align:right;font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);font-weight:500;padding:11px 22px">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ rows }}" as="row" hint-placeholder-count="5">
+                    <tr style="border-top:1px solid var(--hairline)">
+                      <td style="padding:14px 22px;font-size:14px;font-weight:600;color:var(--ink)">{{ row.name }}</td>
+                      <td style="padding:14px 22px;font-size:14px;color:var(--text-body)">{{ row.client }}</td>
+                      <td style="padding:14px 22px">
+                        <x-import component-from-global-scope="FWADesignSystem_49b56b.StatusChip" status="{{ row.status }}" hint-size="90px,24px">{{ row.stage }}</x-import>
+                      </td>
+                      <td style="padding:14px 22px;font-size:14px;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums">{{ row.value }}</td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </x-import>
+          </div>
+
+          <!-- RIGHT: needs attention + agenda -->
+          <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+
+            <!-- needs attention -->
+            <x-import component-from-global-scope="FWADesignSystem_49b56b.Card" padding="{{ 0 }}" style="overflow:hidden" hint-size="100%,340px">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--hairline)">
+                <h2 style="font-family:var(--font-sans);font-weight:600;font-size:16px;color:var(--ink);margin:0">Needs attention</h2>
+                <span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 7px;border-radius:9999px;background:var(--error-bg);color:var(--error);font-size:12px;font-weight:700">4</span>
+              </div>
+              <div style="display:flex;flex-direction:column">
+                <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 20px;border-bottom:1px solid var(--hairline)">
+                  <span style="width:32px;height:32px;flex:none;border-radius:9px;background:var(--error-bg);color:var(--error);display:inline-flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></span>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:14px;font-weight:600;color:var(--ink);line-height:1.35">Mintleaf invoice overdue</div>
+                    <div style="font-size:13px;color:var(--text-muted);margin-top:2px;font-variant-numeric:tabular-nums">$7,200 · 6 days past due</div>
+                  </div>
+                  <x-import component-from-global-scope="FWADesignSystem_49b56b.StatusChip" status="error" hint-size="70px,24px">Overdue</x-import>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 20px;border-bottom:1px solid var(--hairline)">
+                  <span style="width:32px;height:32px;flex:none;border-radius:9px;background:var(--warning-bg);color:var(--warning);display:inline-flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:14px;font-weight:600;color:var(--ink);line-height:1.35">Harborview review due</div>
+                    <div style="font-size:13px;color:var(--text-muted);margin-top:2px">Design review · today</div>
+                  </div>
+                  <x-import component-from-global-scope="FWADesignSystem_49b56b.StatusChip" status="warning" hint-size="70px,24px">Today</x-import>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 20px;border-bottom:1px solid var(--hairline)">
+                  <span style="width:32px;height:32px;flex:none;border-radius:9px;background:var(--info-bg);color:var(--info);display:inline-flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg></span>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:14px;font-weight:600;color:var(--ink);line-height:1.35">Parcel proposal unsigned</div>
+                    <div style="font-size:13px;color:var(--text-muted);margin-top:2px;font-variant-numeric:tabular-nums">$14,000 · sent 3 days ago</div>
+                  </div>
+                  <x-import component-from-global-scope="FWADesignSystem_49b56b.StatusChip" status="info" hint-size="80px,24px">Awaiting</x-import>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:12px;padding:14px 20px">
+                  <span style="width:32px;height:32px;flex:none;border-radius:9px;background:var(--cloud);color:var(--text-body);display:inline-flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:14px;font-weight:600;color:var(--ink);line-height:1.35">3 tasks due this week</div>
+                    <div style="font-size:13px;color:var(--text-muted);margin-top:2px">Across 2 projects</div>
+                  </div>
+                  <x-import component-from-global-scope="FWADesignSystem_49b56b.StatusChip" status="neutral" hint-size="60px,24px">3 open</x-import>
+                </div>
+              </div>
+            </x-import>
+
+            <!-- agenda -->
+            <sc-if value="{{ showAgenda }}" hint-placeholder-val="{{ true }}">
+              <x-import component-from-global-scope="FWADesignSystem_49b56b.Card" padding="{{ 0 }}" style="overflow:hidden" hint-size="100%,240px">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--hairline)">
+                  <h2 style="font-family:var(--font-sans);font-weight:600;font-size:16px;color:var(--ink);margin:0">Today</h2>
+                  <span style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted)">Wed · Jul 2</span>
+                </div>
+                <div style="display:flex;flex-direction:column">
+                  <div style="display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--hairline)">
+                    <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);width:48px;flex:none">09:30</span>
+                    <span style="width:8px;height:8px;flex:none;border-radius:50%;background:var(--teal-400)"></span>
+                    <span style="font-size:14px;color:var(--ink);font-weight:500">Team standup</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid var(--hairline)">
+                    <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);width:48px;flex:none">13:00</span>
+                    <span style="width:8px;height:8px;flex:none;border-radius:50%;background:var(--action)"></span>
+                    <span style="font-size:14px;color:var(--ink);font-weight:500">Northwind kickoff call</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:14px;padding:13px 20px">
+                    <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);width:48px;flex:none">16:00</span>
+                    <span style="width:8px;height:8px;flex:none;border-radius:50%;background:var(--warning)"></span>
+                    <span style="font-size:14px;color:var(--ink);font-weight:500">Invoice review</span>
+                  </div>
+                </div>
+              </x-import>
+            </sc-if>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;startCollapsed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;},&quot;showAgenda&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Dashboard&quot;}}">
+class Component extends DCLogic {
+  state = { collapsed: null, active: 'dashboard', hovered: null };
+
+  navItemStyle(on, hov, collapsed) {
+    return [
+      'display:flex', 'align-items:center',
+      'gap:' + (collapsed ? '0' : '12px'),
+      'justify-content:' + (collapsed ? 'center' : 'flex-start'),
+      'padding:' + (collapsed ? '11px 0' : '9px 11px'),
+      'border-radius:10px', 'text-decoration:none',
+      'font-family:var(--font-sans)', 'font-size:14px',
+      'font-weight:' + (on ? '600' : '500'),
+      'cursor:pointer', 'position:relative', 'white-space:nowrap',
+      'border-left:3px solid ' + ((on && !collapsed) ? 'var(--teal-400)' : 'transparent'),
+      'transition:background .15s ease, color .15s ease',
+      'color:' + (on ? '#fff' : (hov ? '#fff' : 'var(--on-dark-muted)')),
+      'background:' + (on ? 'var(--teal-800)' : (hov ? 'var(--ink-soft)' : 'transparent')),
+    ].join(';');
+  }
+
+  renderVals() {
+    const collapsed = this.state.collapsed ?? (this.props.startCollapsed ?? false);
+    const { active, hovered } = this.state;
+    const ids = ['dashboard','clients','projects','tasks','proposals','contracts','invoices','payments','files','calendar','websites','support','settings'];
+    const nav = {}, pick = {}, enter = {}, leave = {};
+    ids.forEach((id) => {
+      nav[id] = this.navItemStyle(active === id, hovered === id, collapsed);
+      pick[id] = (e) => { if (e && e.preventDefault) e.preventDefault(); this.setState({ active: id }); };
+      enter[id] = () => this.setState({ hovered: id });
+      leave[id] = () => this.setState({ hovered: null });
+    });
+
+    const asideStyle = [
+      'width:' + (collapsed ? '74px' : '260px'),
+      'flex:none', 'background:var(--ink)', 'color:var(--on-dark)',
+      'display:flex', 'flex-direction:column',
+      'padding:' + (collapsed ? '18px 12px' : '20px 16px'),
+      'height:100vh', 'position:sticky', 'top:0',
+      'box-sizing:border-box', 'overflow:hidden',
+      'transition:width .2s ease, padding .2s ease',
+    ].join(';');
+
+    return {
+      collapsed, nav, pick, enter, leave,
+      toggle: () => this.setState({ collapsed: !collapsed }),
+      asideStyle,
+      logoWordStyle: 'font-family:var(--font-display);font-weight:500;font-size:19px;letter-spacing:-.3px;color:#fff;white-space:nowrap;display:' + (collapsed ? 'none' : 'block'),
+      groupLabelStyle: 'font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--on-dark-muted);opacity:.6;padding:0 11px;margin:0 0 7px;white-space:nowrap;display:' + (collapsed ? 'none' : 'block'),
+      groupDivider: 'height:1px;background:var(--ink-soft);margin:14px 10px 0;display:' + (collapsed ? 'block' : 'none'),
+      navLabelStyle: 'overflow:hidden;display:' + (collapsed ? 'none' : 'inline'),
+      userTextStyle: 'line-height:1.3;overflow:hidden;display:' + (collapsed ? 'none' : 'block'),
+      showAgenda: this.props.showAgenda ?? true,
+      rows: this.props.rows ?? [
+        { name: 'Northwind storefront', client: 'Northwind Co.', stage: 'In build', status: 'info', value: '$9,000' },
+        { name: 'Lumen marketing site', client: 'Lumen Labs', stage: 'Live', status: 'success', value: '$4,000' },
+        { name: 'Parcel dashboard', client: 'Parcel', stage: 'Design', status: 'neutral', value: '$14,000' },
+        { name: 'Harborview redesign', client: 'Harborview', stage: 'Review due', status: 'warning', value: '$6,500' },
+        { name: 'Mintleaf checkout', client: 'Mintleaf', stage: 'Overdue', status: 'error', value: '$7,200' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

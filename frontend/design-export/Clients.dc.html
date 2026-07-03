@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/styles.css">
+  <script src="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/_ds_bundle.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--cloud);font-family:var(--font-sans);color:var(--text-body);-webkit-font-smoothing:antialiased;animation:fwaFade .4s ease}
+    @keyframes fwaFade{from{opacity:0}to{opacity:1}}
+    @keyframes fwaShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+    @media (max-width:900px){ .fwa-search{display:none !important} .fwa-crumb{display:none !important} }
+    @media (max-width:720px){ .fwa-hidecol{display:none !important} }
+  </style>
+</helmet>
+
+<div style="display:flex;min-height:100vh;width:100%">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside style="{{ asideStyle }}">
+    <div style="display:flex;align-items:center;gap:11px;padding:4px 6px 20px">
+      <span style="width:34px;height:34px;flex:none;border-radius:9px;background:var(--teal-600);display:inline-flex;align-items:center;justify-content:center">
+        <img src="assets/fwa-mark-white.svg" alt="FWA" style="width:18px;height:18px;display:block">
+      </span>
+      <span style="{{ logoWordStyle }}">Francis</span>
+    </div>
+    <nav style="display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;flex:1;margin:0 -4px;padding:0 4px">
+      <a href="#" title="Dashboard" onClick="{{ pick.dashboard }}" onMouseEnter="{{ enter.dashboard }}" onMouseLeave="{{ leave.dashboard }}" style="{{ nav.dashboard }}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
+        <span style="{{ navLabelStyle }}">Dashboard</span>
+      </a>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Clients &amp; Work</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="#" title="Clients" onClick="{{ pick.clients }}" onMouseEnter="{{ enter.clients }}" onMouseLeave="{{ leave.clients }}" style="{{ nav.clients }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <span style="{{ navLabelStyle }}">Clients</span>
+          </a>
+          <a href="#" title="Projects" onClick="{{ pick.projects }}" onMouseEnter="{{ enter.projects }}" onMouseLeave="{{ leave.projects }}" style="{{ nav.projects }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path><path d="M8 10v4"></path><path d="M12 10v2"></path><path d="M16 10v6"></path></svg>
+            <span style="{{ navLabelStyle }}">Projects</span>
+          </a>
+          <a href="#" title="Tasks" onClick="{{ pick.tasks }}" onMouseEnter="{{ enter.tasks }}" onMouseLeave="{{ leave.tasks }}" style="{{ nav.tasks }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="m3 17 2 2 4-4"></path><path d="m3 7 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>
+            <span style="{{ navLabelStyle }}">Tasks</span>
+          </a>
+        </div>
+      </div>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Sales</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="#" title="Proposals" onClick="{{ pick.proposals }}" onMouseEnter="{{ enter.proposals }}" onMouseLeave="{{ leave.proposals }}" style="{{ nav.proposals }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>
+            <span style="{{ navLabelStyle }}">Proposals</span>
+          </a>
+          <a href="#" title="Contracts" onClick="{{ pick.contracts }}" onMouseEnter="{{ enter.contracts }}" onMouseLeave="{{ leave.contracts }}" style="{{ nav.contracts }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg>
+            <span style="{{ navLabelStyle }}">Contracts</span>
+          </a>
+        </div>
+      </div>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Billing</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="#" title="Invoices" onClick="{{ pick.invoices }}" onMouseEnter="{{ enter.invoices }}" onMouseLeave="{{ leave.invoices }}" style="{{ nav.invoices }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 17.5v-11"></path></svg>
+            <span style="{{ navLabelStyle }}">Invoices</span>
+          </a>
+          <a href="#" title="Payments" onClick="{{ pick.payments }}" onMouseEnter="{{ enter.payments }}" onMouseLeave="{{ leave.payments }}" style="{{ nav.payments }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect width="20" height="14" x="2" y="5" rx="2"></rect><line x1="2" x2="22" y1="10" y2="10"></line></svg>
+            <span style="{{ navLabelStyle }}">Payments</span>
+          </a>
+        </div>
+      </div>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Workspace</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="#" title="Files" onClick="{{ pick.files }}" onMouseEnter="{{ enter.files }}" onMouseLeave="{{ leave.files }}" style="{{ nav.files }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>
+            <span style="{{ navLabelStyle }}">Files</span>
+          </a>
+          <a href="#" title="Calendar" onClick="{{ pick.calendar }}" onMouseEnter="{{ enter.calendar }}" onMouseLeave="{{ leave.calendar }}" style="{{ nav.calendar }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>
+            <span style="{{ navLabelStyle }}">Calendar</span>
+          </a>
+          <a href="#" title="Websites" onClick="{{ pick.websites }}" onMouseEnter="{{ enter.websites }}" onMouseLeave="{{ leave.websites }}" style="{{ nav.websites }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+            <span style="{{ navLabelStyle }}">Websites</span>
+          </a>
+        </div>
+      </div>
+    </nav>
+    <div style="flex:none">
+      <div style="height:1px;background:var(--ink-soft);margin:12px 2px"></div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <a href="#" title="Support Tickets" onClick="{{ pick.support }}" onMouseEnter="{{ enter.support }}" onMouseLeave="{{ leave.support }}" style="{{ nav.support }}">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24"></path><path d="m14.83 9.17 4.24-4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="m9.17 14.83-4.24 4.24"></path><circle cx="12" cy="12" r="4"></circle></svg>
+          <span style="{{ navLabelStyle }}">Support tickets</span>
+        </a>
+        <a href="#" title="Settings" onClick="{{ pick.settings }}" onMouseEnter="{{ enter.settings }}" onMouseLeave="{{ leave.settings }}" style="{{ nav.settings }}">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          <span style="{{ navLabelStyle }}">Settings</span>
+        </a>
+      </div>
+      <div style="height:1px;background:var(--ink-soft);margin:12px 2px"></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 8px">
+        <span style="width:34px;height:34px;flex:none;border-radius:50%;background:var(--teal-600);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">JR</span>
+        <div style="{{ userTextStyle }}">
+          <div style="font-size:13px;font-weight:600;color:#fff;white-space:nowrap">Jordan Rivera</div>
+          <div style="font-size:12px;color:var(--on-dark-muted);white-space:nowrap">Owner</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <header style="height:64px;flex:none;background:var(--canvas);border-bottom:1px solid var(--hairline);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 26px;position:sticky;top:0;z-index:30">
+      <div style="display:flex;align-items:center;gap:14px;min-width:0">
+        <button aria-label="Toggle sidebar" onClick="{{ toggle }}" style="width:38px;height:38px;flex:none;border-radius:10px;border:1px solid var(--hairline);background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);transition:background .15s ease" style-hover="background:var(--cloud)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg>
+        </button>
+        <div style="min-width:0">
+          <div class="fwa-crumb" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted)">Workspace · Clients</div>
+          <h1 style="font-family:var(--font-display);font-weight:500;font-size:22px;letter-spacing:-.4px;color:var(--ink);margin:1px 0 0;white-space:nowrap">Clients</h1>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex:none">
+        <div class="fwa-search" style="display:flex;align-items:center;gap:9px;background:var(--cloud);border:1px solid var(--hairline);border-radius:9999px;padding:8px 10px 8px 14px;width:240px;cursor:text" style-hover="border-color:var(--border-strong)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <span style="flex:1;font-size:14px;color:var(--text-muted)">Search…</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);border:1px solid var(--hairline);border-radius:6px;padding:1px 6px;background:var(--canvas)">⌘K</span>
+        </div>
+        <button aria-label="Notifications" style="position:relative;width:40px;height:40px;flex:none;border-radius:10px;border:1px solid var(--hairline);background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);transition:background .15s ease" style-hover="background:var(--cloud)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+          <span style="position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--error);border:1.5px solid var(--canvas)"></span>
+        </button>
+        <button aria-label="Account menu" style="display:flex;align-items:center;gap:7px;background:transparent;border:none;cursor:pointer;padding:3px 4px 3px 3px;border-radius:10px;transition:background .15s ease" style-hover="background:var(--cloud)">
+          <span style="width:34px;height:34px;flex:none;border-radius:50%;background:var(--teal-600);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">JR</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ===== CLIENTS PAGE ===== -->
+    <main style="flex:1;padding:26px;overflow-y:auto">
+      <div style="max-width:1260px;margin:0 auto;display:flex;flex-direction:column;gap:18px">
+
+        <!-- page header -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+          <div>
+            <div style="display:flex;align-items:center;gap:11px">
+              <h1 style="font-family:var(--font-display);font-weight:500;font-size:26px;letter-spacing:-.5px;color:var(--ink);margin:0">Clients</h1>
+              <span style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--teal-700);background:var(--mist);border-radius:9999px;padding:3px 10px">{{ headerCount }}</span>
+            </div>
+            <p style="font-size:14px;color:var(--text-muted);margin:6px 0 0">Every client relationship — active, leads, and past.</p>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex:none">
+            <div data-pop style="position:relative">
+              <button aria-label="More actions" onClick="{{ toggleOverflow }}" style="width:40px;height:40px;border-radius:10px;border:1px solid var(--border-strong);background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);transition:background .15s ease" style-hover="background:var(--cloud)">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+              </button>
+              <sc-if value="{{ overflowOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:46px;right:0;z-index:40;min-width:180px;background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px">
+                  <button onClick="{{ closePop }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;color:var(--text-body);text-align:left" style-hover="background:var(--cloud)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg>Import clients</button>
+                  <button onClick="{{ closePop }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;color:var(--text-body);text-align:left" style-hover="background:var(--cloud)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg>Export CSV</button>
+                </div>
+              </sc-if>
+            </div>
+            <button onClick="{{ closePop }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--action);color:#fff;border:none;border-radius:9999px;padding:10px 18px 10px 15px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;transition:background .15s ease;white-space:nowrap" style-hover="background:var(--action-hover)">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+              Add client
+            </button>
+          </div>
+        </div>
+
+        <!-- controls row -->
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+          <div style="display:inline-flex;align-items:center;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;padding:3px;gap:2px">
+            <button onClick="{{ pickTab.all }}" style="{{ tabStyle.all }}">All <span style="{{ tabBadge.all }}">{{ tabCount.all }}</span></button>
+            <button onClick="{{ pickTab.active }}" style="{{ tabStyle.active }}">Active <span style="{{ tabBadge.active }}">{{ tabCount.active }}</span></button>
+            <button onClick="{{ pickTab.lead }}" style="{{ tabStyle.lead }}">Leads <span style="{{ tabBadge.lead }}">{{ tabCount.lead }}</span></button>
+            <button onClick="{{ pickTab.paused }}" style="{{ tabStyle.paused }}">Paused <span style="{{ tabBadge.paused }}">{{ tabCount.paused }}</span></button>
+            <button onClick="{{ pickTab.archived }}" style="{{ tabStyle.archived }}">Archived <span style="{{ tabBadge.archived }}">{{ tabCount.archived }}</span></button>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="display:flex;align-items:center;gap:9px;background:var(--canvas);border:1px solid var(--hairline);border-radius:9999px;padding:8px 14px;width:250px" style-focus-within="border-color:var(--focus-ring)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+              <input value="{{ search }}" onChange="{{ onSearch }}" placeholder="Search name, contact, domain…" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:var(--font-sans);font-size:14px;color:var(--ink)">
+            </div>
+
+            <div data-pop style="position:relative">
+              <button onClick="{{ toggleFilter }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:8px 14px;cursor:pointer;font-family:var(--font-sans);font-size:14px;font-weight:500;color:var(--ink);transition:background .15s ease" style-hover="background:var(--cloud)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                Filter
+              </button>
+              <sc-if value="{{ filterOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:44px;right:0;z-index:40;min-width:180px;background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px">
+                  <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);padding:6px 10px 4px">Status</div>
+                  <button onClick="{{ pickTab.active }}" style="display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-size:14px;color:var(--text-body);text-align:left" style-hover="background:var(--cloud)"><span style="width:8px;height:8px;border-radius:50%;background:var(--success)"></span>Active</button>
+                  <button onClick="{{ pickTab.lead }}" style="display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-size:14px;color:var(--text-body);text-align:left" style-hover="background:var(--cloud)"><span style="width:8px;height:8px;border-radius:50%;background:var(--info)"></span>Lead</button>
+                  <button onClick="{{ pickTab.paused }}" style="display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-size:14px;color:var(--text-body);text-align:left" style-hover="background:var(--cloud)"><span style="width:8px;height:8px;border-radius:50%;background:var(--warning)"></span>Paused</button>
+                  <button onClick="{{ pickTab.archived }}" style="display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-size:14px;color:var(--text-body);text-align:left" style-hover="background:var(--cloud)"><span style="width:8px;height:8px;border-radius:50%;background:var(--text-muted)"></span>Archived</button>
+                </div>
+              </sc-if>
+            </div>
+
+            <div data-pop style="position:relative">
+              <button onClick="{{ toggleSort }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:8px 14px;cursor:pointer;font-family:var(--font-sans);font-size:14px;font-weight:500;color:var(--ink);transition:background .15s ease" style-hover="background:var(--cloud)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 16 4 4 4-4"></path><path d="M7 20V4"></path><path d="M11 4h10"></path><path d="M11 8h7"></path><path d="M11 12h4"></path></svg>
+                Sort
+              </button>
+              <sc-if value="{{ sortOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:44px;right:0;z-index:40;min-width:190px;background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px">
+                  <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);padding:6px 10px 4px">Sort by</div>
+                  <button onClick="{{ sortByName }}" style="{{ sortOptName }}">Client name</button>
+                  <button onClick="{{ sortByOut }}" style="{{ sortOptOut }}">Outstanding</button>
+                  <button onClick="{{ sortByAct }}" style="{{ sortOptAct }}">Last activity</button>
+                  <div style="height:1px;background:var(--hairline);margin:5px 4px"></div>
+                  <button onClick="{{ setAsc }}" style="{{ dirOptAsc }}">Ascending</button>
+                  <button onClick="{{ setDesc }}" style="{{ dirOptDesc }}">Descending</button>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+
+        <!-- table card -->
+        <div style="background:var(--canvas);border:1px solid var(--hairline);border-radius:16px">
+
+          <!-- bulk toolbar -->
+          <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 18px;background:var(--mist);border-bottom:1px solid var(--teal-100);border-radius:16px 16px 0 0">
+              <div style="display:flex;align-items:center;gap:12px">
+                <button onClick="{{ clearSelection }}" aria-label="Clear selection" style="width:26px;height:26px;border-radius:7px;border:none;background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--teal-700)" style-hover="background:#fff"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+                <span style="font-size:14px;font-weight:600;color:var(--teal-800)">{{ selectionText }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <button onClick="{{ bulkClear }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:7px 13px;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:600;color:var(--ink)" style-hover="background:#fff"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m9 11 3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>Archive</button>
+                <button onClick="{{ closePop }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:7px 13px;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:600;color:var(--ink)" style-hover="background:#fff"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"></path><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"></circle></svg>Add tag</button>
+                <button onClick="{{ bulkClear }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:7px 13px;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:600;color:var(--ink)" style-hover="background:#fff"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg>Export…</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- TABLE (populated) -->
+          <sc-if value="{{ showTable }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <table style="width:100%;border-collapse:collapse;font-family:var(--font-sans)">
+                <thead>
+                  <tr>
+                    <th style="{{ thCheck }}"><button aria-label="Select all" onClick="{{ selectAll }}" style="{{ selectAllStyle }}"><sc-if value="{{ allChecked }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if></button></th>
+                    <th onClick="{{ sortByName }}" style="{{ thSortName }}"><span style="display:inline-flex;align-items:center;gap:5px">Client <span style="color:var(--action)">{{ sortArrowName }}</span></span></th>
+                    <th style="{{ thPlain }}">Status</th>
+                    <th class="fwa-hidecol" style="{{ thPlain }}">Primary contact</th>
+                    <th class="fwa-hidecol" style="{{ thPlain }}">Projects</th>
+                    <th onClick="{{ sortByOut }}" style="{{ thSortRight }}"><span style="display:inline-flex;align-items:center;gap:5px">Outstanding <span style="color:var(--action)">{{ sortArrowOut }}</span></span></th>
+                    <th class="fwa-hidecol" onClick="{{ sortByAct }}" style="{{ thSort }}"><span style="display:inline-flex;align-items:center;gap:5px">Last activity <span style="color:var(--action)">{{ sortArrowAct }}</span></span></th>
+                    <th style="{{ thAction }}"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ visibleRows }}" as="row" hint-placeholder-count="8">
+                    <tr onClick="{{ row.rowClick }}" onMouseEnter="{{ row.enter }}" onMouseLeave="{{ row.leave }}" style="{{ row.rowStyle }}">
+                      <td style="padding:14px 0 14px 18px;width:44px"><button role="checkbox" aria-checked="{{ row.checked }}" onClick="{{ row.toggle }}" style="{{ row.checkboxStyle }}"><sc-if value="{{ row.checked }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if></button></td>
+                      <td style="padding:12px 16px">
+                        <div style="display:flex;align-items:center;gap:12px">
+                          <span style="{{ row.avatarStyle }}">{{ row.initials }}</span>
+                          <div style="min-width:0">
+                            <div style="font-size:14px;font-weight:600;color:var(--ink);white-space:nowrap">{{ row.name }}</div>
+                            <div style="font-size:13px;color:var(--text-muted);white-space:nowrap">{{ row.domain }}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style="padding:12px 16px"><x-import component-from-global-scope="FWADesignSystem_49b56b.StatusChip" status="{{ row.statusKey }}" hint-size="80px,24px">{{ row.statusLabel }}</x-import></td>
+                      <td class="fwa-hidecol" style="padding:12px 16px">
+                        <div style="min-width:0">
+                          <div style="font-size:14px;color:var(--text-body);white-space:nowrap">{{ row.contact }}</div>
+                          <div style="font-size:13px;color:var(--text-muted);white-space:nowrap">{{ row.email }}</div>
+                        </div>
+                      </td>
+                      <td class="fwa-hidecol" style="{{ row.projectsStyle }}">{{ row.projectsText }}</td>
+                      <td style="{{ row.outstandingStyle }}">{{ row.outstandingText }}</td>
+                      <td class="fwa-hidecol" style="padding:12px 16px;font-size:14px;color:var(--text-muted);white-space:nowrap;font-variant-numeric:tabular-nums">{{ row.activity }}</td>
+                      <td style="padding:12px 16px 12px 8px;width:52px;text-align:right"><button data-pop aria-label="Row actions" onClick="{{ row.openMenu }}" style="width:30px;height:30px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--text-muted);transition:background .12s ease" style-hover="background:var(--cloud)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg></button></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px;border-top:1px solid var(--hairline)">
+                <span style="font-size:13px;color:var(--text-muted);font-variant-numeric:tabular-nums">{{ footerText }}</span>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <button disabled style="display:inline-flex;align-items:center;gap:5px;background:var(--canvas);border:1px solid var(--hairline);border-radius:8px;padding:6px 11px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:not-allowed">Prev</button>
+                  <span style="min-width:30px;text-align:center;font-size:13px;font-weight:600;color:var(--ink);background:var(--cloud);border-radius:8px;padding:6px 10px">1</span>
+                  <button style="display:inline-flex;align-items:center;gap:5px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:8px;padding:6px 11px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer" style-hover="background:var(--cloud)">Next</button>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- EMPTY (no results) -->
+          <sc-if value="{{ showEmptyResults }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:76px 24px">
+              <span style="width:56px;height:56px;border-radius:14px;background:var(--cloud);display:inline-flex;align-items:center;justify-content:center;color:var(--text-muted);margin-bottom:18px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg></span>
+              <h3 style="font-family:var(--font-display);font-weight:500;font-size:20px;color:var(--ink);margin:0 0 6px">No clients match</h3>
+              <p style="font-size:14px;color:var(--text-muted);margin:0 0 20px;max-width:320px">Try a different search or clear the filters to see everyone.</p>
+              <button onClick="{{ clearFilters }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:9px 16px;cursor:pointer;font-family:var(--font-sans);font-size:14px;font-weight:600;color:var(--ink)" style-hover="background:var(--cloud)">Clear filters</button>
+            </div>
+          </sc-if>
+
+          <!-- EMPTY (first client) -->
+          <sc-if value="{{ showEmptyFirst }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:80px 24px">
+              <span style="width:60px;height:60px;border-radius:15px;background:var(--mist);display:inline-flex;align-items:center;justify-content:center;color:var(--teal-700);margin-bottom:20px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span>
+              <h3 style="font-family:var(--font-display);font-weight:500;font-size:22px;color:var(--ink);margin:0 0 8px">No clients yet</h3>
+              <p style="font-size:15px;color:var(--text-muted);margin:0 0 22px;max-width:360px;line-height:1.5">Add your first client to start tracking projects, invoices, and activity in one place.</p>
+              <button style="display:inline-flex;align-items:center;gap:7px;background:var(--action);color:#fff;border:none;border-radius:9999px;padding:11px 20px 11px 16px;font-family:var(--font-sans);font-weight:600;font-size:15px;cursor:pointer;transition:background .15s ease" style-hover="background:var(--action-hover)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add your first client</button>
+            </div>
+          </sc-if>
+
+          <!-- LOADING skeleton -->
+          <sc-if value="{{ showLoading }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:8px 0">
+              <sc-for list="{{ skeletonRows }}" as="sk" hint-placeholder-count="7">
+                <div style="display:flex;align-items:center;gap:14px;padding:16px 20px;border-top:1px solid var(--hairline)">
+                  <div style="width:18px;height:18px;border-radius:5px;flex:none;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                  <div style="width:36px;height:36px;border-radius:9px;flex:none;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                  <div style="flex:1;display:flex;flex-direction:column;gap:7px">
+                    <div style="width:{{ sk.w1 }};height:11px;border-radius:6px;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                    <div style="width:{{ sk.w2 }};height:10px;border-radius:6px;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                  </div>
+                  <div style="width:74px;height:22px;border-radius:9999px;flex:none;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                  <div style="width:70px;height:11px;border-radius:6px;flex:none;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- fixed row action menu -->
+<sc-if value="{{ rowMenuOpen }}" hint-placeholder-val="{{ false }}">
+  <div data-pop style="{{ rowMenuStyle }}">
+    <div style="font-size:12px;font-weight:600;color:var(--text-muted);padding:6px 10px 8px;border-bottom:1px solid var(--hairline);margin-bottom:5px;white-space:nowrap">{{ rowMenuName }}</div>
+    <button onClick="{{ closeRowMenu }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;color:var(--text-body);text-align:left" style-hover="background:var(--cloud)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>View client</button>
+    <button onClick="{{ closeRowMenu }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;color:var(--text-body);text-align:left" style-hover="background:var(--cloud)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>Edit</button>
+    <button onClick="{{ closeRowMenu }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;color:var(--text-body);text-align:left" style-hover="background:var(--cloud)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path></svg>New project</button>
+    <button onClick="{{ closeRowMenu }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;color:var(--text-body);text-align:left" style-hover="background:var(--cloud)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 17.5v-11"></path></svg>New invoice</button>
+    <div style="height:1px;background:var(--hairline);margin:5px 4px"></div>
+    <button onClick="{{ closeRowMenu }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;color:var(--error);text-align:left" style-hover="background:var(--error-bg)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"></path><path d="M10 12h4"></path></svg>Archive</button>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;tableState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;populated&quot;,&quot;empty&quot;,&quot;loading&quot;],&quot;default&quot;:&quot;populated&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Table&quot;},&quot;startCollapsed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;}}">
+class Component extends DCLogic {
+  state = {
+    collapsed: null, navActive: 'clients', navHover: null,
+    tab: 'all', search: '', sortKey: 'name', sortDir: 'asc',
+    selected: {}, hoverRow: null, pop: null, rowMenu: null,
+  };
+
+  DATA = [
+    { id: 'northwind', name: 'Northwind Co.', domain: 'northwind.com', initials: 'NC', status: 'active', contact: 'Dana Cole', email: 'dana@northwind.com', projects: 3, outstanding: 9000, overdue: false, activity: '2d ago', days: 2, ci: 0 },
+    { id: 'lumen', name: 'Lumen Labs', domain: 'lumenlabs.io', initials: 'LL', status: 'active', contact: 'Priya Shah', email: 'priya@lumenlabs.io', projects: 1, outstanding: 0, overdue: false, activity: '5h ago', days: 0.2, ci: 2 },
+    { id: 'parcel', name: 'Parcel', domain: 'parcel.app', initials: 'P', status: 'lead', contact: 'Marco Reyes', email: 'marco@parcel.app', projects: 0, outstanding: 0, overdue: false, activity: '1d ago', days: 1, ci: 1 },
+    { id: 'harborview', name: 'Harborview', domain: 'harborview.co', initials: 'H', status: 'active', contact: 'Ellen Ross', email: 'ellen@harborview.co', projects: 2, outstanding: 6500, overdue: false, activity: '3d ago', days: 3, ci: 3 },
+    { id: 'mintleaf', name: 'Mintleaf', domain: 'mintleaf.com', initials: 'M', status: 'active', contact: 'Sam Tran', email: 'sam@mintleaf.com', projects: 1, outstanding: 7200, overdue: true, activity: '6d ago', days: 6, ci: 4 },
+    { id: 'foundry', name: 'Foundry & Co.', domain: 'foundry.studio', initials: 'FC', status: 'paused', contact: 'Iris Bell', email: 'iris@foundry.studio', projects: 0, outstanding: 1200, overdue: false, activity: '3w ago', days: 21, ci: 1 },
+    { id: 'cedar', name: 'Cedar Health', domain: 'cedarhealth.org', initials: 'CH', status: 'lead', contact: 'Owen Diaz', email: 'owen@cedarhealth.org', projects: 0, outstanding: 0, overdue: false, activity: '4d ago', days: 4, ci: 2 },
+    { id: 'brightsalt', name: 'Bright & Salt', domain: 'brightsalt.co', initials: 'BS', status: 'active', contact: 'Nina Patel', email: 'nina@brightsalt.co', projects: 2, outstanding: 3400, overdue: false, activity: '8h ago', days: 0.33, ci: 0 },
+    { id: 'vantage', name: 'Vantage Group', domain: 'vantage.io', initials: 'VG', status: 'archived', contact: 'Leo Kim', email: 'leo@vantage.io', projects: 0, outstanding: 0, overdue: false, activity: '2mo ago', days: 60, ci: 3 },
+    { id: 'ridgeline', name: 'Ridgeline', domain: 'ridgeline.dev', initials: 'R', status: 'active', contact: 'Grace Lin', email: 'grace@ridgeline.dev', projects: 4, outstanding: 12800, overdue: false, activity: '1d ago', days: 1, ci: 4 },
+  ];
+
+  componentDidMount() {
+    this._doc = (e) => { if (!e.target.closest('[data-pop]')) this.setState({ pop: null, rowMenu: null }); };
+    document.addEventListener('mousedown', this._doc);
+  }
+  componentWillUnmount() { document.removeEventListener('mousedown', this._doc); }
+
+  navItemStyle(on, hov, collapsed) {
+    return [
+      'display:flex', 'align-items:center',
+      'gap:' + (collapsed ? '0' : '12px'),
+      'justify-content:' + (collapsed ? 'center' : 'flex-start'),
+      'padding:' + (collapsed ? '11px 0' : '9px 11px'),
+      'border-radius:10px', 'text-decoration:none', 'font-family:var(--font-sans)', 'font-size:14px',
+      'font-weight:' + (on ? '600' : '500'),
+      'cursor:pointer', 'position:relative', 'white-space:nowrap',
+      'border-left:3px solid ' + ((on && !collapsed) ? 'var(--teal-400)' : 'transparent'),
+      'transition:background .15s ease, color .15s ease',
+      'color:' + (on ? '#fff' : (hov ? '#fff' : 'var(--on-dark-muted)')),
+      'background:' + (on ? 'var(--teal-800)' : (hov ? 'var(--ink-soft)' : 'transparent')),
+    ].join(';');
+  }
+
+  cbStyle(checked) {
+    return 'width:18px;height:18px;flex:none;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:all .12s ease;border:1px solid ' + (checked ? 'var(--action)' : 'var(--border-strong)') + ';background:' + (checked ? 'var(--action)' : 'var(--canvas)');
+  }
+
+  money(n) { return n === 0 ? '—' : '$' + n.toLocaleString('en-US'); }
+
+  renderVals() {
+    // ---- shell ----
+    const collapsed = this.state.collapsed ?? (this.props.startCollapsed ?? false);
+    const active = this.state.navActive, navHover = this.state.navHover;
+    const ids = ['dashboard','clients','projects','tasks','proposals','contracts','invoices','payments','files','calendar','websites','support','settings'];
+    const nav = {}, pick = {}, enter = {}, leave = {};
+    ids.forEach((id) => {
+      nav[id] = this.navItemStyle(active === id, navHover === id, collapsed);
+      pick[id] = (e) => { if (e && e.preventDefault) e.preventDefault(); this.setState({ navActive: id }); };
+      enter[id] = () => this.setState({ navHover: id });
+      leave[id] = () => this.setState({ navHover: null });
+    });
+    const asideStyle = [
+      'width:' + (collapsed ? '74px' : '260px'),
+      'flex:none', 'background:var(--ink)', 'color:var(--on-dark)', 'display:flex', 'flex-direction:column',
+      'padding:' + (collapsed ? '18px 12px' : '20px 16px'),
+      'height:100vh', 'position:sticky', 'top:0', 'box-sizing:border-box', 'overflow:hidden',
+      'transition:width .2s ease, padding .2s ease',
+    ].join(';');
+
+    // ---- data derivation ----
+    const PAL = [
+      { bg: 'var(--mist)', fg: 'var(--teal-700)' },
+      { bg: 'var(--sand)', fg: 'var(--ink)' },
+      { bg: 'var(--info-bg)', fg: 'var(--info)' },
+      { bg: 'var(--cloud)', fg: 'var(--text-body)' },
+      { bg: 'var(--warning-bg)', fg: 'var(--warning)' },
+    ];
+    const ST = { active: { key: 'success', label: 'Active' }, lead: { key: 'info', label: 'Lead' }, paused: { key: 'warning', label: 'Paused' }, archived: { key: 'neutral', label: 'Archived' } };
+    const D = this.DATA;
+    const counts = {
+      all: D.length,
+      active: D.filter(c => c.status === 'active').length,
+      lead: D.filter(c => c.status === 'lead').length,
+      paused: D.filter(c => c.status === 'paused').length,
+      archived: D.filter(c => c.status === 'archived').length,
+    };
+
+    const tab = this.state.tab, q = this.state.search.trim().toLowerCase();
+    let rows = tab === 'all' ? D.slice() : D.filter(c => c.status === tab);
+    if (q) rows = rows.filter(c => (c.name + ' ' + c.contact + ' ' + c.domain + ' ' + c.email).toLowerCase().includes(q));
+    const sk = this.state.sortKey, dir = this.state.sortDir === 'asc' ? 1 : -1;
+    rows.sort((a, b) => {
+      let r = 0;
+      if (sk === 'name') r = a.name.localeCompare(b.name);
+      else if (sk === 'outstanding') r = a.outstanding - b.outstanding;
+      else r = a.days - b.days;
+      return r * dir;
+    });
+
+    const selected = this.state.selected, hoverRow = this.state.hoverRow;
+    const visibleRows = rows.map((c) => {
+      const st = ST[c.status], pal = PAL[c.ci], checked = !!selected[c.id], hover = hoverRow === c.id;
+      return {
+        id: c.id, name: c.name, domain: c.domain, initials: c.initials,
+        contact: c.contact, email: c.email, activity: c.activity,
+        statusKey: st.key, statusLabel: st.label, checked,
+        avatarStyle: 'width:36px;height:36px;flex:none;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;background:' + pal.bg + ';color:' + pal.fg,
+        checkboxStyle: this.cbStyle(checked),
+        rowStyle: 'border-top:1px solid var(--hairline);cursor:pointer;transition:background .12s ease;background:' + (checked ? 'var(--mist)' : (hover ? 'var(--cloud)' : 'var(--canvas)')),
+        projectsText: c.projects > 0 ? c.projects + ' active' : '—',
+        projectsStyle: 'padding:12px 16px;font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap;color:' + (c.projects > 0 ? 'var(--text-body)' : 'var(--text-muted)'),
+        outstandingText: this.money(c.outstanding),
+        outstandingStyle: 'padding:12px 16px;text-align:right;font-size:14px;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:' + (c.overdue ? '600' : '400') + ';color:' + (c.overdue ? 'var(--error)' : (c.outstanding === 0 ? 'var(--text-muted)' : 'var(--ink)')),
+        toggle: (e) => { e.stopPropagation(); this.setState(s => ({ selected: { ...s.selected, [c.id]: !s.selected[c.id] } })); },
+        enter: () => this.setState({ hoverRow: c.id }),
+        leave: () => this.setState({ hoverRow: null }),
+        openMenu: (e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); this.setState({ rowMenu: { id: c.id, name: c.name, top: r.bottom + 6, right: window.innerWidth - r.right } }); },
+        rowClick: () => {},
+      };
+    });
+
+    // ---- tabs ----
+    const TABS = [['all','All'],['active','Active'],['lead','Leads'],['paused','Paused'],['archived','Archived']];
+    const tabStyle = {}, tabBadge = {}, tabCount = {}, pickTab = {};
+    TABS.forEach(([k]) => {
+      const on = tab === k;
+      tabStyle[k] = 'display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;border:none;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:' + (on ? '600' : '500') + ';transition:all .12s ease;background:' + (on ? 'var(--canvas)' : 'transparent') + ';color:' + (on ? 'var(--ink)' : 'var(--text-muted)') + ';box-shadow:' + (on ? 'var(--shadow-soft)' : 'none');
+      tabBadge[k] = 'font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;padding:1px 7px;border-radius:9999px;background:' + (on ? 'var(--mist)' : 'var(--cloud)') + ';color:' + (on ? 'var(--teal-700)' : 'var(--text-muted)');
+      tabCount[k] = counts[k];
+      pickTab[k] = () => this.setState({ tab: k, pop: null });
+    });
+
+    // ---- sort menu option styles ----
+    const optBase = 'display:flex;align-items:center;justify-content:space-between;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;text-align:left;';
+    const opt = (on) => optBase + 'color:' + (on ? 'var(--action)' : 'var(--text-body)') + ';font-weight:' + (on ? '600' : '400');
+    const arrow = (k) => this.state.sortKey === k ? (this.state.sortDir === 'asc' ? '↑' : '↓') : '';
+
+    // ---- selection ----
+    const selCount = Object.keys(selected).filter(k => selected[k]).length;
+    const visIds = visibleRows.map(r => r.id);
+    const allChecked = visibleRows.length > 0 && visIds.every(id => selected[id]);
+
+    // ---- view state ----
+    const ts = this.props.tableState ?? 'populated';
+    const showLoading = ts === 'loading';
+    const showEmptyFirst = ts === 'empty';
+    const showEmptyResults = !showLoading && !showEmptyFirst && visibleRows.length === 0;
+    const showTable = !showLoading && !showEmptyFirst && visibleRows.length > 0;
+
+    const thBase = 'position:sticky;top:0;z-index:5;background:var(--canvas);font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);font-weight:500;padding:12px 16px;box-shadow:inset 0 -1px 0 var(--hairline);';
+    const rm = this.state.rowMenu;
+
+    return {
+      // shell
+      collapsed, nav, pick, enter, leave,
+      toggle: () => this.setState({ collapsed: !collapsed }),
+      asideStyle,
+      logoWordStyle: 'font-family:var(--font-display);font-weight:500;font-size:19px;letter-spacing:-.3px;color:#fff;white-space:nowrap;display:' + (collapsed ? 'none' : 'block'),
+      groupLabelStyle: 'font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--on-dark-muted);opacity:.6;padding:0 11px;margin:0 0 7px;white-space:nowrap;display:' + (collapsed ? 'none' : 'block'),
+      groupDivider: 'height:1px;background:var(--ink-soft);margin:14px 10px 0;display:' + (collapsed ? 'block' : 'none'),
+      navLabelStyle: 'overflow:hidden;display:' + (collapsed ? 'none' : 'inline'),
+      userTextStyle: 'line-height:1.3;overflow:hidden;display:' + (collapsed ? 'none' : 'block'),
+
+      // page
+      headerCount: counts.all,
+      search: this.state.search,
+      onSearch: (e) => this.setState({ search: e.target.value }),
+      tabStyle, tabBadge, tabCount, pickTab,
+
+      // pops
+      overflowOpen: this.state.pop === 'overflow',
+      filterOpen: this.state.pop === 'filter',
+      sortOpen: this.state.pop === 'sort',
+      toggleOverflow: () => this.setState(s => ({ pop: s.pop === 'overflow' ? null : 'overflow' })),
+      toggleFilter: () => this.setState(s => ({ pop: s.pop === 'filter' ? null : 'filter' })),
+      toggleSort: () => this.setState(s => ({ pop: s.pop === 'sort' ? null : 'sort' })),
+      closePop: () => this.setState({ pop: null }),
+
+      // sort
+      sortByName: () => this.setState(s => ({ sortKey: 'name', sortDir: s.sortKey === 'name' ? (s.sortDir === 'asc' ? 'desc' : 'asc') : 'asc' })),
+      sortByOut: () => this.setState(s => ({ sortKey: 'outstanding', sortDir: s.sortKey === 'outstanding' ? (s.sortDir === 'asc' ? 'desc' : 'asc') : 'asc' })),
+      sortByAct: () => this.setState(s => ({ sortKey: 'days', sortDir: s.sortKey === 'days' ? (s.sortDir === 'asc' ? 'desc' : 'asc') : 'asc' })),
+      setAsc: () => this.setState({ sortDir: 'asc', pop: null }),
+      setDesc: () => this.setState({ sortDir: 'desc', pop: null }),
+      sortArrowName: arrow('name'), sortArrowOut: arrow('outstanding'), sortArrowAct: arrow('days'),
+      sortOptName: opt(sk === 'name'), sortOptOut: opt(sk === 'outstanding'), sortOptAct: opt(sk === 'days'),
+      dirOptAsc: opt(this.state.sortDir === 'asc'), dirOptDesc: opt(this.state.sortDir === 'desc'),
+
+      // th styles
+      thCheck: thBase + 'width:44px;padding-left:18px;border-top-left-radius:16px',
+      thPlain: thBase + 'text-align:left',
+      thSort: thBase + 'text-align:left;cursor:pointer;user-select:none',
+      thSortName: thBase + 'text-align:left;cursor:pointer;user-select:none',
+      thSortRight: thBase + 'text-align:right;cursor:pointer;user-select:none',
+      thAction: thBase + 'width:52px;border-top-right-radius:16px',
+
+      // rows + selection
+      visibleRows,
+      allChecked,
+      selectAllStyle: this.cbStyle(allChecked),
+      selectAll: (e) => { if (e) e.stopPropagation(); this.setState(s => { const sel = { ...s.selected }; if (allChecked) { visIds.forEach(id => delete sel[id]); } else { visIds.forEach(id => sel[id] = true); } return { selected: sel }; }); },
+      hasSelection: selCount > 0,
+      selectionText: selCount + (selCount === 1 ? ' selected' : ' selected'),
+      clearSelection: () => this.setState({ selected: {} }),
+      bulkClear: () => this.setState({ selected: {} }),
+
+      // footer
+      footerText: 'Showing ' + visibleRows.length + ' of ' + counts.all + ' clients',
+
+      // view states
+      showTable, showEmptyResults, showEmptyFirst, showLoading,
+      clearFilters: () => this.setState({ search: '', tab: 'all' }),
+      skeletonRows: [ { w1: '38%', w2: '24%' }, { w1: '30%', w2: '20%' }, { w1: '42%', w2: '26%' }, { w1: '28%', w2: '18%' }, { w1: '36%', w2: '22%' }, { w1: '32%', w2: '20%' }, { w1: '40%', w2: '25%' } ],
+
+      // row menu
+      rowMenuOpen: !!rm,
+      rowMenuName: rm ? rm.name : '',
+      rowMenuStyle: rm ? ('position:fixed;top:' + rm.top + 'px;right:' + rm.right + 'px;z-index:100;min-width:190px;background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px') : 'display:none',
+      closeRowMenu: () => this.setState({ rowMenu: null }),
+    };
+  }
+}
+</script>
+</body>
+</html>

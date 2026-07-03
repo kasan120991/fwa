@@ -1,0 +1,55 @@
+/* FWA — Color tokens
+ * Teal does double duty: action color + signature dark bands.
+ * Base ramp + semantic aliases. Light-first. */
+:root {
+  /* Teal ramp (50 → 900) */
+  --teal-50:  #ECFBF7;
+  --teal-100: #CCF3EA;
+  --teal-200: #99E6D6;
+  --teal-300: #5FD4BF;
+  --teal-400: #25BBA4;
+  --teal-500: #0FA08C; /* brand identity color */
+  --teal-600: #0B7F70; /* primary action fill (AA white text) */
+  --teal-700: #0A6358; /* action hover / pressed */
+  --teal-800: #094E46; /* secondary dark band */
+  --teal-900: #073A34; /* hero / product band */
+
+  /* Brand roles */
+  --brand:        #0FA08C;
+  --action:       #0B7F70;
+  --action-hover: #0A6358;
+  --deep-band:    #073A34;
+
+  /* Darks */
+  --ink:      #121817; /* primary text + dark UI chrome */
+  --ink-soft: #1C2422; /* raised dark surface (app dark mode) */
+
+  /* Surfaces */
+  --canvas: #FFFFFF;
+  --sand:   #F1EEE7; /* warm neutral block */
+  --mist:   #ECFBF7; /* pale teal wash (= teal-50) */
+  --cloud:  #F5F7F6; /* cool neutral app background */
+
+  /* Text */
+  --text-primary:  #121817;
+  --text-body:     #4A5654;
+  --text-muted:    #8A9794;
+  --on-dark:       #FFFFFF;
+  --on-dark-muted: #99E6D6; /* muted text on teal bands (= teal-200) */
+
+  /* Rules */
+  --hairline:      #E4E6E2;
+  --border-strong: #D7DAD6;
+
+  /* Semantic (web app) */
+  --success:    #1F9D57;
+  --success-bg: #E7F6EE;
+  --warning:    #E2A032;
+  --warning-bg: #FBF1DF;
+  --error:      #D14B3D;
+  --error-bg:   #FBEAE7;
+  --info:       #2D6FE0;
+  --info-bg:    #E9F0FC;
+
+  --focus-ring: #25BBA4;
+}

@@ -1,0 +1,30 @@
+/* FWA — Typography tokens
+ * Display: Fraunces (editorial serif). Body/UI: Inter. Mono: JetBrains Mono. */
+:root {
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter', -apple-system, 'Segoe UI', Roboto, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Type scale — role: size / weight / line-height / tracking */
+  --t-display-1: 500 88px/1.02 var(--font-display);
+  --t-display-2: 500 64px/1.05 var(--font-display);
+  --t-heading-1: 500 48px/1.10 var(--font-display);
+  --t-heading-2: 500 36px/1.15 var(--font-display);
+  --t-heading-3: 500 28px/1.20 var(--font-display);
+  --t-heading-4: 600 22px/1.30 var(--font-sans);
+  --t-body-large: 400 18px/1.50 var(--font-sans);
+  --t-body: 400 16px/1.55 var(--font-sans);
+  --t-caption: 400 14px/1.50 var(--font-sans);
+  --t-button: 600 14px/1 var(--font-sans);
+  --t-mono-label: 500 13px/1.40 var(--font-mono);
+  --t-micro: 400 12px/1.40 var(--font-sans);
+
+  /* Tracking */
+  --tr-display-1: -2px;
+  --tr-display-2: -1.5px;
+  --tr-heading-1: -1px;
+  --tr-heading-2: -0.5px;
+  --tr-heading-3: -0.3px;
+  --tr-mono-label: 0.6px;
+  --tr-button: 0.1px;
+}

@@ -1,0 +1,21 @@
+# OS
+.DS_Store
+
+# Editors / IDE tooling
+.idea
+.fleet
+.vscode
+
+# Junie
+.junie
+
+# Node dependencies (per-package .gitignore also covers subtrees)
+node_modules
+
+# Logs
+*.log
+
+# Local env files
+.env
+.env.*
+!.env.example

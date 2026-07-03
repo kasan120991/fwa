@@ -1,0 +1,154 @@
+/* =====================================================================
+   Francis Web Agency — design tokens (Tailwind CSS v4 + Nuxt UI v4)
+   Target: app/assets/css/main.css
+   Layer 1 of 2: raw design tokens. Semantic mapping lives in app.config.ts.
+   ===================================================================== */
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/* ---- Fonts (auto-loaded + optimised by @nuxt/fonts) ---------------- */
+@theme {
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Type scale — use as text-display-1 … text-eyebrow (pair with font-display on headings) */
+  --text-display-1: 5.5rem;  --text-display-1--line-height: 1.02; --text-display-1--letter-spacing: -0.02em; --text-display-1--font-weight: 470;
+  --text-display-2: 4rem;    --text-display-2--line-height: 1.05; --text-display-2--letter-spacing: -0.015em; --text-display-2--font-weight: 470;
+  --text-h1: 3rem;           --text-h1--line-height: 1.1;  --text-h1--letter-spacing: -0.012em; --text-h1--font-weight: 470;
+  --text-h2: 2.25rem;        --text-h2--line-height: 1.15; --text-h2--letter-spacing: -0.008em; --text-h2--font-weight: 470;
+  --text-h3: 1.75rem;        --text-h3--line-height: 1.2;  --text-h3--letter-spacing: -0.004em; --text-h3--font-weight: 470;
+  --text-h4: 1.375rem;       --text-h4--line-height: 1.3;  --text-h4--font-weight: 600;
+  --text-body-lg: 1.125rem;  --text-body-lg--line-height: 1.5;
+  --text-body: 1rem;         --text-body--line-height: 1.55;
+  --text-caption: 0.875rem;  --text-caption--line-height: 1.5;
+  --text-eyebrow: 0.8125rem; --text-eyebrow--line-height: 1.4; --text-eyebrow--letter-spacing: 0.18em;
+
+  /* Spacing + radius helpers */
+  --spacing-section: 6rem;     /* py-section = 96px marketing rhythm */
+  --radius-pill: 9999px;       /* rounded-pill */
+  --radius-card: 1rem;         /* rounded-card = 16px */
+
+  /* Marketing surface tokens (single-value, available as bg-sand / bg-mist / bg-deep) */
+  --color-canvas: #FFFFFF;
+  --color-sand: #F1EEE7;
+  --color-mist: #ECFBF7;
+  --color-cloud: #F5F7F6;
+  --color-deep: #073A34;       /* deep teal band */
+}
+
+/* ---- Color ramps (full 50–950 — required by Nuxt UI) -------------- */
+@theme static {
+  /* Brand — primary (teal does double duty: action + signature bands) */
+  --color-teal-50: #ECFBF7;
+  --color-teal-100: #CCF3EA;
+  --color-teal-200: #99E6D6;
+  --color-teal-300: #5FD4BF;
+  --color-teal-400: #25BBA4;
+  --color-teal-500: #0FA08C;
+  --color-teal-600: #0B7F70;
+  --color-teal-700: #0A6358;
+  --color-teal-800: #094E46;
+  --color-teal-900: #073A34;
+  --color-teal-950: #04241F;
+
+  /* Neutral — ink (warm-cool slate; maps to Nuxt UI text/bg/border tokens) */
+  --color-ink-50: #F6F7F6;
+  --color-ink-100: #ECEEEC;
+  --color-ink-200: #E4E6E2;
+  --color-ink-300: #D7DAD6;
+  --color-ink-400: #A6AFAC;
+  --color-ink-500: #8A9794;
+  --color-ink-600: #67716E;
+  --color-ink-700: #4A5654;
+  --color-ink-800: #2C3331;
+  --color-ink-900: #121817;
+  --color-ink-950: #0B0F0E;
+
+  /* Status */
+  --color-success-50: #EDF7F2;
+  --color-success-100: #D7EDE1;
+  --color-success-200: #AADABF;
+  --color-success-300: #79C49A;
+  --color-success-400: #45AE74;
+  --color-success-500: #1F9D57;
+  --color-success-600: #1B894C;
+  --color-success-700: #177340;
+  --color-success-800: #125D33;
+  --color-success-900: #0E4828;
+  --color-success-950: #0A341D;
+
+  --color-warning-50: #FDF7EF;
+  --color-warning-100: #FAEEDA;
+  --color-warning-200: #F4DBB1;
+  --color-warning-300: #EEC684;
+  --color-warning-400: #E7B055;
+  --color-warning-500: #E2A032;
+  --color-warning-600: #C58B2C;
+  --color-warning-700: #A57524;
+  --color-warning-800: #855E1E;
+  --color-warning-900: #684A17;
+  --color-warning-950: #4B3510;
+
+  --color-error-50: #FBF1EF;
+  --color-error-100: #F7DFDC;
+  --color-error-200: #EEBBB5;
+  --color-error-300: #E3938B;
+  --color-error-400: #D96A5E;
+  --color-error-500: #D14B3D;
+  --color-error-600: #B64135;
+  --color-error-700: #99372D;
+  --color-error-800: #7B2C24;
+  --color-error-900: #60221C;
+  --color-error-950: #451914;
+
+  --color-info-50: #EEF3FD;
+  --color-info-100: #D9E5F9;
+  --color-info-200: #AFC8F3;
+  --color-info-300: #81A9EC;
+  --color-info-400: #5187E5;
+  --color-info-500: #2D6FE0;
+  --color-info-600: #2761C3;
+  --color-info-700: #2151A4;
+  --color-info-800: #1B4184;
+  --color-info-900: #153367;
+  --color-info-950: #0F254A;
+}
+
+/* ---- Nuxt UI semantic token tuning -------------------------------- */
+:root {
+  /* Action color = teal-600 (AA with white text); brand identity is teal-500.
+     Nuxt UI defaults --ui-primary to the 500 shade, so we bump it to 600. */
+  --ui-primary: var(--ui-color-primary-600);
+
+  /* Base component radius (drives all rounded-* in Nuxt UI). 8px = soft, premium. */
+  --ui-radius: 0.5rem;
+
+  /* Container max-width matches our 1200px marketing container */
+  --ui-container: 75rem;
+}
+
+.dark {
+  /* On dark surfaces, step the brand up to the brighter teal-400 */
+  --ui-primary: var(--ui-color-primary-400);
+}
+
+/* ---- Base layer --------------------------------------------------- */
+@layer base {
+  /* Headings use the display serif at its optical-display cut */
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+    font-variation-settings: "opsz" 96, "wght" 470, "SOFT" 0, "WONK" 0;
+  }
+  /* Restore pointer cursor on buttons (Tailwind v4 preflight sets default) */
+  button:not(:disabled), [role="button"]:not(:disabled) { cursor: pointer; }
+}
+
+/* Uppercase mono eyebrow helper (brand signature) */
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-eyebrow);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ui-color-primary-600);
+}

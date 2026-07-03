@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/styles.css">
+  <script src="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/_ds_bundle.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--cloud);font-family:var(--font-sans);color:var(--text-body);-webkit-font-smoothing:antialiased;animation:fwaFade .4s ease}
+    @keyframes fwaFade{from{opacity:0}to{opacity:1}}
+    @keyframes fwaShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+    @keyframes fwaPop{from{transform:translateY(6px) scale(.98);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+    @keyframes fwaScrim{from{opacity:0}to{opacity:1}}
+    @keyframes fwaPulse{0%,100%{opacity:1}50%{opacity:.35}}
+    @keyframes fwaDrop{from{transform:translateY(-8px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .fwa-detailscroll::-webkit-scrollbar,.fwa-listscroll::-webkit-scrollbar{width:9px}
+    .fwa-detailscroll::-webkit-scrollbar-thumb,.fwa-listscroll::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:9999px;border:2px solid var(--canvas)}
+    @media (max-width:1080px){ .fwa-detail{display:none !important} .fwa-list{width:100% !important;border-right:none !important} }
+    @media (max-width:900px){ .fwa-search{display:none !important} .fwa-crumb{display:none !important} }
+    @media (max-width:1240px){ .fwa-statwrap{overflow-x:auto} }
+  </style>
+</helmet>
+
+<div style="display:flex;height:100vh;width:100%;overflow:hidden">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside style="{{ asideStyle }}">
+    <div style="display:flex;align-items:center;gap:11px;padding:4px 6px 20px">
+      <span style="width:34px;height:34px;flex:none;border-radius:9px;background:var(--teal-600);display:inline-flex;align-items:center;justify-content:center">
+        <img src="assets/fwa-mark-white.svg" alt="FWA" style="width:18px;height:18px;display:block">
+      </span>
+      <span style="{{ logoWordStyle }}">Francis</span>
+    </div>
+    <nav style="display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;flex:1;margin:0 -4px;padding:0 4px">
+      <a href="AppDashboard.dc.html" title="Dashboard" onClick="{{ pick.dashboard }}" onMouseEnter="{{ enter.dashboard }}" onMouseLeave="{{ leave.dashboard }}" style="{{ nav.dashboard }}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
+        <span style="{{ navLabelStyle }}">Dashboard</span>
+      </a>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Clients &amp; Work</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="Leads.dc.html" title="Leads" onClick="{{ pick.leads }}" onMouseEnter="{{ enter.leads }}" onMouseLeave="{{ leave.leads }}" style="{{ nav.leads }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+            <span style="{{ navLabelStyle }}">Leads</span>
+          </a>
+          <a href="ClientDetail.dc.html" title="Clients" onClick="{{ pick.clients }}" onMouseEnter="{{ enter.clients }}" onMouseLeave="{{ leave.clients }}" style="{{ nav.clients }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <span style="{{ navLabelStyle }}">Clients</span>
+          </a>
+          <a href="#" title="Projects" onClick="{{ pick.projects }}" onMouseEnter="{{ enter.projects }}" onMouseLeave="{{ leave.projects }}" style="{{ nav.projects }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path><path d="M8 10v4"></path><path d="M12 10v2"></path><path d="M16 10v6"></path></svg>
+            <span style="{{ navLabelStyle }}">Projects</span>
+          </a>
+          <a href="#" title="Tasks" onClick="{{ pick.tasks }}" onMouseEnter="{{ enter.tasks }}" onMouseLeave="{{ leave.tasks }}" style="{{ nav.tasks }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="m3 17 2 2 4-4"></path><path d="m3 7 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>
+            <span style="{{ navLabelStyle }}">Tasks</span>
+          </a>
+        </div>
+      </div>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Sales</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="#" title="Proposals" onClick="{{ pick.proposals }}" onMouseEnter="{{ enter.proposals }}" onMouseLeave="{{ leave.proposals }}" style="{{ nav.proposals }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>
+            <span style="{{ navLabelStyle }}">Proposals</span>
+          </a>
+          <a href="#" title="Contracts" onClick="{{ pick.contracts }}" onMouseEnter="{{ enter.contracts }}" onMouseLeave="{{ leave.contracts }}" style="{{ nav.contracts }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg>
+            <span style="{{ navLabelStyle }}">Contracts</span>
+          </a>
+        </div>
+      </div>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Billing</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="#" title="Invoices" onClick="{{ pick.invoices }}" onMouseEnter="{{ enter.invoices }}" onMouseLeave="{{ leave.invoices }}" style="{{ nav.invoices }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 17.5v-11"></path></svg>
+            <span style="{{ navLabelStyle }}">Invoices</span>
+          </a>
+          <a href="#" title="Payments" onClick="{{ pick.payments }}" onMouseEnter="{{ enter.payments }}" onMouseLeave="{{ leave.payments }}" style="{{ nav.payments }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect width="20" height="14" x="2" y="5" rx="2"></rect><line x1="2" x2="22" y1="10" y2="10"></line></svg>
+            <span style="{{ navLabelStyle }}">Payments</span>
+          </a>
+        </div>
+      </div>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Workspace</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="Receptionist.dc.html" title="AI Receptionist" onClick="{{ pick.calls }}" onMouseEnter="{{ enter.calls }}" onMouseLeave="{{ leave.calls }}" style="{{ nav.calls }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z"></path></svg>
+            <span style="{{ navLabelStyle }}">AI Receptionist</span>
+          </a>
+          <a href="#" title="Files" onClick="{{ pick.files }}" onMouseEnter="{{ enter.files }}" onMouseLeave="{{ leave.files }}" style="{{ nav.files }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>
+            <span style="{{ navLabelStyle }}">Files</span>
+          </a>
+          <a href="#" title="Calendar" onClick="{{ pick.calendar }}" onMouseEnter="{{ enter.calendar }}" onMouseLeave="{{ leave.calendar }}" style="{{ nav.calendar }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>
+            <span style="{{ navLabelStyle }}">Calendar</span>
+          </a>
+        </div>
+      </div>
+    </nav>
+    <div style="flex:none">
+      <div style="height:1px;background:var(--ink-soft);margin:12px 2px"></div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <a href="#" title="Support Tickets" onClick="{{ pick.support }}" onMouseEnter="{{ enter.support }}" onMouseLeave="{{ leave.support }}" style="{{ nav.support }}">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24"></path><path d="m14.83 9.17 4.24-4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="m9.17 14.83-4.24 4.24"></path><circle cx="12" cy="12" r="4"></circle></svg>
+          <span style="{{ navLabelStyle }}">Support tickets</span>
+        </a>
+        <a href="#" title="Settings" onClick="{{ pick.settings }}" onMouseEnter="{{ enter.settings }}" onMouseLeave="{{ leave.settings }}" style="{{ nav.settings }}">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          <span style="{{ navLabelStyle }}">Settings</span>
+        </a>
+      </div>
+      <div style="height:1px;background:var(--ink-soft);margin:12px 2px"></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 8px">
+        <span style="width:34px;height:34px;flex:none;border-radius:50%;background:var(--teal-600);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">JR</span>
+        <div style="{{ userTextStyle }}">
+          <div style="font-size:13px;font-weight:600;color:#fff;white-space:nowrap">Jordan Rivera</div>
+          <div style="font-size:12px;color:var(--on-dark-muted);white-space:nowrap">Owner</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0;height:100vh">
+    <header style="height:64px;flex:none;background:var(--canvas);border-bottom:1px solid var(--hairline);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 26px;z-index:30">
+      <div style="display:flex;align-items:center;gap:14px;min-width:0">
+        <button aria-label="Toggle sidebar" onClick="{{ toggle }}" style="width:38px;height:38px;flex:none;border-radius:10px;border:1px solid var(--hairline);background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);transition:background .15s ease" style-hover="background:var(--cloud)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg>
+        </button>
+        <div style="min-width:0">
+          <div class="fwa-crumb" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted)">Workspace · AI Receptionist</div>
+          <h1 style="font-family:var(--font-display);font-weight:500;font-size:22px;letter-spacing:-.4px;color:var(--ink);margin:1px 0 0;white-space:nowrap">AI Receptionist</h1>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex:none">
+        <div class="fwa-search" style="display:flex;align-items:center;gap:9px;background:var(--cloud);border:1px solid var(--hairline);border-radius:9999px;padding:8px 10px 8px 14px;width:220px;cursor:text" style-hover="border-color:var(--border-strong)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <span style="flex:1;font-size:14px;color:var(--text-muted)">Search…</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);border:1px solid var(--hairline);border-radius:6px;padding:1px 6px;background:var(--canvas)">⌘K</span>
+        </div>
+        <button aria-label="Notifications" style="position:relative;width:40px;height:40px;flex:none;border-radius:10px;border:1px solid var(--hairline);background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);transition:background .15s ease" style-hover="background:var(--cloud)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+          <span style="position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--error);border:1.5px solid var(--canvas)"></span>
+        </button>
+        <button aria-label="Account menu" style="display:flex;align-items:center;gap:7px;background:transparent;border:none;cursor:pointer;padding:3px 4px 3px 3px;border-radius:10px;transition:background .15s ease" style-hover="background:var(--cloud)">
+          <span style="width:34px;height:34px;flex:none;border-radius:50%;background:var(--teal-600);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">JR</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:22px 26px;overflow:hidden">
+      <div style="width:100%;max-width:1440px;margin:0 auto;flex:1;min-height:0;display:flex;flex-direction:column;gap:16px">
+
+        <!-- page header -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex:none">
+          <div>
+            <div style="display:flex;align-items:center;gap:11px">
+              <h1 style="font-family:var(--font-display);font-weight:500;font-size:26px;letter-spacing:-.5px;color:var(--ink);margin:0">AI Receptionist</h1>
+              <span style="{{ statusPill }}"><span style="{{ statusDot }}"></span>{{ statusLabel }}</span>
+            </div>
+            <p style="font-size:14px;color:var(--text-muted);margin:6px 0 0;display:inline-flex;align-items:center;gap:7px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z"></path></svg>Answering <span style="font-variant-numeric:tabular-nums;color:var(--text-body);font-weight:500">(415) 555-0100</span></p>
+          </div>
+          <button onClick="{{ noop }}" style="display:inline-flex;align-items:center;gap:8px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:9px 18px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;color:var(--ink);transition:background .15s ease;white-space:nowrap;flex:none" style-hover="background:var(--cloud)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            Configure
+          </button>
+        </div>
+
+        <!-- overview strip -->
+        <sc-if value="{{ showChrome }}" hint-placeholder-val="{{ true }}">
+          <div class="fwa-statwrap" style="flex:none">
+            <div style="display:flex;gap:12px;min-width:min-content">
+              <sc-for list="{{ stats }}" as="s" hint-placeholder-count="5">
+                <div style="flex:1;min-width:170px;background:var(--canvas);border:1px solid var(--hairline);border-radius:14px;padding:14px 16px">
+                  <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);white-space:nowrap">{{ s.label }}</div>
+                  <div style="display:flex;align-items:baseline;gap:8px;margin-top:8px">
+                    <div style="font-family:var(--font-display);font-weight:500;font-size:26px;letter-spacing:-.5px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1">{{ s.value }}</div>
+                    <sc-if value="{{ s.hasTrend }}" hint-placeholder-val="{{ false }}"><span style="{{ s.trendStyle }}">{{ s.trend }}</span></sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- controls row -->
+        <sc-if value="{{ showChrome }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;flex:none">
+            <div style="display:inline-flex;align-items:center;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;padding:3px;gap:2px">
+              <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+                <button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }} <span style="{{ t.badge }}">{{ t.count }}</span></button>
+              </sc-for>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="display:flex;align-items:center;gap:9px;background:var(--canvas);border:1px solid var(--hairline);border-radius:9999px;padding:8px 14px;width:260px" style-focus-within="border-color:var(--focus-ring)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                <input value="{{ search }}" onChange="{{ onSearch }}" placeholder="Search caller, number, transcript…" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:var(--font-sans);font-size:14px;color:var(--ink)">
+              </div>
+              <div data-pop style="position:relative">
+                <button onClick="{{ toggleDate }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:8px 14px;cursor:pointer;font-family:var(--font-sans);font-size:14px;font-weight:500;color:var(--ink);transition:background .15s ease" style-hover="background:var(--cloud)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>{{ dateLabel }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><path d="m6 9 6 6 6-6"></path></svg></button>
+                <sc-if value="{{ dateOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;top:44px;right:0;z-index:40;min-width:180px;background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px;animation:fwaPop .12s ease">
+                    <sc-for list="{{ dateOptions }}" as="d" hint-placeholder-count="4"><button onClick="{{ d.pick }}" style="{{ d.style }}">{{ d.label }}</button></sc-for>
+                  </div>
+                </sc-if>
+              </div>
+              <div data-pop style="position:relative">
+                <button onClick="{{ toggleSort }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:8px 14px;cursor:pointer;font-family:var(--font-sans);font-size:14px;font-weight:500;color:var(--ink);transition:background .15s ease" style-hover="background:var(--cloud)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 16 4 4 4-4"></path><path d="M7 20V4"></path><path d="M11 4h10"></path><path d="M11 8h7"></path><path d="M11 12h4"></path></svg>Sort</button>
+                <sc-if value="{{ sortOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;top:44px;right:0;z-index:40;min-width:180px;background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px;animation:fwaPop .12s ease">
+                    <button onClick="{{ sortNewest }}" style="{{ sortOptNewest }}">Newest first</button>
+                    <button onClick="{{ sortOldest }}" style="{{ sortOptOldest }}">Oldest first</button>
+                    <button onClick="{{ sortLongest }}" style="{{ sortOptLongest }}">Longest call</button>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== NOT CONFIGURED ===== -->
+        <sc-if value="{{ showNotConfigured }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;min-height:0;background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;display:flex;align-items:center;justify-content:center;padding:40px">
+            <div style="max-width:460px;text-align:center">
+              <span style="width:66px;height:66px;border-radius:16px;background:var(--mist);color:var(--teal-700);display:inline-flex;align-items:center;justify-content:center;margin-bottom:22px"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z"></path></svg></span>
+              <h2 style="font-family:var(--font-display);font-weight:500;font-size:24px;letter-spacing:-.4px;color:var(--ink);margin:0 0 10px">Your receptionist isn't answering yet</h2>
+              <p style="font-size:15px;line-height:1.6;color:var(--text-muted);margin:0 0 24px">Set a greeting, business hours, and the number to forward, and your AI receptionist will start answering calls and logging every one here — summaries, recordings, and transcripts included.</p>
+              <div style="display:flex;align-items:center;justify-content:center;gap:10px">
+                <button onClick="{{ noop }}" style="display:inline-flex;align-items:center;gap:8px;background:var(--action);color:#fff;border:none;border-radius:9999px;padding:12px 22px 12px 18px;font-family:var(--font-sans);font-weight:600;font-size:15px;cursor:pointer;transition:background .15s ease" style-hover="background:var(--action-hover)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"></path><circle cx="12" cy="12" r="3"></circle></svg>Configure receptionist</button>
+                <button onClick="{{ noop }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:12px 20px;font-family:var(--font-sans);font-weight:600;font-size:15px;cursor:pointer;color:var(--ink)" style-hover="background:var(--cloud)">Learn more</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== MASTER-DETAIL ===== -->
+        <sc-if value="{{ showBody }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;min-height:0;display:flex;background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;overflow:hidden;position:relative">
+
+            <!-- LIST -->
+            <div class="fwa-list" style="width:384px;flex:none;border-right:1px solid var(--hairline);display:flex;flex-direction:column;min-height:0">
+              <div style="flex:none;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--hairline)">
+                <button onClick="{{ selectAll }}" style="display:inline-flex;align-items:center;gap:9px;background:transparent;border:none;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:600;color:var(--text-muted);padding:2px 4px" style-hover="color:var(--ink)"><span style="{{ selectAllStyle }}"><sc-if value="{{ allChecked }}" hint-placeholder-val="{{ false }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if></span>{{ listCountLabel }}</button>
+                <span style="font-family:var(--font-mono);font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--text-muted)">{{ unreadLabel }}</span>
+              </div>
+
+              <sc-if value="{{ newCall }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ dismissNewCall }}" style="flex:none;display:flex;align-items:center;gap:9px;margin:0;padding:10px 16px;background:var(--mist);border:none;border-bottom:1px solid var(--teal-100);cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:600;color:var(--teal-800);text-align:left;animation:fwaDrop .2s ease" style-hover="background:var(--teal-50)"><span style="width:8px;height:8px;flex:none;border-radius:50%;background:var(--teal-500);animation:fwaPulse 1.4s ease infinite"></span>New call just came in — tap to load</button>
+              </sc-if>
+
+              <div class="fwa-listscroll" style="flex:1;min-height:0;overflow-y:auto">
+                <!-- loading skeletons -->
+                <sc-if value="{{ showLoading }}" hint-placeholder-val="{{ false }}">
+                  <sc-for list="{{ skeletonRows }}" as="sk" hint-placeholder-count="6">
+                    <div style="display:flex;gap:12px;padding:15px 16px;border-bottom:1px solid var(--hairline)">
+                      <div style="width:38px;height:38px;border-radius:10px;flex:none;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                      <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+                        <div style="width:{{ sk.w1 }};height:11px;border-radius:6px;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                        <div style="width:{{ sk.w2 }};height:10px;border-radius:6px;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                        <div style="width:60%;height:9px;border-radius:6px;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </sc-if>
+
+                <!-- empty -->
+                <sc-if value="{{ showEmpty }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:60px 28px">
+                    <span style="width:52px;height:52px;border-radius:13px;background:var(--cloud);color:var(--text-muted);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z"></path></svg></span>
+                    <h3 style="font-family:var(--font-display);font-weight:500;font-size:18px;color:var(--ink);margin:0 0 6px">No calls yet</h3>
+                    <p style="font-size:13.5px;color:var(--text-muted);margin:0;line-height:1.5">When your receptionist answers a call, it'll appear here.</p>
+                  </div>
+                </sc-if>
+
+                <!-- no results -->
+                <sc-if value="{{ showNoResults }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:60px 28px">
+                    <span style="width:48px;height:48px;border-radius:12px;background:var(--cloud);color:var(--text-muted);display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg></span>
+                    <h3 style="font-family:var(--font-display);font-weight:500;font-size:17px;color:var(--ink);margin:0 0 4px">No matching calls</h3>
+                    <p style="font-size:13px;color:var(--text-muted);margin:0 0 14px">Try a different search or filter.</p>
+                    <button onClick="{{ clearFilters }}" style="background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:7px 14px;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:600;color:var(--ink)" style-hover="background:var(--cloud)">Clear filters</button>
+                  </div>
+                </sc-if>
+
+                <!-- rows -->
+                <sc-if value="{{ showRows }}" hint-placeholder-val="{{ true }}">
+                  <sc-for list="{{ visibleCalls }}" as="row" hint-placeholder-count="6">
+                    <div onClick="{{ row.select }}" onMouseEnter="{{ row.enter }}" onMouseLeave="{{ row.leave }}" style="{{ row.rowStyle }}">
+                      <div style="width:22px;flex:none;display:flex;align-items:center;justify-content:center;padding-top:2px">
+                        <sc-if value="{{ row.showCheck }}" hint-placeholder-val="{{ false }}"><button onClick="{{ row.toggle }}" role="checkbox" aria-checked="{{ row.checked }}" style="{{ row.checkboxStyle }}"><sc-if value="{{ row.checked }}" hint-placeholder-val="{{ false }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if></button></sc-if>
+                        <sc-if value="{{ row.showDot }}" hint-placeholder-val="{{ false }}"><span style="width:8px;height:8px;border-radius:50%;background:var(--teal-500)"></span></sc-if>
+                      </div>
+                      <div style="flex:1;min-width:0">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                          <span style="{{ row.nameStyle }}">{{ row.caller }}</span>
+                          <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;flex:none;font-variant-numeric:tabular-nums">{{ row.time }}</span>
+                        </div>
+                        <div style="font-size:12.5px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">{{ row.business }}</div>
+                        <div style="font-size:13px;color:var(--text-body);line-height:1.45;margin-top:6px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">{{ row.summary }}</div>
+                        <div style="display:flex;align-items:center;gap:9px;margin-top:9px">
+                          <span style="{{ row.typeChip }}">{{ row.typeLabel }}</span>
+                          <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--text-muted);font-variant-numeric:tabular-nums"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>{{ row.duration }}</span>
+                          <sc-if value="{{ row.hasRecording }}" hint-placeholder-val="{{ false }}"><span title="Recording available" style="display:inline-flex;align-items:center;color:var(--text-muted)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg></span></sc-if>
+                        </div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </sc-if>
+              </div>
+            </div>
+
+            <!-- DETAIL -->
+            <div class="fwa-detail" style="flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;background:var(--cloud)">
+              <!-- detail loading -->
+              <sc-if value="{{ showLoading }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:26px;display:flex;flex-direction:column;gap:18px">
+                  <div style="display:flex;gap:14px"><div style="width:52px;height:52px;border-radius:12px;background:linear-gradient(90deg,var(--canvas) 25%,#ECEEEC 37%,var(--canvas) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div><div style="flex:1;display:flex;flex-direction:column;gap:9px"><div style="width:40%;height:14px;border-radius:6px;background:linear-gradient(90deg,var(--canvas) 25%,#ECEEEC 37%,var(--canvas) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div><div style="width:26%;height:11px;border-radius:6px;background:linear-gradient(90deg,var(--canvas) 25%,#ECEEEC 37%,var(--canvas) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div></div></div>
+                  <div style="height:64px;border-radius:12px;background:linear-gradient(90deg,var(--canvas) 25%,#ECEEEC 37%,var(--canvas) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                  <div style="height:120px;border-radius:12px;background:linear-gradient(90deg,var(--canvas) 25%,#ECEEEC 37%,var(--canvas) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                  <div style="height:200px;border-radius:12px;background:linear-gradient(90deg,var(--canvas) 25%,#ECEEEC 37%,var(--canvas) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                </div>
+              </sc-if>
+
+              <!-- detail empty -->
+              <sc-if value="{{ showDetailEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px">
+                  <span style="width:56px;height:56px;border-radius:14px;background:var(--canvas);border:1px solid var(--hairline);color:var(--text-muted);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"></path><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path></svg></span>
+                  <p style="font-size:14px;color:var(--text-muted);margin:0;max-width:240px">Select a call to read its summary, recording, and transcript.</p>
+                </div>
+              </sc-if>
+
+              <!-- detail content -->
+              <sc-if value="{{ showDetail }}" hint-placeholder-val="{{ true }}">
+                <div style="flex:none;padding:22px 26px;border-bottom:1px solid var(--hairline);background:var(--canvas)">
+                  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+                    <div style="display:flex;align-items:center;gap:13px;min-width:0">
+                      <span style="{{ d.avatarStyle }}">{{ d.initials }}</span>
+                      <div style="min-width:0">
+                        <div style="font-size:18px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.caller }}</div>
+                        <div style="font-size:13px;color:var(--text-muted);white-space:nowrap;font-variant-numeric:tabular-nums">{{ d.subline }}</div>
+                      </div>
+                    </div>
+                    <div data-pop style="position:relative;flex:none">
+                      <button onClick="{{ toggleReclass }}" style="{{ d.typeChipBtn }}">{{ d.typeLabel }}<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;opacity:.6"><path d="m6 9 6 6 6-6"></path></svg></button>
+                      <sc-if value="{{ reclassOpen }}" hint-placeholder-val="{{ false }}">
+                        <div style="position:absolute;top:36px;right:0;z-index:40;min-width:180px;background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px;animation:fwaPop .12s ease">
+                          <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);padding:4px 10px 6px">Reclassify</div>
+                          <sc-for list="{{ reclassOptions }}" as="o" hint-placeholder-count="5"><button onClick="{{ o.pick }}" style="{{ o.style }}"><span style="{{ o.dot }}"></span>{{ o.label }}<sc-if value="{{ o.current }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--action)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if></button></sc-for>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:16px;margin-top:14px;font-size:12.5px;color:var(--text-muted)">
+                    <span style="display:inline-flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>{{ d.ts }}</span>
+                    <span style="display:inline-flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>{{ d.duration }}</span>
+                    <sc-if value="{{ d.reviewed }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:6px;color:var(--success)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"></path></svg>Reviewed</span></sc-if>
+                  </div>
+                </div>
+
+                <div class="fwa-detailscroll" style="flex:1;min-height:0;overflow-y:auto;padding:22px 26px 26px">
+                  <!-- recording -->
+                  <sc-if value="{{ d.hasRecording }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;gap:14px;background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;padding:14px 16px;margin-bottom:22px">
+                      <button onClick="{{ togglePlay }}" aria-label="Play recording" style="width:44px;height:44px;flex:none;border-radius:50%;background:var(--action);border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:#fff" style-hover="background:var(--action-hover)">
+                        <sc-if value="{{ playing }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="5" width="4" height="14" rx="1"></rect><rect x="14" y="5" width="4" height="14" rx="1"></rect></svg></sc-if>
+                        <sc-if value="{{ notPlaying }}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z"></path></svg></sc-if>
+                      </button>
+                      <div style="flex:1;min-width:0">
+                        <div style="display:flex;align-items:center;gap:2px;height:26px">
+                          <sc-for list="{{ waveform }}" as="b" hint-placeholder-count="40"><span style="{{ b.style }}"></span></sc-for>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11.5px;color:var(--text-muted);font-variant-numeric:tabular-nums"><span>{{ playPos }}</span><span>{{ d.duration }}</span></div>
+                      </div>
+                      <button onClick="{{ noop }}" title="Download recording" style="width:36px;height:36px;flex:none;border-radius:9px;border:1px solid var(--hairline);background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--text-muted)" style-hover="background:var(--cloud)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg></button>
+                    </div>
+                  </sc-if>
+
+                  <!-- summary -->
+                  <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Summary</div>
+                  <p style="font-size:14.5px;line-height:1.65;color:var(--text-body);margin:0 0 24px">{{ d.summary }}</p>
+
+                  <!-- captured details -->
+                  <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Captured details</div>
+                  <div style="background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;overflow:hidden;margin-bottom:24px">
+                    <sc-for list="{{ d.captured }}" as="f" hint-placeholder-count="5">
+                      <div style="{{ f.rowStyle }}"><span style="font-size:13px;color:var(--text-muted);flex:none;width:140px">{{ f.k }}</span><span style="font-size:13.5px;color:var(--ink);font-weight:500;text-align:right;min-width:0">{{ f.v }}</span></div>
+                    </sc-for>
+                  </div>
+
+                  <!-- transcript -->
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                    <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted)">Transcript</div>
+                    <span style="font-size:12px;color:var(--text-muted)">{{ d.turnCount }} turns</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:14px">
+                    <sc-for list="{{ d.transcript }}" as="t" hint-placeholder-count="6">
+                      <div style="{{ t.wrapStyle }}">
+                        <div style="{{ t.labelStyle }}">{{ t.who }}</div>
+                        <div style="{{ t.bubbleStyle }}">{{ t.text }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+
+                <!-- actions -->
+                <div style="flex:none;padding:14px 26px;border-top:1px solid var(--hairline);background:var(--canvas);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <sc-if value="{{ d.canConvert }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ openConvert }}" style="display:inline-flex;align-items:center;gap:8px;background:var(--action);color:#fff;border:none;border-radius:9999px;padding:11px 20px 11px 16px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;transition:background .15s ease" style-hover="background:var(--action-hover)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="m5 12 7 7 7-7"></path></svg>Convert to lead</button>
+                  </sc-if>
+                  <sc-if value="{{ d.hasLink }}" hint-placeholder-val="{{ false }}">
+                    <a href="{{ d.linkHref }}" style="display:inline-flex;align-items:center;gap:8px;background:var(--mist);color:var(--teal-800);border:1px solid var(--teal-100);border-radius:9999px;padding:9px 16px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;text-decoration:none" style-hover="background:var(--teal-50)"><span style="{{ d.linkDot }}"></span>{{ d.linkLabel }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a>
+                  </sc-if>
+                  <div style="flex:1"></div>
+                  <button onClick="{{ toggleReviewed }}" style="{{ d.reviewedBtn }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"></path></svg>{{ d.reviewedLabel }}</button>
+                  <button onClick="{{ noop }}" title="Ignore / archive" style="display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:9px 15px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;color:var(--ink)" style-hover="background:var(--cloud)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"></path><path d="M10 12h4"></path></svg>Ignore</button>
+                </div>
+              </sc-if>
+            </div>
+
+            <!-- bulk toolbar -->
+            <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;left:50%;bottom:20px;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:8px;background:var(--ink);border-radius:9999px;padding:8px 8px 8px 16px;box-shadow:var(--shadow-pop);animation:fwaDrop .18s ease">
+                <span style="font-size:13px;font-weight:600;color:#fff;white-space:nowrap">{{ selectionText }}</span>
+                <span style="width:1px;height:20px;background:var(--ink-soft);margin:0 4px"></span>
+                <button onClick="{{ bulkClear }}" style="{{ bulkBtn }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"></path></svg>Mark reviewed</button>
+                <button onClick="{{ bulkClear }}" style="{{ bulkBtn }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>Reclassify</button>
+                <button onClick="{{ bulkClear }}" style="{{ bulkBtn }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="m5 12 7 7 7-7"></path></svg>Convert</button>
+                <button onClick="{{ bulkClear }}" style="{{ bulkBtnDanger }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"></path></svg>Delete</button>
+                <button onClick="{{ clearSelection }}" aria-label="Clear selection" style="width:32px;height:32px;flex:none;border-radius:50%;border:none;background:var(--ink-soft);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--on-dark)" style-hover="background:#2a3230"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+              </div>
+            </sc-if>
+
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- convert-to-lead confirmation -->
+<sc-if value="{{ convertOpen }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:24px">
+    <div onClick="{{ closeConvert }}" style="position:absolute;inset:0;background:var(--scrim);animation:fwaScrim .15s ease"></div>
+    <div style="position:relative;width:452px;max-width:100%;background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;box-shadow:var(--shadow-pop);padding:26px;animation:fwaPop .16s ease">
+      <span style="width:46px;height:46px;border-radius:12px;background:var(--mist);color:var(--teal-700);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="m5 12 7 7 7-7"></path></svg></span>
+      <h3 style="font-family:var(--font-display);font-weight:500;font-size:21px;letter-spacing:-.3px;color:var(--ink);margin:0 0 8px">Convert to lead</h3>
+      <p style="font-size:14.5px;line-height:1.6;color:var(--text-body);margin:0">Create a contact for <strong style="color:var(--ink)">{{ convertName }}</strong> with source <strong style="color:var(--ink)">Call</strong>. They'll appear in <strong style="color:var(--ink)">Leads → Inbound</strong> at the New stage, and this call will be linked to the new contact.</p>
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:22px">
+        <button onClick="{{ closeConvert }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:10px 18px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;color:var(--ink)" style-hover="background:var(--cloud)">Cancel</button>
+        <button onClick="{{ confirmConvert }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--action);color:#fff;border:none;border-radius:9999px;padding:10px 20px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer" style-hover="background:var(--action-hover)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="m5 12 7 7 7-7"></path></svg>Create lead</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;viewState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;populated&quot;,&quot;notConfigured&quot;,&quot;empty&quot;,&quot;loading&quot;],&quot;default&quot;:&quot;populated&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;State&quot;},&quot;startCollapsed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;}}">
+class Component extends DCLogic {
+  state = {
+    collapsed: null, navActive: 'calls', navHover: null,
+    tab: 'all', search: '', sortKey: 'newest', dateRange: '7d',
+    selected: {}, hoverRow: null, pop: null,
+    selectedId: 'delta', reclass: {}, reviewed: {}, contactLinks: {},
+    playing: false, reclassOpen: false, convert: null, newCall: false,
+  };
+
+  CALLS = [
+    { id: 'delta', name: 'Rachel Munoz', number: '(415) 555-0148', business: 'Delta Kitchens', type: 'inquiry', unread: true, contactId: null, time: '12m ago', ts: 'Today, 9:12 AM', duration: '4:12', sortT: 0.2, dur: 252,
+      summary: 'Rachel runs a kitchen-remodeling business and wants a new website with online consultation booking. Her current site is about six years old and not mobile-friendly. She mentioned an approximate budget and hopes to launch before spring.',
+      captured: [['Name', 'Rachel Munoz'], ['Business', 'Delta Kitchens'], ['Reason for call', 'New website + online booking'], ['Callback number', '(415) 555-0148'], ['Timeline', 'Before spring'], ['Budget', 'Mentioned']],
+      transcript: [
+        { r: true, t: 'Thanks for calling Francis Web Agency — this is the front desk. How can I help you today?' },
+        { r: false, t: "Hi, yeah, I run a kitchen remodeling business and I think I need a whole new website. Mine's pretty old." },
+        { r: true, t: 'Happy to help with that. When you say old — is it not working on phones, or more that it looks dated?' },
+        { r: false, t: 'Both, honestly. And I want people to be able to book a consultation online instead of calling.' },
+        { r: true, t: 'Got it — a modern site with online booking built in. Do you have a rough timeline or budget in mind?' },
+        { r: false, t: "I'd love to launch before spring. Budget's flexible but I want it done right." },
+        { r: true, t: "Perfect. I'll pass this to the team with your number and they'll follow up with next steps. Anything else?" },
+        { r: false, t: 'That covers it, thank you!' },
+      ] },
+    { id: 'bloom', name: 'Sofia Nguyen', number: '(212) 555-0173', business: 'Bloom Floral', type: 'inquiry', unread: true, contactId: 'bloom', time: '5h ago', ts: 'Today, 6:40 AM', duration: '3:28', sortT: 5, dur: 208,
+      summary: 'Sofia owns a flower shop and wants to add e-commerce with same-day delivery scheduling. She currently takes orders by phone and is losing evening sales. Interested in a phased build starting with the storefront.',
+      captured: [['Name', 'Sofia Nguyen'], ['Business', 'Bloom Floral'], ['Reason for call', 'E-commerce + delivery scheduling'], ['Callback number', '(212) 555-0173'], ['Current setup', 'Phone orders only']],
+      transcript: [
+        { r: true, t: 'Francis Web Agency, this is the front desk — how can I help?' },
+        { r: false, t: 'Hi! I have a flower shop and I want to start selling online with delivery times customers can pick.' },
+        { r: true, t: 'Lovely. Are you taking any orders online today, or all by phone right now?' },
+        { r: false, t: 'All by phone, and I lose a lot of evening orders because of it.' },
+        { r: true, t: "Understood — a storefront with scheduled delivery would cover that. I'll have the team reach out with options." },
+        { r: false, t: 'Great, thanks so much.' },
+      ] },
+    { id: 'northwind', name: 'Dana Cole', number: '(503) 555-0110', business: 'Northwind Co. · Client', type: 'client', unread: false, contactId: 'northwind', time: '1d ago', ts: 'Yesterday, 3:22 PM', duration: '2:05', sortT: 26, dur: 125,
+      summary: 'Dana from Northwind (existing client) called about an invoice question on their latest project milestone. Wanted to confirm the amount and the due date before approving internally.',
+      captured: [['Name', 'Dana Cole'], ['Business', 'Northwind Co.'], ['Reason for call', 'Invoice question'], ['Callback number', '(503) 555-0110'], ['Account', 'Active client']],
+      transcript: [
+        { r: true, t: 'Francis Web Agency, front desk speaking.' },
+        { r: false, t: "Hi, it's Dana from Northwind — I have a quick question about our latest invoice." },
+        { r: true, t: "Of course, Dana. I'll flag this to your account owner so they can confirm the amount and due date." },
+        { r: false, t: 'Perfect, thank you.' },
+      ] },
+    { id: 'robocall', name: null, number: '(800) 555-0011', business: null, type: 'spam', unread: false, contactId: null, time: '1d ago', ts: 'Yesterday, 11:04 AM', duration: '0:18', sortT: 30, dur: 18,
+      summary: 'Automated robocall about an expiring vehicle warranty. No real caller — receptionist ended the call after detecting a pre-recorded message.',
+      captured: [['Number', '(800) 555-0011'], ['Detected as', 'Robocall / warranty scam'], ['Action taken', 'Call ended']],
+      transcript: [
+        { r: true, t: 'Francis Web Agency, how can I help you?' },
+        { r: false, t: '(Pre-recorded) We have been trying to reach you about your vehicle\u2019s extended warranty…' },
+        { r: true, t: 'This appears to be an automated message. Ending the call.' },
+      ] },
+    { id: 'wrong', name: null, number: '(646) 555-0295', business: null, type: 'wrongnumber', unread: false, contactId: null, time: '2d ago', ts: '2 days ago, 4:47 PM', duration: '0:22', sortT: 52, dur: 22,
+      summary: 'Caller was trying to reach a pharmacy and dialed the wrong number. Receptionist clarified and politely ended the call.',
+      captured: [['Number', '(646) 555-0295'], ['Reason for call', 'Wanted a pharmacy'], ['Action taken', 'Clarified wrong number']],
+      transcript: [
+        { r: true, t: 'Francis Web Agency, how can I help you?' },
+        { r: false, t: 'Oh — is this the pharmacy on 5th?' },
+        { r: true, t: "You've reached Francis Web Agency, a web design studio. I think you may have the wrong number." },
+        { r: false, t: 'Sorry about that!' },
+      ] },
+    { id: 'permit', name: 'City of Portland', number: '(503) 555-0777', business: 'Permitting Office', type: 'other', unread: false, contactId: null, time: '3d ago', ts: '3 days ago, 10:12 AM', duration: '1:10', sortT: 74, dur: 70,
+      summary: 'Automated-adjacent message from the city permitting office following up on a business license renewal. Left a reference number and a callback line.',
+      captured: [['Caller', 'City of Portland'], ['Reason for call', 'Business license renewal'], ['Reference', 'BL-2026-4471'], ['Callback number', '(503) 555-0777']],
+      transcript: [
+        { r: true, t: 'Francis Web Agency, front desk speaking.' },
+        { r: false, t: 'This is the Portland permitting office regarding a business license renewal reference BL-2026-4471.' },
+        { r: true, t: "Thank you — I'll log this and pass along the reference number to the owner." },
+      ] },
+    { id: 'fielder', name: 'Tom Fielder', number: '(503) 555-0192', business: 'Fielder Roofing', type: 'inquiry', unread: false, contactId: 'fielder', time: '3d ago', ts: '3 days ago, 2:05 PM', duration: '5:47', sortT: 75, dur: 347,
+      summary: 'Tom wants a lead-generation site with quote-request forms and is comparing two agencies, so a fast proposal matters. Emphasized ranking locally for roofing searches.',
+      captured: [['Name', 'Tom Fielder'], ['Business', 'Fielder Roofing'], ['Reason for call', 'Lead-gen site + quote forms'], ['Callback number', '(503) 555-0192'], ['Note', 'Comparing 2 agencies']],
+      transcript: [
+        { r: true, t: 'Francis Web Agency, how can I help?' },
+        { r: false, t: 'I need a website that actually brings in roofing leads. Forms, quotes, the works.' },
+        { r: true, t: "We do exactly that. I'll have the team send a proposal — I understand timing matters." },
+        { r: false, t: "It does, I'm talking to a couple other folks. Appreciate it." },
+      ] },
+  ];
+
+  TYPES = { inquiry: 'Inquiry', client: 'Client', spam: 'Spam', wrongnumber: 'Wrong number', other: 'Other' };
+  RECLASS_ORDER = ['inquiry', 'client', 'spam', 'wrongnumber', 'other'];
+
+  STATS = [
+    { label: 'Calls this week', value: '34', trend: '+12%', up: true },
+    { label: 'Inquiries captured', value: '11', trend: '+4', up: true },
+    { label: 'After-hours answered', value: '7', trend: null, up: true },
+    { label: 'Avg. duration', value: '3:12', trend: null, up: true },
+    { label: 'Converted to leads', value: '6', trend: '+2', up: true },
+  ];
+
+  componentDidMount() {
+    this._doc = (e) => { if (!e.target.closest('[data-pop]')) this.setState({ pop: null, reclassOpen: false }); };
+    document.addEventListener('mousedown', this._doc);
+    const ts = this.props.viewState ?? 'populated';
+    if (ts === 'populated') this._t = setTimeout(() => this.setState({ newCall: true }), 4500);
+  }
+  componentWillUnmount() { document.removeEventListener('mousedown', this._doc); if (this._t) clearTimeout(this._t); }
+
+  navItemStyle(on, hov, collapsed) {
+    return ['display:flex','align-items:center','gap:' + (collapsed ? '0' : '12px'),'justify-content:' + (collapsed ? 'center' : 'flex-start'),'padding:' + (collapsed ? '11px 0' : '9px 11px'),'border-radius:10px','text-decoration:none','font-family:var(--font-sans)','font-size:14px','font-weight:' + (on ? '600' : '500'),'cursor:pointer','position:relative','white-space:nowrap','border-left:3px solid ' + ((on && !collapsed) ? 'var(--teal-400)' : 'transparent'),'transition:background .15s ease, color .15s ease','color:' + (on ? '#fff' : (hov ? '#fff' : 'var(--on-dark-muted)')),'background:' + (on ? 'var(--teal-800)' : (hov ? 'var(--ink-soft)' : 'transparent'))].join(';');
+  }
+
+  effType(c) { return this.state.reclass[c.id] ?? c.type; }
+  isReviewed(c) { return this.state.reviewed[c.id] ?? !c.unread; }
+  effContact(c) { return this.state.contactLinks[c.id] ?? c.contactId; }
+
+  typeColor(key) {
+    if (key === 'inquiry') return { bg: 'var(--mist)', fg: 'var(--teal-700)', dot: 'var(--teal-600)' };
+    if (key === 'client') return { bg: 'var(--info-bg)', fg: 'var(--info)', dot: 'var(--info)' };
+    if (key === 'spam') return { bg: 'var(--error-bg)', fg: 'var(--error)', dot: 'var(--error)' };
+    return { bg: 'var(--cloud)', fg: 'var(--text-body)', dot: 'var(--text-muted)' };
+  }
+  chip(key) {
+    const c = this.typeColor(key);
+    return 'display:inline-flex;align-items:center;gap:5px;background:' + c.bg + ';color:' + c.fg + ';font-family:var(--font-sans);font-size:11.5px;font-weight:600;line-height:1.4;padding:3px 9px;border-radius:9999px';
+  }
+
+  renderVals() {
+    const collapsed = this.state.collapsed ?? (this.props.startCollapsed ?? false);
+    const active = this.state.navActive, navHover = this.state.navHover;
+    const ids = ['dashboard','leads','clients','projects','tasks','proposals','contracts','invoices','payments','calls','files','calendar','support','settings'];
+    const linked = { leads: 1, clients: 1, calls: 1, dashboard: 1 };
+    const nav = {}, pick = {}, enter = {}, leave = {};
+    ids.forEach((id) => {
+      nav[id] = this.navItemStyle(active === id, navHover === id, collapsed);
+      pick[id] = (e) => { if (e && e.preventDefault && !linked[id]) e.preventDefault(); this.setState({ navActive: id }); };
+      enter[id] = () => this.setState({ navHover: id });
+      leave[id] = () => this.setState({ navHover: null });
+    });
+    const asideStyle = ['width:' + (collapsed ? '74px' : '260px'),'flex:none','background:var(--ink)','color:var(--on-dark)','display:flex','flex-direction:column','padding:' + (collapsed ? '18px 12px' : '20px 16px'),'height:100vh','box-sizing:border-box','overflow:hidden','transition:width .2s ease, padding .2s ease'].join(';');
+
+    const ts = this.props.viewState ?? 'populated';
+    const isNotConfigured = ts === 'notConfigured';
+    const isEmpty = ts === 'empty';
+    const isLoading = ts === 'loading';
+
+    // ---- stats ----
+    const stats = this.STATS.map(s => ({
+      label: s.label, value: (isEmpty || isLoading) ? '—' : s.value,
+      hasTrend: !!s.trend && !isEmpty && !isLoading, trend: s.trend || '',
+      trendStyle: 'display:inline-flex;align-items:center;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:' + (s.up ? 'var(--success)' : 'var(--error)'),
+    }));
+
+    // ---- tabs ----
+    const counts = {
+      all: this.CALLS.length,
+      inquiry: this.CALLS.filter(c => this.effType(c) === 'inquiry').length,
+      client: this.CALLS.filter(c => this.effType(c) === 'client').length,
+      other: this.CALLS.filter(c => ['spam','wrongnumber','other'].includes(this.effType(c))).length,
+    };
+    const TAB_DEFS = [['all','All'],['inquiry','Inquiries'],['client','Clients'],['other','Other']];
+    const tab = this.state.tab;
+    const tabs = TAB_DEFS.map(([k, label]) => {
+      const on = tab === k;
+      return { key: k, label, count: isEmpty ? 0 : counts[k],
+        style: 'display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;border:none;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:' + (on ? '600' : '500') + ';transition:all .12s ease;background:' + (on ? 'var(--canvas)' : 'transparent') + ';color:' + (on ? 'var(--ink)' : 'var(--text-muted)') + ';box-shadow:' + (on ? 'var(--shadow-soft)' : 'none'),
+        badge: 'font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;padding:1px 7px;border-radius:9999px;background:' + (on ? 'var(--mist)' : 'var(--cloud)') + ';color:' + (on ? 'var(--teal-700)' : 'var(--text-muted)'),
+        onClick: () => this.setState({ tab: k }) };
+    });
+
+    // ---- filter / sort ----
+    const q = this.state.search.trim().toLowerCase();
+    let calls = this.CALLS.slice();
+    if (tab === 'inquiry') calls = calls.filter(c => this.effType(c) === 'inquiry');
+    else if (tab === 'client') calls = calls.filter(c => this.effType(c) === 'client');
+    else if (tab === 'other') calls = calls.filter(c => ['spam','wrongnumber','other'].includes(this.effType(c)));
+    if (q) calls = calls.filter(c => ((c.name || '') + ' ' + c.number + ' ' + (c.business || '') + ' ' + c.summary + ' ' + c.transcript.map(t => t.t).join(' ')).toLowerCase().includes(q));
+    const sortKey = this.state.sortKey;
+    calls.sort((a, b) => sortKey === 'oldest' ? b.sortT - a.sortT : (sortKey === 'longest' ? b.dur - a.dur : a.sortT - b.sortT));
+
+    const selected = this.state.selected, hoverRow = this.state.hoverRow, selId = this.state.selectedId;
+    const PAL = [ { bg: 'var(--mist)', fg: 'var(--teal-700)' }, { bg: 'var(--info-bg)', fg: 'var(--info)' }, { bg: 'var(--sand)', fg: 'var(--ink)' }, { bg: 'var(--cloud)', fg: 'var(--text-body)' } ];
+    const initialsOf = (c) => c.name ? c.name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase() : '#';
+
+    const visibleCalls = calls.map((c, i) => {
+      const tkey = this.effType(c), checked = !!selected[c.id], hover = hoverRow === c.id, sel = selId === c.id;
+      const reviewed = this.isReviewed(c), unread = !reviewed;
+      const anySel = Object.keys(selected).some(k => selected[k]);
+      const showCheck = checked || hover || anySel;
+      return {
+        id: c.id, caller: c.name || c.number, business: c.business || (c.name ? '' : 'Unknown caller'),
+        summary: c.summary, time: c.time, duration: c.duration, typeLabel: this.TYPES[tkey], typeChip: this.chip(tkey),
+        hasRecording: true, checked, showCheck, showDot: !showCheck && unread,
+        nameStyle: 'font-size:14px;font-weight:' + (unread ? '700' : '600') + ';color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis',
+        checkboxStyle: 'width:18px;height:18px;flex:none;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;border:1px solid ' + (checked ? 'var(--action)' : 'var(--border-strong)') + ';background:' + (checked ? 'var(--action)' : 'var(--canvas)'),
+        rowStyle: 'display:flex;gap:11px;padding:14px 16px;border-bottom:1px solid var(--hairline);cursor:pointer;transition:background .12s ease;border-left:3px solid ' + (sel ? 'var(--teal-500)' : 'transparent') + ';background:' + (sel ? 'var(--mist)' : (checked ? 'var(--teal-50)' : (hover ? 'var(--cloud)' : 'var(--canvas)'))),
+        toggle: (e) => { e.stopPropagation(); this.setState(s => ({ selected: { ...s.selected, [c.id]: !s.selected[c.id] } })); },
+        enter: () => this.setState({ hoverRow: c.id }),
+        leave: () => this.setState({ hoverRow: null }),
+        select: () => this.setState({ selectedId: c.id, playing: false, reviewed: { ...this.state.reviewed, [c.id]: true }, reclassOpen: false }),
+      };
+    });
+
+    // ---- selection ----
+    const selCount = Object.keys(selected).filter(k => selected[k]).length;
+    const visIds = visibleCalls.map(r => r.id);
+    const allChecked = visibleCalls.length > 0 && visIds.every(id => selected[id]);
+    const unreadCount = this.CALLS.filter(c => !this.isReviewed(c)).length;
+
+    // ---- detail ----
+    const cur = this.CALLS.find(c => c.id === selId) || null;
+    let d = null;
+    if (cur) {
+      const tkey = this.effType(cur);
+      const cid = this.effContact(cur);
+      const reviewed = this.isReviewed(cur);
+      const linkMap = { bloom: { label: 'Sofia Nguyen · Lead', href: 'Leads.dc.html', kind: 'lead' }, northwind: { label: 'Northwind Co. · Client', href: 'ClientDetail.dc.html', kind: 'client' }, fielder: { label: 'Tom Fielder · Lead', href: 'Leads.dc.html', kind: 'lead' } };
+      const link = cid ? linkMap[cid] : null;
+      const canConvert = tkey === 'inquiry' && !cid;
+      d = {
+        id: cur.id, caller: cur.name || cur.number, initials: initialsOf(cur),
+        avatarStyle: 'width:46px;height:46px;flex:none;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;background:' + PAL[0].bg + ';color:' + PAL[0].fg,
+        subline: (cur.business ? cur.business + ' · ' : '') + cur.number,
+        ts: cur.ts, duration: cur.duration, typeLabel: this.TYPES[tkey],
+        typeChipBtn: this.chip(tkey) + ';cursor:pointer;border:none;padding:5px 10px',
+        reviewed, hasRecording: true, summary: cur.summary,
+        captured: cur.captured.map((f, i) => ({ k: f[0], v: f[1], rowStyle: 'display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px 15px;' + (i > 0 ? 'border-top:1px solid var(--hairline)' : '') })),
+        turnCount: cur.transcript.length,
+        transcript: cur.transcript.map(t => ({
+          who: t.r ? 'Receptionist' : 'Caller', text: t.t,
+          wrapStyle: 'display:flex;flex-direction:column;gap:5px;max-width:86%;align-self:' + (t.r ? 'flex-start' : 'flex-end'),
+          labelStyle: 'font-family:var(--font-mono);font-size:10px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);padding:0 4px;text-align:' + (t.r ? 'left' : 'right'),
+          bubbleStyle: 'font-size:14px;line-height:1.55;padding:11px 14px;border-radius:14px;' + (t.r ? 'background:var(--canvas);border:1px solid var(--hairline);color:var(--text-body);border-bottom-left-radius:4px' : 'background:var(--teal-800);color:var(--on-dark);border-bottom-right-radius:4px'),
+        })),
+        canConvert, hasLink: !!link, linkLabel: link ? link.label : '', linkHref: link ? link.href : '#',
+        linkDot: 'width:7px;height:7px;flex:none;border-radius:50%;background:' + (link && link.kind === 'client' ? 'var(--info)' : 'var(--teal-600)'),
+        reviewedLabel: reviewed ? 'Reviewed' : 'Mark reviewed',
+        reviewedBtn: 'display:inline-flex;align-items:center;gap:7px;border-radius:9999px;padding:9px 15px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;transition:all .12s ease;' + (reviewed ? 'background:var(--success-bg);color:var(--success);border:1px solid transparent' : 'background:var(--canvas);color:var(--ink);border:1px solid var(--border-strong)'),
+      };
+    }
+
+    // ---- reclassify menu ----
+    const reclassOptions = cur ? this.RECLASS_ORDER.map(k => {
+      const cc = this.typeColor(k), on = this.effType(cur) === k;
+      return { key: k, label: this.TYPES[k], current: on,
+        dot: 'width:8px;height:8px;flex:none;border-radius:50%;background:' + cc.dot,
+        style: 'display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;text-align:left;color:var(--text-body);font-weight:' + (on ? '600' : '400'),
+        pick: () => this.setState(s => ({ reclass: { ...s.reclass, [cur.id]: k }, reclassOpen: false })) };
+    }) : [];
+
+    // ---- waveform ----
+    const wf = [];
+    const seed = cur ? cur.dur : 100;
+    for (let i = 0; i < 44; i++) {
+      const h = 5 + Math.abs(Math.sin(i * 1.7 + seed) * Math.cos(i * 0.6)) * 20;
+      const played = this.state.playing && i < 14;
+      wf.push({ style: 'flex:1;height:' + h.toFixed(0) + 'px;border-radius:9999px;background:' + (played ? 'var(--teal-600)' : 'var(--border-strong)') });
+    }
+
+    // ---- date options ----
+    const DATE_DEFS = [['today','Today'],['7d','This week'],['30d','This month'],['all','All time']];
+    const dateRange = this.state.dateRange;
+    const dateOptions = DATE_DEFS.map(([k, label]) => ({ key: k, label, style: 'display:flex;align-items:center;justify-content:space-between;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;text-align:left;color:' + (dateRange === k ? 'var(--action)' : 'var(--text-body)') + ';font-weight:' + (dateRange === k ? '600' : '400'), pick: () => this.setState({ dateRange: k, pop: null }) }));
+    const dateLabel = (DATE_DEFS.find(d => d[0] === dateRange) || DATE_DEFS[1])[1];
+
+    const optS = (on) => 'display:flex;align-items:center;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;text-align:left;color:' + (on ? 'var(--action)' : 'var(--text-body)') + ';font-weight:' + (on ? '600' : '400');
+
+    // ---- view flags ----
+    const hasRows = !isLoading && !isEmpty && visibleCalls.length > 0;
+    const conv = this.state.convert;
+
+    return {
+      collapsed, nav, pick, enter, leave,
+      toggle: () => this.setState({ collapsed: !collapsed }),
+      asideStyle,
+      logoWordStyle: 'font-family:var(--font-display);font-weight:500;font-size:19px;letter-spacing:-.3px;color:#fff;white-space:nowrap;display:' + (collapsed ? 'none' : 'block'),
+      groupLabelStyle: 'font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--on-dark-muted);opacity:.6;padding:0 11px;margin:0 0 7px;white-space:nowrap;display:' + (collapsed ? 'none' : 'block'),
+      groupDivider: 'height:1px;background:var(--ink-soft);margin:14px 10px 0;display:' + (collapsed ? 'block' : 'none'),
+      navLabelStyle: 'overflow:hidden;display:' + (collapsed ? 'none' : 'inline'),
+      userTextStyle: 'line-height:1.3;overflow:hidden;display:' + (collapsed ? 'none' : 'block'),
+      noop: () => {},
+
+      // status
+      statusPill: 'display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;padding:4px 11px 4px 9px;border-radius:9999px;' + (isNotConfigured ? 'background:var(--cloud);color:var(--text-muted)' : 'background:var(--success-bg);color:var(--success)'),
+      statusDot: 'width:7px;height:7px;border-radius:50%;background:' + (isNotConfigured ? 'var(--text-muted)' : 'var(--success)') + (isNotConfigured ? '' : ';animation:fwaPulse 2s ease infinite'),
+      statusLabel: isNotConfigured ? 'Offline' : 'Online',
+
+      // chrome / states
+      showChrome: !isNotConfigured,
+      showNotConfigured: isNotConfigured,
+      showBody: !isNotConfigured,
+      showLoading: isLoading,
+      showEmpty: isEmpty,
+      showNoResults: !isLoading && !isEmpty && visibleCalls.length === 0,
+      showRows: hasRows,
+      showDetail: !isLoading && !isEmpty && !!cur && !this.state.mobileNoSel,
+      showDetailEmpty: !isLoading && (isEmpty || !cur),
+
+      // stats / tabs / controls
+      stats, tabs,
+      search: this.state.search, onSearch: (e) => this.setState({ search: e.target.value }),
+      dateOpen: this.state.pop === 'date', sortOpen: this.state.pop === 'sort',
+      toggleDate: () => this.setState(s => ({ pop: s.pop === 'date' ? null : 'date' })),
+      toggleSort: () => this.setState(s => ({ pop: s.pop === 'sort' ? null : 'sort' })),
+      dateOptions, dateLabel,
+      sortNewest: () => this.setState({ sortKey: 'newest', pop: null }),
+      sortOldest: () => this.setState({ sortKey: 'oldest', pop: null }),
+      sortLongest: () => this.setState({ sortKey: 'longest', pop: null }),
+      sortOptNewest: optS(sortKey === 'newest'), sortOptOldest: optS(sortKey === 'oldest'), sortOptLongest: optS(sortKey === 'longest'),
+      clearFilters: () => this.setState({ search: '', tab: 'all' }),
+
+      // list
+      visibleCalls,
+      listCountLabel: visibleCalls.length + (visibleCalls.length === 1 ? ' call' : ' calls'),
+      unreadLabel: unreadCount > 0 ? unreadCount + ' unread' : 'All reviewed',
+      selectAll: () => this.setState(s => { const sel = { ...s.selected }; if (allChecked) { visIds.forEach(id => delete sel[id]); } else { visIds.forEach(id => sel[id] = true); } return { selected: sel }; }),
+      selectAllStyle: 'width:18px;height:18px;flex:none;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;border:1px solid ' + (allChecked ? 'var(--action)' : 'var(--border-strong)') + ';background:' + (allChecked ? 'var(--action)' : 'var(--canvas)'),
+      allChecked,
+      skeletonRows: [ { w1: '55%', w2: '38%' }, { w1: '48%', w2: '30%' }, { w1: '60%', w2: '42%' }, { w1: '44%', w2: '34%' }, { w1: '52%', w2: '36%' }, { w1: '46%', w2: '28%' } ],
+
+      // new call banner
+      newCall: this.state.newCall,
+      dismissNewCall: () => this.setState({ newCall: false }),
+
+      // detail
+      d,
+      reclassOpen: this.state.reclassOpen,
+      toggleReclass: (e) => { if (e) e.stopPropagation(); this.setState(s => ({ reclassOpen: !s.reclassOpen, pop: null })); },
+      reclassOptions,
+      playing: this.state.playing, notPlaying: !this.state.playing,
+      togglePlay: () => this.setState(s => ({ playing: !s.playing })),
+      playPos: this.state.playing ? '1:12' : '0:00',
+      waveform: wf,
+      toggleReviewed: () => cur && this.setState(s => ({ reviewed: { ...s.reviewed, [cur.id]: !(s.reviewed[cur.id] ?? !cur.unread) } })),
+
+      // selection / bulk
+      hasSelection: selCount > 0,
+      selectionText: selCount + ' selected',
+      bulkBtn: 'display:inline-flex;align-items:center;gap:6px;background:transparent;border:none;border-radius:9999px;padding:7px 12px;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:600;color:var(--on-dark);transition:background .12s ease',
+      bulkBtnDanger: 'display:inline-flex;align-items:center;gap:6px;background:transparent;border:none;border-radius:9999px;padding:7px 12px;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:600;color:#F2A5A0;transition:background .12s ease',
+      bulkClear: () => this.setState({ selected: {} }),
+      clearSelection: () => this.setState({ selected: {} }),
+
+      // convert
+      convertOpen: !!conv,
+      convertName: conv ? conv.name : '',
+      openConvert: () => cur && this.setState({ convert: { id: cur.id, name: cur.name || cur.number } }),
+      closeConvert: () => this.setState({ convert: null }),
+      confirmConvert: () => this.setState(s => ({ contactLinks: s.convert ? { ...s.contactLinks, [s.convert.id]: s.convert.id } : s.contactLinks, convert: null })),
+    };
+  }
+}
+</script>
+</body>
+</html>

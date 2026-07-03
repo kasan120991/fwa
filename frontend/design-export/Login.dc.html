@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <script src="./ds-base.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#FFFFFF;font-family:'Inter',system-ui,sans-serif;color:#4A5654;-webkit-font-smoothing:antialiased}
+    .fwa-in{opacity:1}
+    @media (max-width:900px){
+      .fwa-brand{display:none !important}
+      .fwa-formpane{flex:1 1 100% !important}
+    }
+  </style>
+</helmet>
+
+<div style="display:flex;min-height:100vh;width:100%">
+
+  <!-- LEFT — brand panel -->
+  <div class="fwa-brand" style="position:relative;flex:0 0 56%;background:#073A34;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px">
+    <!-- faint grid -->
+    <div style="position:absolute;inset:0;background-image:linear-gradient(#0FA08C 1px,transparent 1px),linear-gradient(90deg,#0FA08C 1px,transparent 1px);background-size:56px 56px;opacity:.05"></div>
+    <!-- soft top-light glow -->
+    <div style="position:absolute;top:-20%;left:50%;transform:translateX(-50%);width:820px;height:820px;border-radius:50%;background:radial-gradient(circle,rgba(37,187,164,.20) 0%,rgba(7,58,52,0) 62%);pointer-events:none"></div>
+    <!-- concentric ring accent -->
+    <div style="position:absolute;bottom:-260px;right:-200px;width:640px;height:640px;border-radius:50%;border:1px solid rgba(153,230,214,.10)"></div>
+    <div style="position:absolute;bottom:-180px;right:-120px;width:480px;height:480px;border-radius:50%;border:1px solid rgba(153,230,214,.08)"></div>
+
+    <div style="position:relative;display:flex;flex-direction:column;align-items:center;text-align:center">
+      <img src="assets/fwa-logo-stacked-white.svg" alt="Francis Web Agency" style="width:300px;max-width:60%;height:auto;display:block">
+      <div style="width:40px;height:1px;background:rgba(153,230,214,.35);margin:34px 0 22px"></div>
+      <p style="font-family:'Inter',sans-serif;font-size:16px;line-height:1.6;color:#99E6D6;max-width:340px;margin:0;letter-spacing:.1px">Agency Management Platform — everything your agency needs, in one place.</p>
+    </div>
+
+    <div style="position:absolute;left:48px;bottom:40px;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:rgba(153,230,214,.55)">Francis Web Agency · Internal</div>
+  </div>
+
+  <!-- RIGHT — form pane -->
+  <div class="fwa-formpane" style="flex:1 1 44%;display:flex;align-items:center;justify-content:center;padding:48px 40px;background:#FFFFFF">
+    <div style="width:100%;max-width:420px">
+
+      <!-- mobile mini-brand -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:36px;justify-content:center">
+        <span style="width:34px;height:34px;border-radius:9px;background:#073A34;display:inline-flex;align-items:center;justify-content:center">
+          <img src="assets/fwa-mark-white.svg" alt="" style="width:18px;height:18px;display:block">
+        </span>
+      </div>
+
+      <div class="fwa-in" style="animation-delay:.08s">
+        <h1 style="font-family:'Fraunces',serif;font-weight:500;font-size:34px;line-height:1.1;letter-spacing:-.6px;color:#121817;margin:0 0 8px">Welcome back</h1>
+        <p style="font-size:15px;line-height:1.55;color:#8A9794;margin:0 0 30px">Sign in to your Francis Web Agency workspace.</p>
+      </div>
+
+      <form onSubmit="{{ onSubmit }}" style="display:flex;flex-direction:column;gap:18px">
+
+        <!-- Email -->
+        <div class="fwa-in" style="animation-delay:.14s;display:flex;flex-direction:column;gap:7px">
+          <label for="fwa-email" style="font-size:14px;font-weight:500;color:#121817">Email</label>
+          <div style="position:relative;display:flex;align-items:center">
+            <svg style="position:absolute;left:13px;pointer-events:none" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{ emailIconColor }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+            <input id="fwa-email" type="email" name="email" autocomplete="email" placeholder="you@agency.com" onFocus="{{ focusEmail }}" onBlur="{{ blurEmail }}" style="{{ emailStyle }}">
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="fwa-in" style="animation-delay:.2s;display:flex;flex-direction:column;gap:7px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <label for="fwa-pass" style="font-size:14px;font-weight:500;color:#121817">Password</label>
+            <a href="#" style="font-size:13px;font-weight:500;color:#0B7F70;text-decoration:none">Forgot password?</a>
+          </div>
+          <div style="position:relative;display:flex;align-items:center">
+            <svg style="position:absolute;left:13px;pointer-events:none" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{ passIconColor }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <input id="fwa-pass" type="{{ passInputType }}" name="password" autocomplete="current-password" placeholder="••••••••" onFocus="{{ focusPass }}" onBlur="{{ blurPass }}" style="{{ passStyle }}">
+            <button type="button" onClick="{{ togglePass }}" aria-label="Toggle password visibility" style="position:absolute;right:6px;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;background:transparent;cursor:pointer;color:#8A9794;border-radius:8px">
+              <sc-if value="{{ showPass }}" hint-placeholder-val="{{ false }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>
+              </sc-if>
+              <sc-if value="{{ passHidden }}" hint-placeholder-val="{{ true }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </sc-if>
+            </button>
+          </div>
+        </div>
+
+        <!-- Remember me -->
+        <div class="fwa-in" style="animation-delay:.26s;display:flex;align-items:center;gap:10px;margin-top:2px">
+          <button type="button" role="checkbox" aria-checked="{{ remember }}" onClick="{{ toggleRemember }}" style="{{ checkboxStyle }}">
+            <sc-if value="{{ remember }}" hint-placeholder-val="{{ true }}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </sc-if>
+          </button>
+          <span onClick="{{ toggleRemember }}" style="font-size:14px;color:#4A5654;cursor:pointer;user-select:none">Keep me signed in</span>
+        </div>
+
+        <!-- Submit -->
+        <div class="fwa-in" style="animation-delay:.32s;margin-top:6px">
+          <button type="submit" onMouseEnter="{{ btnEnter }}" onMouseLeave="{{ btnLeave }}" style="{{ submitStyle }}">Sign in</button>
+        </div>
+      </form>
+
+      <!-- divider + help -->
+      <div class="fwa-in" style="animation-delay:.38s;display:flex;align-items:center;gap:14px;margin:26px 0 18px">
+        <div style="flex:1;height:1px;background:#E4E6E2"></div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:#8A9794">Trouble signing in</span>
+        <div style="flex:1;height:1px;background:#E4E6E2"></div>
+      </div>
+      <p class="fwa-in" style="animation-delay:.42s;text-align:center;font-size:14px;color:#8A9794;margin:0">Contact your workspace admin or <a href="#" style="color:#0B7F70;text-decoration:none;font-weight:500">get support</a>.</p>
+
+      <p class="fwa-in" style="animation-delay:.46s;text-align:center;font-size:12px;color:#B4BDBA;margin:40px 0 0">© 2026 Francis Web Agency. All rights reserved.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:800}}">
+class Component extends DCLogic {
+  state = { showPass: false, remember: true, emailFocus: false, passFocus: false, btnHover: false };
+
+  fieldStyle(focused) {
+    return [
+      'width:100%',
+      "font-family:'Inter',sans-serif",
+      'font-size:15px',
+      'color:#121817',
+      'background:#FFFFFF',
+      'border:1px solid ' + (focused ? '#25BBA4' : '#E4E6E2'),
+      'border-radius:12px',
+      'padding:12px 44px 12px 40px',
+      'outline:' + (focused ? '2px solid rgba(37,187,164,.35)' : 'none'),
+      'outline-offset:1px',
+      'transition:border-color .15s ease, box-shadow .15s ease, outline .15s ease',
+    ].join(';');
+  }
+
+  renderVals() {
+    const { showPass, remember, emailFocus, passFocus, btnHover } = this.state;
+    const set = (k, v) => this.setState({ [k]: v });
+
+    const checkboxStyle = [
+      'flex:none','width:20px','height:20px','border-radius:6px','cursor:pointer',
+      'display:inline-flex','align-items:center','justify-content:center',
+      'padding:0','transition:all .15s ease',
+      'border:1px solid ' + (remember ? '#0B7F70' : '#D7DAD6'),
+      'background:' + (remember ? '#0B7F70' : '#FFFFFF'),
+    ].join(';');
+
+    const submitStyle = [
+      'width:100%',"font-family:'Inter',sans-serif",'font-weight:600','font-size:15px',
+      'letter-spacing:.1px','color:#FFFFFF','border:none','border-radius:9999px',
+      'padding:14px 22px','cursor:pointer','transition:background-color .15s ease, transform .08s ease',
+      'background:' + (btnHover ? '#0A6358' : '#0B7F70'),
+    ].join(';');
+
+    return {
+      remember,
+      showPass,
+      passHidden: !showPass,
+      passInputType: showPass ? 'text' : 'password',
+      emailStyle: this.fieldStyle(emailFocus),
+      passStyle: this.fieldStyle(passFocus),
+      emailIconColor: emailFocus ? '#0B7F70' : '#8A9794',
+      passIconColor: passFocus ? '#0B7F70' : '#8A9794',
+      checkboxStyle,
+      submitStyle,
+      focusEmail: () => set('emailFocus', true),
+      blurEmail: () => set('emailFocus', false),
+      focusPass: () => set('passFocus', true),
+      blurPass: () => set('passFocus', false),
+      togglePass: () => set('showPass', !showPass),
+      toggleRemember: () => set('remember', !remember),
+      btnEnter: () => set('btnHover', true),
+      btnLeave: () => set('btnHover', false),
+      onSubmit: (e) => { e.preventDefault(); },
+    };
+  }
+}
+</script>
+</body>
+</html>
