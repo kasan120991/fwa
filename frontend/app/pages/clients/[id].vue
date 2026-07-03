@@ -46,7 +46,6 @@ const STAGE_META: Record<Stage, { status: 'success' | 'neutral', label: string }
   past: { status: 'neutral', label: 'Past' }
 }
 
-const ownerName = computed(() => user.value?.name || 'Jordan Rivera')
 const ownerInitials = computed(() => {
   const p = (user.value?.name || 'Jordan Rivera').trim().split(/\s+/)
   return (p[0][0] + (p[1]?.[0] ?? '')).toUpperCase()
@@ -275,12 +274,6 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
           </div>
 
           <div class="flex flex-col gap-3 p-[18px]">
-            <div class="flex items-center justify-between gap-3">
-              <span class="text-[13px] text-muted">Account owner</span>
-              <span class="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-highlighted">
-                <span class="inline-flex size-[22px] flex-none items-center justify-center rounded-full bg-teal-600 text-[10px] font-semibold text-white">{{ ownerInitials }}</span>{{ ownerName }}
-              </span>
-            </div>
             <div class="flex items-center justify-between gap-3">
               <span class="text-[13px] text-muted">Client since</span>
               <span class="text-[13.5px] font-semibold text-highlighted tabular-nums">{{ client.since }}</span>
