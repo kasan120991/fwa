@@ -26,6 +26,9 @@ const ADDITIVE_COLUMNS = {
     ['postal_code', 'VARCHAR(20) NULL'],
     ['country', 'VARCHAR(120) NULL'],
     ['client_since', 'DATE NULL']
+  ],
+  calls: [
+    ['reviewed_at', 'DATETIME NULL AFTER extracted']
   ]
 }
 

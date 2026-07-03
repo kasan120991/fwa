@@ -95,8 +95,11 @@ CREATE TABLE IF NOT EXISTS calls (
   recording_url      VARCHAR(1024) NULL,
   duration_seconds   INT UNSIGNED NULL,
 
-  -- Structured fields the receptionist extracted (intent, budget, etc.).
+  -- Structured fields the receptionist extracted (intent, budget, business, etc.).
   extracted          JSON NULL,
+
+  -- Set when the call has been reviewed in the inbox (NULL = unread).
+  reviewed_at        DATETIME NULL,
 
   occurred_at        DATETIME NOT NULL,
   created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
