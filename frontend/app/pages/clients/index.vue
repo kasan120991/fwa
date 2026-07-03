@@ -1,11 +1,12 @@
 <script setup lang="ts">
 useHead({ title: 'Clients · Francis Web Agency' })
 
-// Clients = contacts whose stage is active/past (per CLAUDE.md). Sample data
-// until the /contacts API lands; shape mirrors the eventual API rows.
+// Clients = contacts whose stage is active/past (per CLAUDE.md), from
+// GET /api/contacts?group=clients. Projects/outstanding are aggregates from
+// tables that don't exist yet, so they show placeholders ("—").
 type Stage = 'active' | 'past'
 interface Client {
-  id: string
+  id: number
   name: string
   domain: string
   initials: string
@@ -20,16 +21,50 @@ interface Client {
   color: number
 }
 
-const clients = ref<Client[]>([
-  { id: 'northwind', name: 'Northwind Co.', domain: 'northwind.com', initials: 'NC', stage: 'active', contact: 'Dana Cole', email: 'dana@northwind.com', projects: 3, outstanding: 9000, overdue: false, activity: '2d ago', days: 2, color: 0 },
-  { id: 'lumen', name: 'Lumen Labs', domain: 'lumenlabs.io', initials: 'LL', stage: 'active', contact: 'Priya Shah', email: 'priya@lumenlabs.io', projects: 1, outstanding: 0, overdue: false, activity: '5h ago', days: 0.2, color: 2 },
-  { id: 'harborview', name: 'Harborview', domain: 'harborview.co', initials: 'H', stage: 'active', contact: 'Ellen Ross', email: 'ellen@harborview.co', projects: 2, outstanding: 6500, overdue: false, activity: '3d ago', days: 3, color: 3 },
-  { id: 'mintleaf', name: 'Mintleaf', domain: 'mintleaf.com', initials: 'M', stage: 'active', contact: 'Sam Tran', email: 'sam@mintleaf.com', projects: 1, outstanding: 7200, overdue: true, activity: '6d ago', days: 6, color: 4 },
-  { id: 'brightsalt', name: 'Bright & Salt', domain: 'brightsalt.co', initials: 'BS', stage: 'active', contact: 'Nina Patel', email: 'nina@brightsalt.co', projects: 2, outstanding: 3400, overdue: false, activity: '8h ago', days: 0.33, color: 0 },
-  { id: 'ridgeline', name: 'Ridgeline', domain: 'ridgeline.dev', initials: 'R', stage: 'active', contact: 'Grace Lin', email: 'grace@ridgeline.dev', projects: 4, outstanding: 12800, overdue: false, activity: '1d ago', days: 1, color: 2 },
-  { id: 'foundry', name: 'Foundry & Co.', domain: 'foundry.studio', initials: 'FC', stage: 'past', contact: 'Iris Bell', email: 'iris@foundry.studio', projects: 0, outstanding: 1200, overdue: false, activity: '3w ago', days: 21, color: 1 },
-  { id: 'vantage', name: 'Vantage Group', domain: 'vantage.io', initials: 'VG', stage: 'past', contact: 'Leo Kim', email: 'leo@vantage.io', projects: 0, outstanding: 0, overdue: false, activity: '2mo ago', days: 60, color: 3 }
-])
+interface ApiContact {
+  id: number
+  company: string | null
+  name: string
+  email: string | null
+  website: string | null
+  stage: string
+  updated_at: string
+  last_contacted_at: string | null
+}
+
+const api = useApi()
+const clients = ref<Client[]>([])
+const pending = ref(true)
+
+function mapContact(c: ApiContact, i: number): Client {
+  const activityAt = c.last_contacted_at || c.updated_at
+  return {
+    id: c.id,
+    name: c.company || c.name,
+    domain: c.website || '',
+    initials: initials(c.company || c.name),
+    stage: c.stage === 'past' ? 'past' : 'active',
+    contact: c.name,
+    email: c.email || '',
+    projects: 0,
+    outstanding: 0,
+    overdue: false,
+    activity: timeAgo(activityAt) || '—',
+    days: -(daysFromNow(activityAt) ?? -999),
+    color: i % 5
+  }
+}
+
+async function load() {
+  pending.value = true
+  try {
+    const { data } = await api<{ data: ApiContact[] }>('/contacts', { query: { group: 'clients', limit: 200 } })
+    clients.value = data.map(mapContact)
+  } finally {
+    pending.value = false
+  }
+}
+onMounted(load)
 
 const STAGE_META: Record<Stage, { status: 'success' | 'neutral', label: string }> = {
   active: { status: 'success', label: 'Active' },
@@ -50,7 +85,7 @@ const tab = ref<Tab>('all')
 const search = ref('')
 const sortKey = ref<'name' | 'outstanding' | 'days'>('name')
 const sortDir = ref<'asc' | 'desc'>('asc')
-const selected = ref<Record<string, boolean>>({})
+const selected = ref<Record<number, boolean>>({})
 
 const counts = computed(() => ({
   all: clients.value.length,
@@ -153,7 +188,7 @@ function clearSelection() {
   selected.value = {}
 }
 
-function openClient(id: string) {
+function openClient(id: number) {
   navigateTo(`/clients/${id}`)
 }
 </script>
@@ -238,7 +273,9 @@ function openClient(id: string) {
     </div>
 
     <!-- table -->
-    <template v-if="visibleRows.length > 0">
+    <div v-if="pending" class="px-6 py-16 text-center text-sm text-muted">Loading clients…</div>
+
+    <template v-else-if="visibleRows.length > 0">
       <div class="overflow-x-auto">
         <table class="w-full border-collapse">
           <thead>

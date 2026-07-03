@@ -1,9 +1,10 @@
 <script setup lang="ts">
 const route = useRoute()
 const { user } = useAuth()
+const api = useApi()
 
-// Client identity, keyed by the id used in the Clients list. Sample data until
-// the /contacts API lands; tab data below is representative placeholder.
+// Identity/profile comes from GET /api/contacts/:id. The tabs below (projects,
+// invoices, websites, …) stay representative sample data until those tables exist.
 type Stage = 'active' | 'past'
 interface ClientIdentity {
   name: string
@@ -22,20 +23,73 @@ interface ClientIdentity {
   outstanding: number
 }
 
-const CLIENTS: Record<string, ClientIdentity> = {
-  northwind: { name: 'Northwind Co.', initials: 'NC', avatar: 'bg-mist text-teal-700', domain: 'northwind.com', stage: 'active', contact: 'Dana Cole', contactTitle: 'Marketing Director', email: 'dana@northwind.com', phone: '(415) 555-0132', address: ['400 Market Street, Suite 210', 'San Francisco, CA 94111', 'United States'], since: 'Mar 12, 2023', sinceShort: 'Mar 2023', tags: [{ label: 'Retainer', tone: 'primary' }, { label: 'E-commerce', tone: 'neutral' }, { label: 'Priority', tone: 'outline' }], outstanding: 9000 },
-  lumen: { name: 'Lumen Labs', initials: 'LL', avatar: 'bg-info/10 text-info', domain: 'lumenlabs.io', stage: 'active', contact: 'Priya Shah', contactTitle: 'Founder', email: 'priya@lumenlabs.io', phone: '(628) 555-0148', address: ['55 Innovation Way', 'Oakland, CA 94607', 'United States'], since: 'Jan 08, 2024', sinceShort: 'Jan 2024', tags: [{ label: 'Retainer', tone: 'primary' }, { label: 'SaaS', tone: 'neutral' }], outstanding: 0 },
-  harborview: { name: 'Harborview', initials: 'H', avatar: 'bg-muted text-default', domain: 'harborview.co', stage: 'active', contact: 'Ellen Ross', contactTitle: 'Operations Lead', email: 'ellen@harborview.co', phone: '(206) 555-0199', address: ['1200 Harbor Ave SW', 'Seattle, WA 98116', 'United States'], since: 'Sep 21, 2023', sinceShort: 'Sep 2023', tags: [{ label: 'Project', tone: 'neutral' }], outstanding: 6500 },
-  mintleaf: { name: 'Mintleaf', initials: 'M', avatar: 'bg-warning/10 text-warning', domain: 'mintleaf.com', stage: 'active', contact: 'Sam Tran', contactTitle: 'Owner', email: 'sam@mintleaf.com', phone: '(512) 555-0170', address: ['88 Congress Ave', 'Austin, TX 78701', 'United States'], since: 'Nov 02, 2023', sinceShort: 'Nov 2023', tags: [{ label: 'E-commerce', tone: 'neutral' }, { label: 'Priority', tone: 'outline' }], outstanding: 7200 },
-  brightsalt: { name: 'Bright & Salt', initials: 'BS', avatar: 'bg-mist text-teal-700', domain: 'brightsalt.co', stage: 'active', contact: 'Nina Patel', contactTitle: 'Creative Director', email: 'nina@brightsalt.co', phone: '(303) 555-0121', address: ['2100 Larimer St', 'Denver, CO 80205', 'United States'], since: 'Feb 14, 2024', sinceShort: 'Feb 2024', tags: [{ label: 'Retainer', tone: 'primary' }], outstanding: 3400 },
-  ridgeline: { name: 'Ridgeline', initials: 'R', avatar: 'bg-info/10 text-info', domain: 'ridgeline.dev', stage: 'active', contact: 'Grace Lin', contactTitle: 'CTO', email: 'grace@ridgeline.dev', phone: '(646) 555-0188', address: ['12 W 21st Street', 'New York, NY 10010', 'United States'], since: 'May 30, 2023', sinceShort: 'May 2023', tags: [{ label: 'Retainer', tone: 'primary' }, { label: 'Priority', tone: 'outline' }], outstanding: 12800 },
-  foundry: { name: 'Foundry & Co.', initials: 'FC', avatar: 'bg-sand text-highlighted', domain: 'foundry.studio', stage: 'past', contact: 'Iris Bell', contactTitle: 'Principal', email: 'iris@foundry.studio', phone: '(312) 555-0166', address: ['400 N Wells St', 'Chicago, IL 60654', 'United States'], since: 'Jun 05, 2022', sinceShort: 'Jun 2022', tags: [{ label: 'Project', tone: 'neutral' }], outstanding: 1200 },
-  vantage: { name: 'Vantage Group', initials: 'VG', avatar: 'bg-muted text-default', domain: 'vantage.io', stage: 'past', contact: 'Leo Kim', contactTitle: 'VP Marketing', email: 'leo@vantage.io', phone: '(213) 555-0110', address: ['900 Wilshire Blvd', 'Los Angeles, CA 90017', 'United States'], since: 'Aug 19, 2021', sinceShort: 'Aug 2021', tags: [{ label: 'Archived', tone: 'neutral' }], outstanding: 0 }
+interface ApiContact {
+  id: number
+  company: string | null
+  name: string
+  title: string | null
+  email: string | null
+  phone: string | null
+  website: string | null
+  stage: string
+  tags: string[] | null
+  notes: string | null
+  client_since: string | null
+  address_line1: string | null
+  address_line2: string | null
+  city: string | null
+  region: string | null
+  postal_code: string | null
+  country: string | null
 }
 
-const client = computed(() => CLIENTS[route.params.id as string])
+const AVATAR = ['bg-mist text-teal-700', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default', 'bg-warning/10 text-warning']
+const TAG_TONE: Record<string, 'primary' | 'neutral' | 'outline'> = { Retainer: 'primary', Priority: 'outline' }
+
+function buildClient(c: ApiContact): ClientIdentity {
+  const cityLine = [c.city, [c.region, c.postal_code].filter(Boolean).join(' ').trim()].filter(Boolean).join(', ')
+  const address = [c.address_line1, c.address_line2, cityLine, c.country].filter(Boolean) as string[]
+  const sinceDate = c.client_since ? new Date(`${c.client_since}T00:00:00`) : null
+  return {
+    name: c.company || c.name,
+    initials: initials(c.company || c.name),
+    avatar: AVATAR[c.id % AVATAR.length],
+    domain: c.website || '',
+    stage: c.stage === 'past' ? 'past' : 'active',
+    contact: c.name,
+    contactTitle: c.title || '',
+    email: c.email || '',
+    phone: c.phone || '',
+    address,
+    since: sinceDate ? sinceDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '',
+    sinceShort: sinceDate ? sinceDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '',
+    tags: (c.tags || []).map(label => ({ label, tone: TAG_TONE[label] || 'neutral' })),
+    outstanding: 0
+  }
+}
+
+const client = ref<ClientIdentity | null>(null)
+const pending = ref(true)
+
+async function load() {
+  pending.value = true
+  try {
+    const { data } = await api<{ data: ApiContact }>(`/contacts/${route.params.id}`)
+    client.value = buildClient(data)
+    notes.value = data.notes || ''
+  } catch {
+    client.value = null
+  } finally {
+    pending.value = false
+  }
+}
+onMounted(load)
 
 useHead({ title: () => `${client.value?.name ?? 'Client'} · Francis Web Agency` })
+
+function saveNotes() {
+  api(`/contacts/${route.params.id}`, { method: 'PATCH', body: { notes: notes.value } }).catch(() => {})
+}
 
 function money(n: number) {
   return n === 0 ? '$0' : `$${n.toLocaleString('en-US')}`
@@ -51,7 +105,7 @@ const ownerInitials = computed(() => {
   return (p[0][0] + (p[1]?.[0] ?? '')).toUpperCase()
 })
 
-const notes = ref('Prefers async updates over calls. Launch target before Q3 — storefront rebuild is the priority. Renews retainer in March.')
+const notes = ref('')
 
 // ---------- tab sample data (representative until API) ----------
 const projects = [
@@ -184,7 +238,11 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
 </script>
 
 <template>
-  <div v-if="!client" class="flex min-h-[60vh] items-center justify-center">
+  <div v-if="pending" class="flex min-h-[60vh] items-center justify-center text-sm text-muted">
+    Loading client…
+  </div>
+
+  <div v-else-if="!client" class="flex min-h-[60vh] items-center justify-center">
     <div class="flex max-w-md flex-col items-center rounded-card bg-default px-10 py-14 text-center ring ring-default">
       <span class="mb-5 inline-flex size-12 items-center justify-center rounded-[12px] bg-muted text-muted">
         <UIcon name="i-lucide-user-x" class="size-6" />
@@ -287,7 +345,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
             <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Internal notes</div>
             <span class="text-xs text-muted">{{ notes.length }} chars</span>
           </div>
-          <UTextarea v-model="notes" :rows="4" autoresize placeholder="Add a private note about this client…" class="w-full" />
+          <UTextarea v-model="notes" :rows="4" autoresize placeholder="Add a private note about this client…" class="w-full" @blur="saveNotes" />
         </div>
       </div>
 

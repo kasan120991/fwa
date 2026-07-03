@@ -1,0 +1,68 @@
+// Formatting helpers for API datetime strings ('YYYY-MM-DD HH:MM:SS').
+
+function toDate(input?: string | null): Date | null {
+  if (!input) return null
+  const d = new Date(input.replace(' ', 'T'))
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
+/** "12m ago", "5h ago", "3d ago", "2w ago", "2mo ago". */
+export function timeAgo(input?: string | null): string {
+  const d = toDate(input)
+  if (!d) return ''
+  const s = Math.max(0, (Date.now() - d.getTime()) / 1000)
+  if (s < 60) return 'just now'
+  const m = s / 60
+  if (m < 60) return `${Math.round(m)}m ago`
+  const h = m / 60
+  if (h < 24) return `${Math.round(h)}h ago`
+  const day = h / 24
+  if (day < 7) return `${Math.round(day)}d ago`
+  const w = day / 7
+  if (w < 5) return `${Math.round(w)}w ago`
+  const mo = day / 30
+  if (mo < 12) return `${Math.round(mo)}mo ago`
+  return `${Math.round(day / 365)}y ago`
+}
+
+/** Whole days from now (negative = past). */
+export function daysFromNow(input?: string | null): number | null {
+  const d = toDate(input)
+  if (!d) return null
+  return Math.round((d.getTime() - Date.now()) / 86400e3)
+}
+
+export function durationMMSS(sec?: number | null): string {
+  if (sec == null) return ''
+  const m = Math.floor(sec / 60)
+  const s = Math.floor(sec % 60)
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+/** "Today, 9:12 AM" / "Yesterday, 3:22 PM" / "Jul 1, 10:12 AM". */
+export function callTimestamp(input?: string | null): string {
+  const d = toDate(input)
+  if (!d) return ''
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  const today = new Date()
+  const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+  const dayDiff = Math.round((startOf(today) - startOf(d)) / 86400e3)
+  if (dayDiff === 0) return `Today, ${time}`
+  if (dayDiff === 1) return `Yesterday, ${time}`
+  return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${time}`
+}
+
+/** Initials from a name ("Dana Cole" → "DC"); falls back to "#". */
+export function initials(name?: string | null): string {
+  if (!name) return '#'
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return '#'
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase()
+}
+
+/** Short date "Mar 12, 2023". */
+export function shortDate(input?: string | null): string {
+  const d = toDate(input)
+  if (!d) return ''
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}

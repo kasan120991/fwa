@@ -12,11 +12,7 @@ export function useAuthUser() {
 
 export function useAuth() {
   const user = useAuthUser()
-  const { public: { apiBase } } = useRuntimeConfig()
-
-  // credentials:'include' so the httpOnly session cookie rides along.
-  const api = <T>(path: string, opts: Record<string, unknown> = {}) =>
-    $fetch<T>(path, { baseURL: apiBase, credentials: 'include', ...opts })
+  const api = useApi()
 
   async function login(email: string, password: string) {
     const { user: u } = await api<{ user: AuthUser }>('/auth/login', {
