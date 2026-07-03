@@ -8,9 +8,11 @@
   "scripts": {
     "dev": "node --watch --env-file-if-exists=.env src/index.js",
     "start": "node --env-file-if-exists=.env src/index.js",
-    "migrate": "node --env-file-if-exists=.env src/db/migrate.js"
+    "migrate": "node --env-file-if-exists=.env src/db/migrate.js",
+    "create-user": "node --env-file-if-exists=.env src/db/create-user.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "morgan": "^1.10.0",

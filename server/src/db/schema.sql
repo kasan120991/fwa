@@ -92,3 +92,27 @@ CREATE TABLE IF NOT EXISTS calls (
   CONSTRAINT fk_calls_contact FOREIGN KEY (contact_id)
     REFERENCES contacts (id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- users — app login accounts. Two-sided by design (see CLAUDE.md):
+--   role = 'admin'  -> internal ops app (the only role in use this phase)
+--   role = 'client' -> external client portal (built in a later phase)
+-- Client-portal users will later link to their contacts row; that column
+-- is added when the portal is built, not speculatively now.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS users (
+  id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  email          VARCHAR(254) NOT NULL,
+  password_hash  VARCHAR(255) NOT NULL,
+  name           VARCHAR(160) NOT NULL,
+  role           ENUM('admin', 'client') NOT NULL DEFAULT 'admin',
+  is_active      TINYINT(1) NOT NULL DEFAULT 1,
+  last_login_at  DATETIME NULL,
+  created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                   ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_users_email (email),
+  KEY idx_users_role (role)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
