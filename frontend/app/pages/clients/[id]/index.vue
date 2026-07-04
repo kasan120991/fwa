@@ -87,7 +87,10 @@ async function load() {
     pending.value = false
   }
 }
-onMounted(load)
+onMounted(() => {
+  load()
+  loadContracts()
+})
 
 useHead({ title: () => `${client.value?.name ?? 'Client'} · Francis Web Agency` })
 
@@ -141,12 +144,64 @@ const invoices = [
   { num: 'INV-1050', issue: '—', due: '—', amount: '$2,200', balance: '$2,200', status: 'neutral', statusLabel: 'Draft', overdue: false }
 ] as const
 
-const contracts = [
-  { title: '2024 Retainer Agreement', type: 'Contract', status: 'success', statusLabel: 'Signed', meta: 'Contract · Mar 12, 2024 · Signed Mar 14', value: '$48,000' },
-  { title: 'Storefront Rebuild SOW', type: 'Proposal', status: 'info', statusLabel: 'Sent', meta: 'Proposal · Jun 18, 2025 · Awaiting signature', value: '$9,000' },
-  { title: 'Analytics Add-on', type: 'Proposal', status: 'neutral', statusLabel: 'Draft', meta: 'Proposal · Jun 28, 2025 · Not sent', value: '$3,500' },
-  { title: '2023 Build Agreement', type: 'Contract', status: 'neutral', statusLabel: 'Expired', meta: 'Contract · Mar 2023 · Expired Mar 2024', value: '$32,000' }
-] as const
+// Contracts tab — this client's proposals + contracts, from the merged
+// GET /api/agreements?contact_id= view. (Other tabs remain sample data.)
+type AgreementStatus = 'draft' | 'sent' | 'viewed' | 'accepted' | 'signed' | 'declined' | 'expired' | 'voided'
+interface ApiAgreementRow {
+  kind: 'proposal' | 'contract'
+  uid: string
+  title: string
+  status: AgreementStatus
+  total: number
+  recurring: boolean
+  created_at: string
+  closed_at: string | null
+  updated_at: string
+}
+interface ContractRow { key: string, title: string, type: 'Contract' | 'Proposal', status: 'success' | 'info' | 'error' | 'neutral', statusLabel: string, meta: string, value: string }
+
+const AGREEMENT_STATUS: Record<AgreementStatus, { status: ContractRow['status'], label: string }> = {
+  draft: { status: 'neutral', label: 'Draft' },
+  sent: { status: 'info', label: 'Sent' },
+  viewed: { status: 'info', label: 'Viewed' },
+  accepted: { status: 'success', label: 'Accepted' },
+  signed: { status: 'success', label: 'Signed' },
+  declined: { status: 'error', label: 'Declined' },
+  expired: { status: 'neutral', label: 'Expired' },
+  voided: { status: 'error', label: 'Voided' }
+}
+
+function mapContractRow(r: ApiAgreementRow): ContractRow {
+  const type = r.kind === 'contract' ? 'Contract' : 'Proposal'
+  const m = AGREEMENT_STATUS[r.status]
+  let hint = 'Not sent'
+  if (r.status === 'accepted' || r.status === 'signed') hint = `${m.label} ${shortDate(r.closed_at)}`
+  else if (r.status === 'sent' || r.status === 'viewed') hint = type === 'Contract' ? 'Awaiting signature' : 'Awaiting response'
+  else if (r.status === 'declined' || r.status === 'expired' || r.status === 'voided') hint = `${m.label} ${shortDate(r.updated_at)}`
+  return {
+    key: r.uid,
+    title: r.title,
+    type,
+    status: m.status,
+    statusLabel: m.label,
+    meta: [type, shortDate(r.created_at), hint].filter(Boolean).join(' · '),
+    value: formatMoney(r.total) + (r.recurring ? '/mo' : '')
+  }
+}
+
+const contracts = ref<ContractRow[]>([])
+const contractsPending = ref(true)
+async function loadContracts() {
+  contractsPending.value = true
+  try {
+    const { data } = await api<{ data: ApiAgreementRow[] }>('/agreements', { query: { contact_id: route.params.id } })
+    contracts.value = data.map(mapContractRow)
+  } catch {
+    contracts.value = []
+  } finally {
+    contractsPending.value = false
+  }
+}
 
 const EXT_CLASS: Record<string, string> = { PDF: 'text-error', FIG: 'text-info', ZIP: 'text-warning', XLSX: 'text-success', DOC: 'text-info' }
 const fileGroups = [
@@ -204,7 +259,7 @@ const tabs = computed(() => [
   { key: 'projects' as const, label: 'Projects', badge: projects.length },
   { key: 'websites' as const, label: 'Websites', badge: websites.length },
   { key: 'invoices' as const, label: 'Invoices', badge: null },
-  { key: 'contracts' as const, label: 'Contracts', badge: null },
+  { key: 'contracts' as const, label: 'Contracts', badge: contracts.value.length || null },
   { key: 'files' as const, label: 'Files', badge: null },
   { key: 'support' as const, label: 'Support', badge: tickets.filter(t => t.open).length },
   { key: 'activity' as const, label: 'Activity', badge: null }
@@ -242,18 +297,39 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
 </script>
 
 <template>
-  <div v-if="pending" class="flex min-h-[60vh] items-center justify-center text-sm text-muted">
+  <div
+    v-if="pending"
+    class="flex min-h-[60vh] items-center justify-center text-sm text-muted"
+  >
     Loading client…
   </div>
 
-  <div v-else-if="!client" class="flex min-h-[60vh] items-center justify-center">
+  <div
+    v-else-if="!client"
+    class="flex min-h-[60vh] items-center justify-center"
+  >
     <div class="flex max-w-md flex-col items-center rounded-card bg-default px-10 py-14 text-center ring ring-default">
       <span class="mb-5 inline-flex size-12 items-center justify-center rounded-[12px] bg-muted text-muted">
-        <UIcon name="i-lucide-user-x" class="size-6" />
+        <UIcon
+          name="i-lucide-user-x"
+          class="size-6"
+        />
       </span>
-      <h2 class="font-display text-2xl font-medium tracking-tight text-highlighted">Client not found</h2>
-      <p class="mt-2 text-[15px] text-muted">We couldn't find that client.</p>
-      <UButton to="/clients" variant="soft" color="primary" class="mt-6" icon="i-lucide-arrow-left">Back to clients</UButton>
+      <h2 class="font-display text-2xl font-medium tracking-tight text-highlighted">
+        Client not found
+      </h2>
+      <p class="mt-2 text-[15px] text-muted">
+        We couldn't find that client.
+      </p>
+      <UButton
+        to="/clients"
+        variant="soft"
+        color="primary"
+        class="mt-6"
+        icon="i-lucide-arrow-left"
+      >
+        Back to clients
+      </UButton>
     </div>
   </div>
 
@@ -261,37 +337,88 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
     <!-- header identity -->
     <div class="flex flex-wrap items-start justify-between gap-5">
       <div class="flex min-w-0 items-center gap-4">
-        <img v-if="client.logo" :src="resolveUrl(client.logo)" alt="" class="size-[58px] flex-none rounded-[14px] object-cover ring ring-default">
-        <span v-else class="inline-flex size-[58px] flex-none items-center justify-center rounded-[14px] font-display text-2xl font-medium tracking-tight" :class="client.avatar">{{ client.initials }}</span>
+        <img
+          v-if="client.logo"
+          :src="resolveUrl(client.logo)"
+          alt=""
+          class="size-[58px] flex-none rounded-[14px] object-cover ring ring-default"
+        >
+        <span
+          v-else
+          class="inline-flex size-[58px] flex-none items-center justify-center rounded-[14px] font-display text-2xl font-medium tracking-tight"
+          :class="client.avatar"
+        >{{ client.initials }}</span>
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-3">
-            <h1 class="font-display text-[28px] font-medium tracking-tight text-highlighted">{{ client.name }}</h1>
-            <StatusChip :status="STAGE_META[client.stage].status">{{ STAGE_META[client.stage].label }}</StatusChip>
+            <h1 class="font-display text-[28px] font-medium tracking-tight text-highlighted">
+              {{ client.name }}
+            </h1>
+            <StatusChip :status="STAGE_META[client.stage].status">
+              {{ STAGE_META[client.stage].label }}
+            </StatusChip>
           </div>
           <div class="mt-1.5 flex items-center gap-3.5">
-            <a :href="`https://${client.domain}`" target="_blank" class="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80">
-              <UIcon name="i-lucide-globe" class="size-[15px]" />{{ client.domain }}
+            <a
+              :href="`https://${client.domain}`"
+              target="_blank"
+              class="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80"
+            >
+              <UIcon
+                name="i-lucide-globe"
+                class="size-[15px]"
+              />{{ client.domain }}
             </a>
             <span class="text-[13px] text-muted">Client since {{ client.sinceShort }}</span>
           </div>
         </div>
       </div>
       <div class="flex flex-none items-center gap-2.5">
-        <UButton :to="`/clients/${route.params.id}/edit`" icon="i-lucide-pencil" color="neutral" variant="outline" class="rounded-full">Edit</UButton>
-        <UButton icon="i-lucide-plus" color="primary">New project</UButton>
+        <UButton
+          :to="`/clients/${route.params.id}/edit`"
+          icon="i-lucide-pencil"
+          color="neutral"
+          variant="outline"
+          class="rounded-full"
+        >
+          Edit
+        </UButton>
+        <UButton
+          icon="i-lucide-plus"
+          color="primary"
+        >
+          New project
+        </UButton>
         <UDropdownMenu :items="headerMenu">
-          <UButton icon="i-lucide-ellipsis" color="neutral" variant="outline" square aria-label="More actions" />
+          <UButton
+            icon="i-lucide-ellipsis"
+            color="neutral"
+            variant="outline"
+            square
+            aria-label="More actions"
+          />
         </UDropdownMenu>
       </div>
     </div>
 
     <!-- metric strip -->
     <div class="grid grid-cols-2 gap-3.5 md:grid-cols-3 xl:grid-cols-5">
-      <div v-for="m in metrics" :key="m.label" class="rounded-[14px] bg-default p-4 ring ring-default">
-        <div class="mb-2 whitespace-nowrap text-[12.5px] text-muted">{{ m.label }}</div>
+      <div
+        v-for="m in metrics"
+        :key="m.label"
+        class="rounded-[14px] bg-default p-4 ring ring-default"
+      >
+        <div class="mb-2 whitespace-nowrap text-[12.5px] text-muted">
+          {{ m.label }}
+        </div>
         <div class="flex items-baseline gap-2">
-          <span class="font-display text-2xl font-medium leading-none tracking-tight tabular-nums" :class="m.tone">{{ m.value }}</span>
-          <span v-if="m.sub" class="text-xs text-muted">{{ m.sub }}</span>
+          <span
+            class="font-display text-2xl font-medium leading-none tracking-tight tabular-nums"
+            :class="m.tone"
+          >{{ m.value }}</span>
+          <span
+            v-if="m.sub"
+            class="text-xs text-muted"
+          >{{ m.sub }}</span>
         </div>
       </div>
     </div>
@@ -302,37 +429,73 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
       <div class="flex flex-col gap-4 lg:sticky lg:top-4">
         <div class="overflow-hidden rounded-card bg-default ring ring-default">
           <div class="border-b border-default p-[18px]">
-            <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Primary contact</div>
+            <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+              Primary contact
+            </div>
             <div class="mt-2.5 flex items-center gap-3">
               <span class="inline-flex size-[38px] flex-none items-center justify-center rounded-full bg-sand text-[13px] font-semibold text-highlighted">
                 {{ client.contact.split(' ').map(w => w[0]).slice(0, 2).join('') }}
               </span>
               <div class="min-w-0">
-                <div class="text-sm font-semibold text-highlighted">{{ client.contact }}</div>
-                <div class="text-[13px] text-muted">{{ client.contactTitle }}</div>
+                <div class="text-sm font-semibold text-highlighted">
+                  {{ client.contact }}
+                </div>
+                <div class="text-[13px] text-muted">
+                  {{ client.contactTitle }}
+                </div>
               </div>
             </div>
             <div class="mt-3.5 flex flex-col gap-2.5">
-              <a :href="`mailto:${client.email}`" class="flex items-center gap-2.5 text-[13.5px] text-default hover:text-primary">
-                <UIcon name="i-lucide-mail" class="size-[15px] flex-none text-muted" />{{ client.email }}
+              <a
+                :href="`mailto:${client.email}`"
+                class="flex items-center gap-2.5 text-[13.5px] text-default hover:text-primary"
+              >
+                <UIcon
+                  name="i-lucide-mail"
+                  class="size-[15px] flex-none text-muted"
+                />{{ client.email }}
               </a>
-              <a :href="`tel:${phoneDigits(client.phone)}`" class="flex items-center gap-2.5 text-[13.5px] text-default hover:text-primary">
-                <UIcon name="i-lucide-phone" class="size-[15px] flex-none text-muted" />{{ formatPhone(client.phone) }}
+              <a
+                :href="`tel:${phoneDigits(client.phone)}`"
+                class="flex items-center gap-2.5 text-[13.5px] text-default hover:text-primary"
+              >
+                <UIcon
+                  name="i-lucide-phone"
+                  class="size-[15px] flex-none text-muted"
+                />{{ formatPhone(client.phone) }}
               </a>
             </div>
           </div>
 
           <div class="border-b border-default p-[18px]">
-            <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Billing address</div>
+            <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+              Billing address
+            </div>
             <div class="mt-2.5 text-[13.5px] leading-relaxed text-default">
-              <div v-for="line in client.address" :key="line">{{ line }}</div>
+              <div
+                v-for="line in client.address"
+                :key="line"
+              >
+                {{ line }}
+              </div>
             </div>
           </div>
 
           <div class="border-b border-default p-[18px]">
-            <div class="mb-3 font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Tags</div>
+            <div class="mb-3 font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+              Tags
+            </div>
             <div class="flex flex-wrap gap-2">
-              <UBadge v-for="t in client.tags" :key="t.label" :color="tagColor[t.tone]" :variant="tagVariant[t.tone]" size="sm" class="rounded-full">{{ t.label }}</UBadge>
+              <UBadge
+                v-for="t in client.tags"
+                :key="t.label"
+                :color="tagColor[t.tone]"
+                :variant="tagVariant[t.tone]"
+                size="sm"
+                class="rounded-full"
+              >
+                {{ t.label }}
+              </UBadge>
             </div>
           </div>
 
@@ -347,10 +510,19 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
         <!-- notes -->
         <div class="rounded-card bg-default p-[18px] ring ring-default">
           <div class="mb-2.5 flex items-center justify-between">
-            <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Internal notes</div>
+            <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+              Internal notes
+            </div>
             <span class="text-xs text-muted">{{ notes.length }} chars</span>
           </div>
-          <UTextarea v-model="notes" :rows="4" autoresize placeholder="Add a private note about this client…" class="w-full" @blur="saveNotes" />
+          <UTextarea
+            v-model="notes"
+            :rows="4"
+            autoresize
+            placeholder="Add a private note about this client…"
+            class="w-full"
+            @blur="saveNotes"
+          />
         </div>
       </div>
 
@@ -375,25 +547,45 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
         </div>
 
         <!-- OVERVIEW -->
-        <div v-if="activeTab === 'overview'" class="flex flex-col gap-4">
+        <div
+          v-if="activeTab === 'overview'"
+          class="flex flex-col gap-4"
+        >
           <div class="grid grid-cols-1 items-start gap-4 xl:grid-cols-[1.3fr_1fr]">
             <!-- active projects mini -->
             <div class="overflow-hidden rounded-card bg-default ring ring-default">
               <div class="flex items-center justify-between px-[18px] py-4">
                 <span class="text-[15px] font-semibold text-highlighted">Active projects</span>
-                <button class="text-[13px] font-semibold text-primary" @click="activeTab = 'projects'">View all</button>
+                <button
+                  class="text-[13px] font-semibold text-primary"
+                  @click="activeTab = 'projects'"
+                >
+                  View all
+                </button>
               </div>
-              <div v-for="p in projects" :key="p.id" class="flex items-center gap-3 border-t border-default px-[18px] py-3">
+              <div
+                v-for="p in projects"
+                :key="p.id"
+                class="flex items-center gap-3 border-t border-default px-[18px] py-3"
+              >
                 <div class="min-w-0 flex-1">
-                  <div class="truncate text-sm font-semibold text-highlighted">{{ p.name }}</div>
+                  <div class="truncate text-sm font-semibold text-highlighted">
+                    {{ p.name }}
+                  </div>
                   <div class="mt-1.5 flex items-center gap-2">
                     <div class="h-[5px] max-w-[150px] flex-1 overflow-hidden rounded-full bg-muted">
-                      <div class="h-full rounded-full" :class="p.bar" :style="{ width: p.progress + '%' }" />
+                      <div
+                        class="h-full rounded-full"
+                        :class="p.bar"
+                        :style="{ width: p.progress + '%' }"
+                      />
                     </div>
                     <span class="text-xs text-muted tabular-nums">{{ p.progress }}%</span>
                   </div>
                 </div>
-                <StatusChip :status="p.status">{{ p.statusLabel }}</StatusChip>
+                <StatusChip :status="p.status">
+                  {{ p.statusLabel }}
+                </StatusChip>
               </div>
             </div>
             <!-- latest invoice + websites -->
@@ -401,14 +593,25 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
               <div class="rounded-card bg-default p-[18px] ring ring-default">
                 <div class="mb-3.5 flex items-center justify-between">
                   <span class="text-[15px] font-semibold text-highlighted">Latest invoice</span>
-                  <button class="text-[13px] font-semibold text-primary" @click="activeTab = 'invoices'">All invoices</button>
+                  <button
+                    class="text-[13px] font-semibold text-primary"
+                    @click="activeTab = 'invoices'"
+                  >
+                    All invoices
+                  </button>
                 </div>
                 <div class="flex items-center justify-between gap-3">
                   <div>
-                    <div class="text-sm font-semibold text-highlighted tabular-nums">INV-1042</div>
-                    <div class="mt-0.5 text-[13px] text-muted">Due Jul 20 · $4,000</div>
+                    <div class="text-sm font-semibold text-highlighted tabular-nums">
+                      INV-1042
+                    </div>
+                    <div class="mt-0.5 text-[13px] text-muted">
+                      Due Jul 20 · $4,000
+                    </div>
                   </div>
-                  <StatusChip status="info">Sent</StatusChip>
+                  <StatusChip status="info">
+                    Sent
+                  </StatusChip>
                 </div>
                 <div class="my-3.5 border-t border-default" />
                 <div class="flex items-center justify-between">
@@ -419,7 +622,12 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
               <div class="rounded-card bg-default p-[18px] ring ring-default">
                 <div class="mb-3 flex items-center justify-between">
                   <span class="text-[15px] font-semibold text-highlighted">Websites</span>
-                  <button class="text-[13px] font-semibold text-primary" @click="activeTab = 'websites'">Manage</button>
+                  <button
+                    class="text-[13px] font-semibold text-primary"
+                    @click="activeTab = 'websites'"
+                  >
+                    Manage
+                  </button>
                 </div>
                 <div class="flex items-center justify-between text-[13.5px]">
                   <span class="text-default">3 sites</span>
@@ -433,29 +641,63 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
             <div class="overflow-hidden rounded-card bg-default ring ring-default">
               <div class="flex items-center justify-between px-[18px] py-4">
                 <span class="text-[15px] font-semibold text-highlighted">Open tickets</span>
-                <button class="text-[13px] font-semibold text-primary" @click="activeTab = 'support'">Support</button>
+                <button
+                  class="text-[13px] font-semibold text-primary"
+                  @click="activeTab = 'support'"
+                >
+                  Support
+                </button>
               </div>
-              <div v-for="t in tickets.filter(x => x.open)" :key="t.id" class="flex items-center gap-3 border-t border-default px-[18px] py-3">
-                <span class="size-[9px] flex-none rounded-full" :class="PRIO_CLASS[t.prio]" />
+              <div
+                v-for="t in tickets.filter(x => x.open)"
+                :key="t.id"
+                class="flex items-center gap-3 border-t border-default px-[18px] py-3"
+              >
+                <span
+                  class="size-[9px] flex-none rounded-full"
+                  :class="PRIO_CLASS[t.prio]"
+                />
                 <div class="min-w-0 flex-1">
-                  <div class="truncate text-[13.5px] font-semibold text-highlighted">{{ t.subject }}</div>
-                  <div class="mt-0.5 text-xs text-muted tabular-nums">{{ t.id }} · {{ t.updated }}</div>
+                  <div class="truncate text-[13.5px] font-semibold text-highlighted">
+                    {{ t.subject }}
+                  </div>
+                  <div class="mt-0.5 text-xs text-muted tabular-nums">
+                    {{ t.id }} · {{ t.updated }}
+                  </div>
                 </div>
-                <StatusChip :status="t.status">{{ t.statusLabel }}</StatusChip>
+                <StatusChip :status="t.status">
+                  {{ t.statusLabel }}
+                </StatusChip>
               </div>
             </div>
             <!-- recent activity -->
             <div class="overflow-hidden rounded-card bg-default ring ring-default">
               <div class="flex items-center justify-between px-[18px] py-4">
                 <span class="text-[15px] font-semibold text-highlighted">Recent activity</span>
-                <button class="text-[13px] font-semibold text-primary" @click="activeTab = 'activity'">Timeline</button>
+                <button
+                  class="text-[13px] font-semibold text-primary"
+                  @click="activeTab = 'activity'"
+                >
+                  Timeline
+                </button>
               </div>
               <div class="px-[18px] pb-3.5 pt-1.5">
-                <div v-for="(a, i) in activity.slice(0, 4)" :key="i" class="flex gap-3 pt-3">
-                  <span class="mt-1.5 size-2 flex-none rounded-full" :class="a.tone.replace('text-', 'bg-')" />
+                <div
+                  v-for="(a, i) in activity.slice(0, 4)"
+                  :key="i"
+                  class="flex gap-3 pt-3"
+                >
+                  <span
+                    class="mt-1.5 size-2 flex-none rounded-full"
+                    :class="a.tone.replace('text-', 'bg-')"
+                  />
                   <div class="min-w-0">
-                    <div class="text-[13.5px] leading-snug text-default">{{ a.text }}</div>
-                    <div class="mt-0.5 text-xs text-muted">{{ a.time }}</div>
+                    <div class="text-[13.5px] leading-snug text-default">
+                      {{ a.text }}
+                    </div>
+                    <div class="mt-0.5 text-xs text-muted">
+                      {{ a.time }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -467,35 +709,80 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
         <div v-else-if="activeTab === 'projects'">
           <div class="mb-3.5 flex flex-wrap items-center justify-between gap-3.5">
             <div><span class="text-base font-semibold text-highlighted">Projects</span><span class="ml-2 text-sm text-muted">{{ projects.length }} active</span></div>
-            <UButton icon="i-lucide-plus" color="primary" size="sm">New project</UButton>
+            <UButton
+              icon="i-lucide-plus"
+              color="primary"
+              size="sm"
+            >
+              New project
+            </UButton>
           </div>
           <div class="overflow-hidden rounded-card bg-default ring ring-default">
             <table class="w-full border-collapse">
               <thead>
                 <tr class="border-b border-default bg-muted/40">
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Project</th>
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Status</th>
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Progress</th>
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Due</th>
-                  <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Value</th>
-                  <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Tasks</th>
+                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                    Project
+                  </th>
+                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                    Status
+                  </th>
+                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                    Progress
+                  </th>
+                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                    Due
+                  </th>
+                  <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                    Value
+                  </th>
+                  <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                    Tasks
+                  </th>
                   <th class="w-11" />
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="p in projects" :key="p.id" class="cursor-pointer border-t border-default transition-colors hover:bg-muted first:border-t-0">
-                  <td class="px-4 py-3.5 text-sm font-semibold text-highlighted">{{ p.name }}</td>
-                  <td class="px-4 py-3.5"><StatusChip :status="p.status">{{ p.statusLabel }}</StatusChip></td>
+                <tr
+                  v-for="p in projects"
+                  :key="p.id"
+                  class="cursor-pointer border-t border-default transition-colors hover:bg-muted first:border-t-0"
+                >
+                  <td class="px-4 py-3.5 text-sm font-semibold text-highlighted">
+                    {{ p.name }}
+                  </td>
+                  <td class="px-4 py-3.5">
+                    <StatusChip :status="p.status">
+                      {{ p.statusLabel }}
+                    </StatusChip>
+                  </td>
                   <td class="px-4 py-3.5">
                     <div class="flex items-center gap-2.5">
-                      <div class="h-1.5 w-[90px] overflow-hidden rounded-full bg-muted"><div class="h-full rounded-full" :class="p.bar" :style="{ width: p.progress + '%' }" /></div>
+                      <div class="h-1.5 w-[90px] overflow-hidden rounded-full bg-muted">
+                        <div
+                          class="h-full rounded-full"
+                          :class="p.bar"
+                          :style="{ width: p.progress + '%' }"
+                        />
+                      </div>
                       <span class="text-[12.5px] text-muted tabular-nums">{{ p.progress }}%</span>
                     </div>
                   </td>
-                  <td class="whitespace-nowrap px-4 py-3.5 text-sm text-default tabular-nums">{{ p.due }}</td>
-                  <td class="px-4 py-3.5 text-right text-sm text-highlighted tabular-nums">{{ p.value }}</td>
-                  <td class="px-4 py-3.5 text-right text-sm text-default tabular-nums">{{ p.tasks }}</td>
-                  <td class="px-3 py-3.5 text-right text-muted"><UIcon name="i-lucide-chevron-right" class="size-4" /></td>
+                  <td class="whitespace-nowrap px-4 py-3.5 text-sm text-default tabular-nums">
+                    {{ p.due }}
+                  </td>
+                  <td class="px-4 py-3.5 text-right text-sm text-highlighted tabular-nums">
+                    {{ p.value }}
+                  </td>
+                  <td class="px-4 py-3.5 text-right text-sm text-default tabular-nums">
+                    {{ p.tasks }}
+                  </td>
+                  <td class="px-3 py-3.5 text-right text-muted">
+                    <UIcon
+                      name="i-lucide-chevron-right"
+                      class="size-4"
+                    />
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -506,44 +793,113 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
         <div v-else-if="activeTab === 'websites'">
           <div class="mb-3.5 flex flex-wrap items-center justify-between gap-3.5">
             <div><span class="text-base font-semibold text-highlighted">Websites</span><span class="ml-2 text-sm text-muted">3 sites · 2 connected</span></div>
-            <UButton icon="i-lucide-plus" color="primary" size="sm">Add website</UButton>
+            <UButton
+              icon="i-lucide-plus"
+              color="primary"
+              size="sm"
+            >
+              Add website
+            </UButton>
           </div>
           <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <div v-for="w in websites" :key="w.id" class="rounded-card bg-default p-5 ring ring-default">
+            <div
+              v-for="w in websites"
+              :key="w.id"
+              class="rounded-card bg-default p-5 ring ring-default"
+            >
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
                   <div class="flex items-center gap-2.5">
                     <span class="text-[15px] font-semibold text-highlighted">{{ w.name }}</span>
-                    <span class="rounded-full bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.05em]" :class="envClass(w.env)">{{ w.env }}</span>
+                    <span
+                      class="rounded-full bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.05em]"
+                      :class="envClass(w.env)"
+                    >{{ w.env }}</span>
                   </div>
-                  <a :href="w.href" target="_blank" class="mt-1 inline-flex items-center gap-1 text-[13px] text-primary hover:text-primary/80">{{ w.url }}<UIcon name="i-lucide-external-link" class="size-[13px]" /></a>
+                  <a
+                    :href="w.href"
+                    target="_blank"
+                    class="mt-1 inline-flex items-center gap-1 text-[13px] text-primary hover:text-primary/80"
+                  >{{ w.url }}<UIcon
+                    name="i-lucide-external-link"
+                    class="size-[13px]"
+                  /></a>
                 </div>
                 <UDropdownMenu :items="websiteMenu(w)">
-                  <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="ghost" size="xs" aria-label="Website actions" />
+                  <UButton
+                    icon="i-lucide-ellipsis-vertical"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    aria-label="Website actions"
+                  />
                 </UDropdownMenu>
               </div>
               <div class="my-4 border-t border-default" />
               <div v-if="w.connected">
                 <div class="flex items-center justify-between gap-2.5">
-                  <StatusChip status="success">Analytics connected</StatusChip>
+                  <StatusChip status="success">
+                    Analytics connected
+                  </StatusChip>
                   <span class="text-xs text-muted">Synced {{ w.synced }}</span>
                 </div>
                 <div class="mt-3.5 flex items-end justify-between gap-3.5">
                   <div>
-                    <div class="font-display text-[22px] font-medium leading-none tracking-tight text-highlighted tabular-nums">{{ w.visitors }}</div>
-                    <div class="mt-1.5 text-xs text-muted">Visitors · 30d <span class="font-semibold text-success">{{ w.delta }}</span></div>
+                    <div class="font-display text-[22px] font-medium leading-none tracking-tight text-highlighted tabular-nums">
+                      {{ w.visitors }}
+                    </div>
+                    <div class="mt-1.5 text-xs text-muted">
+                      Visitors · 30d <span class="font-semibold text-success">{{ w.delta }}</span>
+                    </div>
                   </div>
-                  <svg width="120" height="34" viewBox="0 0 120 34" fill="none" preserveAspectRatio="none" class="flex-none">
-                    <polyline :points="w.sparkArea" fill="var(--color-mist)" stroke="none" />
-                    <polyline :points="w.spark" fill="none" stroke="var(--color-teal-500)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  <svg
+                    width="120"
+                    height="34"
+                    viewBox="0 0 120 34"
+                    fill="none"
+                    preserveAspectRatio="none"
+                    class="flex-none"
+                  >
+                    <polyline
+                      :points="w.sparkArea"
+                      fill="var(--color-mist)"
+                      stroke="none"
+                    />
+                    <polyline
+                      :points="w.spark"
+                      fill="none"
+                      stroke="var(--color-teal-500)"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
                   </svg>
                 </div>
-                <UButton block color="neutral" variant="outline" size="sm" icon="i-lucide-chart-line" class="mt-4 rounded-full">View analytics</UButton>
+                <UButton
+                  block
+                  color="neutral"
+                  variant="outline"
+                  size="sm"
+                  icon="i-lucide-chart-line"
+                  class="mt-4 rounded-full"
+                >
+                  View analytics
+                </UButton>
               </div>
               <div v-else>
                 <span class="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted"><span class="size-1.5 rounded-full bg-ink-400" />Analytics not connected</span>
-                <p class="my-3.5 text-[13px] leading-relaxed text-muted">Connect analytics to track visitors and conversions for this site.</p>
-                <UButton block color="primary" size="sm" icon="i-lucide-plus" class="rounded-full">Connect analytics</UButton>
+                <p class="my-3.5 text-[13px] leading-relaxed text-muted">
+                  Connect analytics to track visitors and conversions for this site.
+                </p>
+                <UButton
+                  block
+                  color="primary"
+                  size="sm"
+                  icon="i-lucide-plus"
+                  class="rounded-full"
+                >
+                  Connect analytics
+                </UButton>
               </div>
             </div>
           </div>
@@ -556,28 +912,70 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
               <span class="text-base font-semibold text-highlighted">Invoices</span>
               <span class="inline-flex items-center gap-1.5 rounded-full bg-error/10 px-3 py-1 text-[13px] font-semibold text-error tabular-nums">{{ money(client.outstanding) }} outstanding</span>
             </div>
-            <UButton icon="i-lucide-plus" color="primary" size="sm">New invoice</UButton>
+            <UButton
+              icon="i-lucide-plus"
+              color="primary"
+              size="sm"
+            >
+              New invoice
+            </UButton>
           </div>
           <div class="overflow-hidden rounded-card bg-default ring ring-default">
             <table class="w-full border-collapse">
               <thead>
                 <tr class="border-b border-default bg-muted/40">
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Invoice</th>
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Issued</th>
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Due</th>
-                  <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Amount</th>
-                  <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Balance</th>
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Status</th>
+                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                    Invoice
+                  </th>
+                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                    Issued
+                  </th>
+                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                    Due
+                  </th>
+                  <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                    Amount
+                  </th>
+                  <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                    Balance
+                  </th>
+                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                    Status
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="v in invoices" :key="v.num" class="border-t border-default transition-colors hover:bg-muted first:border-t-0">
-                  <td class="px-4 py-3 text-sm font-semibold text-highlighted tabular-nums">{{ v.num }}</td>
-                  <td class="whitespace-nowrap px-4 py-3 text-sm text-default tabular-nums">{{ v.issue }}</td>
-                  <td class="whitespace-nowrap px-4 py-3 text-sm tabular-nums" :class="v.overdue ? 'text-error' : 'text-default'">{{ v.due }}</td>
-                  <td class="px-4 py-3 text-right text-sm text-highlighted tabular-nums">{{ v.amount }}</td>
-                  <td class="px-4 py-3 text-right text-sm tabular-nums" :class="v.balance === '$0' ? 'text-muted' : (v.overdue ? 'font-bold text-error' : 'text-highlighted')">{{ v.balance }}</td>
-                  <td class="px-4 py-3"><StatusChip :status="v.status">{{ v.statusLabel }}</StatusChip></td>
+                <tr
+                  v-for="v in invoices"
+                  :key="v.num"
+                  class="border-t border-default transition-colors hover:bg-muted first:border-t-0"
+                >
+                  <td class="px-4 py-3 text-sm font-semibold text-highlighted tabular-nums">
+                    {{ v.num }}
+                  </td>
+                  <td class="whitespace-nowrap px-4 py-3 text-sm text-default tabular-nums">
+                    {{ v.issue }}
+                  </td>
+                  <td
+                    class="whitespace-nowrap px-4 py-3 text-sm tabular-nums"
+                    :class="v.overdue ? 'text-error' : 'text-default'"
+                  >
+                    {{ v.due }}
+                  </td>
+                  <td class="px-4 py-3 text-right text-sm text-highlighted tabular-nums">
+                    {{ v.amount }}
+                  </td>
+                  <td
+                    class="px-4 py-3 text-right text-sm tabular-nums"
+                    :class="v.balance === '$0' ? 'text-muted' : (v.overdue ? 'font-bold text-error' : 'text-highlighted')"
+                  >
+                    {{ v.balance }}
+                  </td>
+                  <td class="px-4 py-3">
+                    <StatusChip :status="v.status">
+                      {{ v.statusLabel }}
+                    </StatusChip>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -589,22 +987,74 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
           <div class="mb-3.5 flex flex-wrap items-center justify-between gap-3.5">
             <span class="text-base font-semibold text-highlighted">Contracts &amp; proposals</span>
             <div class="flex gap-2.5">
-              <UButton color="neutral" variant="outline" size="sm" class="rounded-full">New proposal</UButton>
-              <UButton icon="i-lucide-plus" color="primary" size="sm">New contract</UButton>
+              <UButton
+                color="neutral"
+                variant="outline"
+                size="sm"
+                class="rounded-full"
+              >
+                New proposal
+              </UButton>
+              <UButton
+                icon="i-lucide-plus"
+                color="primary"
+                size="sm"
+              >
+                New contract
+              </UButton>
             </div>
           </div>
           <div class="overflow-hidden rounded-card bg-default ring ring-default">
-            <div v-for="(c, i) in contracts" :key="c.title" class="flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-muted" :class="i > 0 ? 'border-t border-default' : ''">
-              <span class="inline-flex size-[38px] flex-none items-center justify-center rounded-[10px]" :class="c.type === 'Contract' ? 'bg-mist text-teal-700' : 'bg-muted text-muted'">
-                <UIcon :name="c.type === 'Contract' ? 'i-lucide-file-check-2' : 'i-lucide-file-text'" class="size-[18px]" />
-              </span>
-              <div class="min-w-0 flex-1">
-                <div class="truncate text-sm font-semibold text-highlighted">{{ c.title }}</div>
-                <div class="mt-0.5 text-[13px] text-muted">{{ c.meta }}</div>
-              </div>
-              <span class="whitespace-nowrap text-sm text-highlighted tabular-nums">{{ c.value }}</span>
-              <div class="flex w-24 justify-end"><StatusChip :status="c.status">{{ c.statusLabel }}</StatusChip></div>
+            <div
+              v-if="contractsPending"
+              class="px-4 py-12 text-center text-sm text-muted"
+            >
+              Loading agreements…
             </div>
+            <div
+              v-else-if="contracts.length === 0"
+              class="flex flex-col items-center px-4 py-12 text-center"
+            >
+              <span class="mb-3 inline-flex size-11 items-center justify-center rounded-[12px] bg-muted text-muted"><UIcon
+                name="i-lucide-file-text"
+                class="size-5"
+              /></span>
+              <p class="text-sm text-muted">
+                No proposals or contracts yet for this client.
+              </p>
+            </div>
+            <template v-else>
+              <div
+                v-for="(c, i) in contracts"
+                :key="c.key"
+                class="flex items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-muted"
+                :class="i > 0 ? 'border-t border-default' : ''"
+              >
+                <span
+                  class="inline-flex size-[38px] flex-none items-center justify-center rounded-[10px]"
+                  :class="c.type === 'Contract' ? 'bg-mist text-teal-700' : 'bg-muted text-muted'"
+                >
+                  <UIcon
+                    :name="c.type === 'Contract' ? 'i-lucide-file-check-2' : 'i-lucide-file-text'"
+                    class="size-[18px]"
+                  />
+                </span>
+                <div class="min-w-0 flex-1">
+                  <div class="truncate text-sm font-semibold text-highlighted">
+                    {{ c.title }}
+                  </div>
+                  <div class="mt-0.5 text-[13px] text-muted">
+                    {{ c.meta }}
+                  </div>
+                </div>
+                <span class="whitespace-nowrap text-sm text-highlighted tabular-nums">{{ c.value }}</span>
+                <div class="flex w-24 justify-end">
+                  <StatusChip :status="c.status">
+                    {{ c.statusLabel }}
+                  </StatusChip>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
 
@@ -612,23 +1062,53 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
         <div v-else-if="activeTab === 'files'">
           <div class="mb-3.5 flex flex-wrap items-center justify-between gap-3.5">
             <span class="text-base font-semibold text-highlighted">Files</span>
-            <UButton icon="i-lucide-upload" color="primary" size="sm">Upload</UButton>
+            <UButton
+              icon="i-lucide-upload"
+              color="primary"
+              size="sm"
+            >
+              Upload
+            </UButton>
           </div>
           <div class="flex flex-col gap-4">
-            <div v-for="g in fileGroups" :key="g.name" class="overflow-hidden rounded-card bg-default ring ring-default">
+            <div
+              v-for="g in fileGroups"
+              :key="g.name"
+              class="overflow-hidden rounded-card bg-default ring ring-default"
+            >
               <div class="flex items-center gap-2.5 border-b border-default px-4 py-3">
-                <UIcon name="i-lucide-folder" class="size-4 text-muted" />
+                <UIcon
+                  name="i-lucide-folder"
+                  class="size-4 text-muted"
+                />
                 <span class="text-[13.5px] font-semibold text-highlighted">{{ g.name }}</span>
                 <span class="text-[12.5px] text-muted">{{ g.files.length }} files</span>
               </div>
-              <div v-for="f in g.files" :key="f.name" class="flex items-center gap-3 border-t border-default px-4 py-3 transition-colors hover:bg-muted first:border-t-0">
-                <span class="inline-flex size-[38px] flex-none items-center justify-center rounded-[9px] bg-muted font-mono text-[10px] font-semibold" :class="EXT_CLASS[f.ext] ?? 'text-muted'">{{ f.ext }}</span>
+              <div
+                v-for="f in g.files"
+                :key="f.name"
+                class="flex items-center gap-3 border-t border-default px-4 py-3 transition-colors hover:bg-muted first:border-t-0"
+              >
+                <span
+                  class="inline-flex size-[38px] flex-none items-center justify-center rounded-[9px] bg-muted font-mono text-[10px] font-semibold"
+                  :class="EXT_CLASS[f.ext] ?? 'text-muted'"
+                >{{ f.ext }}</span>
                 <div class="min-w-0 flex-1">
-                  <div class="truncate text-sm font-medium text-highlighted">{{ f.name }}</div>
-                  <div class="mt-0.5 text-[12.5px] text-muted">{{ f.meta }}</div>
+                  <div class="truncate text-sm font-medium text-highlighted">
+                    {{ f.name }}
+                  </div>
+                  <div class="mt-0.5 text-[12.5px] text-muted">
+                    {{ f.meta }}
+                  </div>
                 </div>
                 <span class="whitespace-nowrap text-[13px] text-muted tabular-nums">{{ f.size }}</span>
-                <UButton icon="i-lucide-download" color="neutral" variant="ghost" size="xs" aria-label="Download" />
+                <UButton
+                  icon="i-lucide-download"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  aria-label="Download"
+                />
               </div>
             </div>
           </div>
@@ -638,7 +1118,13 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
         <div v-else-if="activeTab === 'support'">
           <div class="mb-3.5 flex flex-wrap items-center justify-between gap-3.5">
             <span class="text-base font-semibold text-highlighted">Support tickets</span>
-            <UButton icon="i-lucide-plus" color="primary" size="sm">New ticket</UButton>
+            <UButton
+              icon="i-lucide-plus"
+              color="primary"
+              size="sm"
+            >
+              New ticket
+            </UButton>
           </div>
           <div class="mb-3.5 inline-flex items-center gap-0.5 rounded-[10px] border border-default bg-muted p-0.5">
             <button
@@ -649,19 +1135,42 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
               @click="supportFilter = f.key"
             >
               {{ f.label }}
-              <span class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums" :class="supportFilter === f.key ? 'bg-mist text-teal-700' : 'bg-elevated text-muted'">{{ f.count }}</span>
+              <span
+                class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums"
+                :class="supportFilter === f.key ? 'bg-mist text-teal-700' : 'bg-elevated text-muted'"
+              >{{ f.count }}</span>
             </button>
           </div>
           <div class="overflow-hidden rounded-card bg-default ring ring-default">
-            <div v-for="(t, i) in visibleTickets" :key="t.id" class="flex cursor-pointer items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted" :class="i > 0 ? 'border-t border-default' : ''">
-              <span class="size-[9px] flex-none rounded-full" :class="PRIO_CLASS[t.prio]" :title="`${t.prio} priority`" />
+            <div
+              v-for="(t, i) in visibleTickets"
+              :key="t.id"
+              class="flex cursor-pointer items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted"
+              :class="i > 0 ? 'border-t border-default' : ''"
+            >
+              <span
+                class="size-[9px] flex-none rounded-full"
+                :class="PRIO_CLASS[t.prio]"
+                :title="`${t.prio} priority`"
+              />
               <div class="min-w-0 flex-1">
-                <div class="truncate text-sm font-semibold text-highlighted">{{ t.subject }}</div>
-                <div class="mt-0.5 text-[12.5px] text-muted tabular-nums">{{ t.id }} · opened {{ t.created }}</div>
+                <div class="truncate text-sm font-semibold text-highlighted">
+                  {{ t.subject }}
+                </div>
+                <div class="mt-0.5 text-[12.5px] text-muted tabular-nums">
+                  {{ t.id }} · opened {{ t.created }}
+                </div>
               </div>
               <span class="hidden whitespace-nowrap text-[13px] text-muted tabular-nums sm:block">{{ t.updated }}</span>
-              <div class="flex w-[104px] justify-end"><StatusChip :status="t.status">{{ t.statusLabel }}</StatusChip></div>
-              <UIcon name="i-lucide-chevron-right" class="size-[17px] text-muted" />
+              <div class="flex w-[104px] justify-end">
+                <StatusChip :status="t.status">
+                  {{ t.statusLabel }}
+                </StatusChip>
+              </div>
+              <UIcon
+                name="i-lucide-chevron-right"
+                class="size-[17px] text-muted"
+              />
             </div>
           </div>
         </div>
@@ -670,20 +1179,45 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
         <div v-else-if="activeTab === 'activity'">
           <div class="mb-[18px] flex items-center gap-3 rounded-[14px] bg-default p-3.5 ring ring-default">
             <span class="inline-flex size-8 flex-none items-center justify-center rounded-full bg-teal-600 text-[11px] font-semibold text-white">{{ ownerInitials }}</span>
-            <input placeholder="Add a note or log activity…" class="flex-1 bg-transparent text-sm text-highlighted outline-none placeholder:text-muted">
-            <UButton color="primary" size="sm">Add note</UButton>
+            <input
+              placeholder="Add a note or log activity…"
+              class="flex-1 bg-transparent text-sm text-highlighted outline-none placeholder:text-muted"
+            >
+            <UButton
+              color="primary"
+              size="sm"
+            >
+              Add note
+            </UButton>
           </div>
           <div class="relative pl-2">
-            <div v-for="(a, i) in activity" :key="i" class="relative flex gap-3.5 pb-5">
+            <div
+              v-for="(a, i) in activity"
+              :key="i"
+              class="relative flex gap-3.5 pb-5"
+            >
               <div class="flex flex-none flex-col items-center">
-                <span class="inline-flex size-8 flex-none items-center justify-center rounded-[9px] bg-muted" :class="a.tone">
-                  <UIcon :name="a.icon" class="size-4" />
+                <span
+                  class="inline-flex size-8 flex-none items-center justify-center rounded-[9px] bg-muted"
+                  :class="a.tone"
+                >
+                  <UIcon
+                    :name="a.icon"
+                    class="size-4"
+                  />
                 </span>
-                <span v-if="i < activity.length - 1" class="mt-1 w-0.5 flex-1 bg-default" />
+                <span
+                  v-if="i < activity.length - 1"
+                  class="mt-1 w-0.5 flex-1 bg-default"
+                />
               </div>
               <div class="min-w-0 pt-1">
-                <div class="text-sm leading-snug text-highlighted">{{ a.text }}</div>
-                <div class="mt-0.5 text-[12.5px] text-muted">{{ a.meta }}</div>
+                <div class="text-sm leading-snug text-highlighted">
+                  {{ a.text }}
+                </div>
+                <div class="mt-0.5 text-[12.5px] text-muted">
+                  {{ a.meta }}
+                </div>
               </div>
               <span class="ml-auto whitespace-nowrap pt-1.5 text-[12.5px] text-muted tabular-nums">{{ a.time }}</span>
             </div>

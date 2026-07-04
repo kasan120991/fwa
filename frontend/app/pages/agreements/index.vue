@@ -1,37 +1,70 @@
 <script setup lang="ts">
 useHead({ title: 'Agreements · Francis Web Agency' })
 
-// Agreements — every proposal and contract across all clients, merged into one
-// list (the merge happens here at the view layer; proposals and contracts are
-// separate records/tables per the build plan). UI-only for now: the proposals/
-// contracts + PandaDoc backend lands in a later phase, so this runs on sample
-// data and the generate/send/void actions are stubs until those routes exist.
+// Agreements — every proposal and contract across all clients. Data comes from
+// GET /api/agreements (the proposal+contract merge happens server-side at the
+// query layer). A row's line items + full timeline load on demand from
+// /api/proposals/:id or /api/contracts/:id when its drawer opens. The
+// generate/send/void actions remain stubs pending the PandaDoc UI.
 type Kind = 'proposal' | 'contract'
 type Ctype = 'project' | 'care_plan'
 type Status = 'draft' | 'sent' | 'viewed' | 'accepted' | 'signed' | 'declined' | 'expired' | 'voided'
 
-interface LineItem { name: string, qty: number, unit: number, custom: boolean }
-interface Agreement {
-  id: string
-  client: string
-  ci: number
+// Shape returned by GET /api/agreements (the merged view).
+interface ApiAgreement {
   kind: Kind
-  ctype?: Ctype
+  id: number
+  uid: string
+  contact_id: number
   title: string
   status: Status
   total: number
+  ctype: Ctype | null
+  billing_interval: string
+  proposal_id: number | null
+  expires_at: string | null
+  sent_at: string | null
+  viewed_at: string | null
+  closed_at: string | null
+  created_at: string
+  updated_at: string
+  client: string
   recurring: boolean
-  created: string
-  sent?: string
-  viewed?: string
-  end?: { k: Status, label: string, date: string }
+}
+// Full record (with line items + all timestamps) from /api/proposals|contracts/:id.
+interface ApiLineItem { name_snapshot: string, qty: number, unit_price_snapshot: number, service_id: number | null }
+interface ApiRecord {
+  id: number
+  items: ApiLineItem[]
+  created_at: string
+  sent_at: string | null
+  viewed_at: string | null
+  accepted_at?: string | null
+  signed_at?: string | null
+  declined_at: string | null
+  expires_at: string | null
+  updated_at: string
+}
+
+interface LineItem { name: string, qty: number, unit: number, custom: boolean }
+interface Agreement {
+  id: string // uid, unique across the union (e.g. "proposal-3")
+  numId: number
+  contactId: number
+  kind: Kind
+  ctype?: Ctype
+  title: string
+  client: string
+  ci: number
+  status: Status
+  total: number
+  recurring: boolean
+  ts: number // created_at as ms — drives the "recent" sort
   dateText: string
   dateKind: 'good' | 'expiring' | 'bad' | 'muted'
-  sortT: number
   fromProposal?: string
   lineTo?: string
   producedProject?: boolean
-  items: LineItem[]
 }
 
 const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-teal-700', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
@@ -65,22 +98,81 @@ const BOARD_COLS: { key: string, label: string, statuses: Status[], dot: string 
   { key: 'closed', label: 'Closed', statuses: ['declined', 'expired', 'voided'], dot: 'bg-error' }
 ]
 
-const AGREEMENTS: Agreement[] = [
-  { id: 'a1', client: 'Northwind Co.', ci: 0, kind: 'proposal', title: 'Website redesign & SEO', status: 'accepted', total: 18000, recurring: false, created: 'Apr 2', sent: 'Apr 3', viewed: 'Apr 4', end: { k: 'accepted', label: 'Accepted', date: 'Apr 9' }, dateText: 'Accepted Apr 9', dateKind: 'good', sortT: 90, lineTo: 'a2', items: [{ name: 'Discovery & IA', qty: 1, unit: 3500, custom: false }, { name: 'Responsive redesign (8 pages)', qty: 1, unit: 9500, custom: false }, { name: 'Technical SEO setup', qty: 1, unit: 3500, custom: false }, { name: 'Copy polish pass', qty: 1, unit: 1500, custom: true }] },
-  { id: 'a2', client: 'Northwind Co.', ci: 0, kind: 'contract', ctype: 'project', title: 'Website redesign & SEO', status: 'signed', total: 18000, recurring: false, created: 'Apr 9', sent: 'Apr 9', viewed: 'Apr 10', end: { k: 'signed', label: 'Signed', date: 'Apr 11' }, dateText: 'Signed Apr 11', dateKind: 'good', sortT: 84, fromProposal: 'a1', producedProject: true, items: [{ name: 'Discovery & IA', qty: 1, unit: 3500, custom: false }, { name: 'Responsive redesign (8 pages)', qty: 1, unit: 9500, custom: false }, { name: 'Technical SEO setup', qty: 1, unit: 3500, custom: false }, { name: 'Copy polish pass', qty: 1, unit: 1500, custom: true }] },
-  { id: 'a3', client: 'Bloom Floral', ci: 1, kind: 'contract', ctype: 'care_plan', title: 'Website Care Plan', status: 'signed', total: 99, recurring: true, created: 'Jan 15', sent: 'Jan 15', viewed: 'Jan 16', end: { k: 'signed', label: 'Signed', date: 'Jan 18' }, dateText: 'Signed Jan 18', dateKind: 'good', sortT: 170, items: [{ name: 'Managed hosting & backups', qty: 1, unit: 39, custom: false }, { name: 'Monthly updates & monitoring', qty: 1, unit: 60, custom: false }] },
-  { id: 'a4', client: 'Delta Kitchens', ci: 2, kind: 'proposal', title: 'Booking site build', status: 'sent', total: 12000, recurring: false, created: 'Jun 28', sent: 'Jun 30', dateText: 'Expires in 3d', dateKind: 'expiring', sortT: 4, items: [{ name: 'Booking flow design', qty: 1, unit: 4500, custom: false }, { name: 'Calendar integration', qty: 1, unit: 4500, custom: false }, { name: 'Responsive build', qty: 1, unit: 3000, custom: false }] },
-  { id: 'a5', client: 'Brooks Law', ci: 3, kind: 'proposal', title: 'Consultation funnel', status: 'viewed', total: 9800, recurring: false, created: 'Jun 27', sent: 'Jun 28', viewed: 'Jul 2', dateText: 'Expires in 2d', dateKind: 'expiring', sortT: 2, items: [{ name: 'Landing + intake form', qty: 1, unit: 5800, custom: false }, { name: 'Email automation setup', qty: 1, unit: 4000, custom: false }] },
-  { id: 'a6', client: 'Fielder Roofing', ci: 4, kind: 'proposal', title: 'Lead-gen site', status: 'draft', total: 14200, recurring: false, created: 'Jul 2', dateText: 'Created 2d ago', dateKind: 'muted', sortT: 2, items: [{ name: 'Lead-gen site (6 pages)', qty: 1, unit: 10200, custom: false }, { name: 'Quote request forms', qty: 1, unit: 4000, custom: false }] },
-  { id: 'a7', client: 'Anand Dental', ci: 0, kind: 'proposal', title: 'Patient portal', status: 'accepted', total: 32000, recurring: false, created: 'May 20', sent: 'May 21', viewed: 'May 22', end: { k: 'accepted', label: 'Accepted', date: 'May 28' }, dateText: 'Accepted May 28', dateKind: 'good', sortT: 40, lineTo: 'a8', items: [{ name: 'Portal UX & design', qty: 1, unit: 12000, custom: false }, { name: 'Auth & records module', qty: 1, unit: 20000, custom: false }] },
-  { id: 'a8', client: 'Anand Dental', ci: 0, kind: 'contract', ctype: 'project', title: 'Patient portal', status: 'sent', total: 32000, recurring: false, created: 'May 28', sent: 'May 29', dateText: 'Awaiting signature', dateKind: 'muted', sortT: 5, fromProposal: 'a7', items: [{ name: 'Portal UX & design', qty: 1, unit: 12000, custom: false }, { name: 'Auth & records module', qty: 1, unit: 20000, custom: false }] },
-  { id: 'a9', client: 'Chen Studio', ci: 1, kind: 'contract', ctype: 'care_plan', title: 'Care Plan — Studio', status: 'signed', total: 79, recurring: true, created: 'Mar 3', sent: 'Mar 3', viewed: 'Mar 4', end: { k: 'signed', label: 'Signed', date: 'Mar 6' }, dateText: 'Signed Mar 6', dateKind: 'good', sortT: 123, items: [{ name: 'Hosting & backups', qty: 1, unit: 29, custom: false }, { name: 'Content updates (2/mo)', qty: 1, unit: 50, custom: false }] },
-  { id: 'a10', client: 'Bloom Floral', ci: 1, kind: 'proposal', title: 'E-commerce phase 2', status: 'declined', total: 24500, recurring: false, created: 'May 8', sent: 'May 10', viewed: 'May 12', end: { k: 'declined', label: 'Declined', date: 'May 22' }, dateText: 'Declined May 22', dateKind: 'bad', sortT: 43, items: [{ name: 'Storefront rebuild', qty: 1, unit: 18500, custom: false }, { name: 'Subscriptions module', qty: 1, unit: 6000, custom: false }] },
-  { id: 'a11', client: 'Delta Kitchens', ci: 2, kind: 'proposal', title: 'Rush microsite', status: 'expired', total: 4000, recurring: false, created: 'Jun 1', sent: 'Jun 2', viewed: 'Jun 3', end: { k: 'expired', label: 'Expired', date: 'Jun 16' }, dateText: 'Expired 18d ago', dateKind: 'bad', sortT: 18, items: [{ name: 'One-page microsite', qty: 1, unit: 4000, custom: false }] },
-  { id: 'a12', client: 'Fielder Roofing', ci: 4, kind: 'contract', ctype: 'project', title: 'SEO addendum', status: 'voided', total: 2500, recurring: false, created: 'Mar 4', sent: 'Mar 5', end: { k: 'voided', label: 'Voided', date: 'Mar 8' }, dateText: 'Voided Mar 8', dateKind: 'bad', sortT: 121, items: [{ name: 'Additional keyword targets', qty: 1, unit: 2500, custom: true }] }
-]
+const api = useApi()
 
-const byId = (id?: string) => AGREEMENTS.find(a => a.id === id) || null
+// Stable avatar tint derived from the client name.
+const hashCi = (s: string) => [...s].reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR.length
+
+// Human date label + tone for the table's Date column, from status + timestamps.
+function deriveDate(r: ApiAgreement): { text: string, kind: Agreement['dateKind'] } {
+  const label = STATUS_META[r.status].label
+  if (r.status === 'accepted' || r.status === 'signed') return { text: `${label} ${shortDate(r.closed_at)}`, kind: 'good' }
+  if (r.status === 'declined' || r.status === 'expired' || r.status === 'voided') return { text: `${label} ${shortDate(r.updated_at)}`, kind: 'bad' }
+  if (r.status === 'sent' || r.status === 'viewed') {
+    if (r.expires_at) {
+      const d = daysFromNow(r.expires_at) ?? 0
+      if (d < 0) return { text: `Expired ${Math.abs(d)}d ago`, kind: 'bad' }
+      return { text: `Expires in ${d}d`, kind: d <= 5 ? 'expiring' : 'muted' }
+    }
+    return { text: r.kind === 'proposal' ? 'Awaiting response' : 'Awaiting signature', kind: 'muted' }
+  }
+  return { text: `Created ${timeAgo(r.created_at)}`, kind: 'muted' }
+}
+
+function mapAgreement(r: ApiAgreement): Agreement {
+  const d = deriveDate(r)
+  return {
+    id: r.uid,
+    numId: r.id,
+    contactId: r.contact_id,
+    kind: r.kind,
+    ctype: r.ctype ?? undefined,
+    title: r.title,
+    client: r.client,
+    ci: hashCi(r.client || '#'),
+    status: r.status,
+    total: r.total,
+    recurring: r.recurring,
+    ts: Date.parse((r.created_at || '').replace(' ', 'T')) || 0,
+    dateText: d.text,
+    dateKind: d.kind
+  }
+}
+
+const agreements = ref<Agreement[]>([])
+const pending = ref(true)
+async function load() {
+  pending.value = true
+  try {
+    const { data } = await api<{ data: ApiAgreement[] }>('/agreements', { query: { limit: 300 } })
+    const rows = data.map(mapAgreement)
+    // Cross-reference lineage from the full set: a contract points back to its
+    // proposal; a proposal points forward to the contract it produced; a signed
+    // project contract produced a project.
+    const proposalUid = new Map<number, string>()
+    const contractForProposal = new Map<number, ApiAgreement>()
+    for (const r of data) {
+      if (r.kind === 'proposal') proposalUid.set(r.id, r.uid)
+      else if (r.proposal_id != null) contractForProposal.set(r.proposal_id, r)
+    }
+    rows.forEach((row, i) => {
+      const raw = data[i]
+      if (raw.kind === 'contract') {
+        if (raw.proposal_id != null && proposalUid.has(raw.proposal_id)) row.fromProposal = proposalUid.get(raw.proposal_id)
+        if (raw.ctype === 'project' && raw.status === 'signed') row.producedProject = true
+      } else {
+        const c = contractForProposal.get(raw.id)
+        if (c) row.lineTo = c.uid
+      }
+    })
+    agreements.value = rows
+  } finally {
+    pending.value = false
+  }
+}
+onMounted(load)
+
+const byId = (id?: string | null) => agreements.value.find(a => a.id === id) || null
 
 // ---- presentation helpers ----
 const kindLabel = (k: Kind) => (k === 'proposal' ? 'Proposal' : 'Contract')
@@ -113,15 +205,15 @@ function openAgreement(id: string) {
 }
 
 const segCounts = computed(() => ({
-  all: AGREEMENTS.length,
-  proposals: AGREEMENTS.filter(a => a.kind === 'proposal').length,
-  contracts: AGREEMENTS.filter(a => a.kind === 'contract').length
+  all: agreements.value.length,
+  proposals: agreements.value.filter(a => a.kind === 'proposal').length,
+  contracts: agreements.value.filter(a => a.kind === 'contract').length
 }))
 
 // summary tiles
-const awaitingResp = computed(() => AGREEMENTS.filter(a => a.kind === 'proposal' && (a.status === 'sent' || a.status === 'viewed')))
-const awaitingSign = computed(() => AGREEMENTS.filter(a => a.kind === 'contract' && (a.status === 'sent' || a.status === 'viewed')))
-const inFlightValue = computed(() => AGREEMENTS
+const awaitingResp = computed(() => agreements.value.filter(a => a.kind === 'proposal' && (a.status === 'sent' || a.status === 'viewed')))
+const awaitingSign = computed(() => agreements.value.filter(a => a.kind === 'contract' && (a.status === 'sent' || a.status === 'viewed')))
+const inFlightValue = computed(() => agreements.value
   .filter(a => a.status === 'sent' || a.status === 'viewed')
   .reduce((s, a) => s + (a.recurring ? 0 : a.total), 0))
 
@@ -138,7 +230,7 @@ const tiles = computed(() => [
 
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase()
-  let list = AGREEMENTS.filter((a) => {
+  let list = agreements.value.filter((a) => {
     if (seg.value === 'proposals' && a.kind !== 'proposal') return false
     if (seg.value === 'contracts' && a.kind !== 'contract') return false
     if (statusFilter.value !== 'all' && !GROUP[statusFilter.value].includes(a.status)) return false
@@ -150,7 +242,7 @@ const filtered = computed(() => {
     if (sortKey.value === 'value') return b.total - a.total
     if (sortKey.value === 'client') return a.client.localeCompare(b.client)
     if (sortKey.value === 'status') return STATUS_RANK[a.status] - STATUS_RANK[b.status]
-    return a.sortT - b.sortT
+    return b.ts - a.ts
   })
   return list
 })
@@ -192,12 +284,13 @@ const sortItems = computed(() => [[
   { label: 'Status', icon: sortKey.value === 'status' ? 'i-lucide-check' : undefined, onSelect: () => { sortKey.value = 'status' } }
 ]])
 function rowMenuItems(a: Agreement) {
-  const items: { label: string, icon: string, color?: 'error' }[][] = [[
+  const items: { label: string, icon: string, color?: 'error', onSelect?: () => void }[][] = [[
     { label: 'Open in PandaDoc', icon: 'i-lucide-external-link' },
     { label: 'Copy link', icon: 'i-lucide-link' },
     { label: 'Resend', icon: 'i-lucide-rotate-cw' }
   ]]
-  if (a.lineTo || a.fromProposal) items[0].push({ label: 'View related agreement', icon: 'i-lucide-link-2' })
+  const related = a.lineTo || a.fromProposal
+  if (related) items[0].push({ label: 'View related agreement', icon: 'i-lucide-link-2', onSelect: () => openAgreement(related) })
   items.push([{ label: 'Void', icon: 'i-lucide-ban', color: 'error' }])
   return items
 }
@@ -217,19 +310,51 @@ const legend = [
 ]
 
 // ---- detail drawer ----
+// The row (from the list) drives the header/chips immediately; the full record
+// (line items + all lifecycle timestamps) loads on demand when the drawer opens.
 const detail = computed(() => byId(openId.value))
 const drawerOpen = computed({
   get: () => !!detail.value,
   set: (v: boolean) => { if (!v) openId.value = null }
 })
 
+const detailRecord = ref<ApiRecord | null>(null)
+const detailLoading = ref(false)
+watch(openId, async (id) => {
+  detailRecord.value = null
+  const row = byId(id)
+  if (!row) return
+  detailLoading.value = true
+  try {
+    const path = row.kind === 'proposal' ? `/proposals/${row.numId}` : `/contracts/${row.numId}`
+    const { data } = await api<{ data: ApiRecord }>(path)
+    detailRecord.value = data
+  } catch {
+    detailRecord.value = null
+  } finally {
+    detailLoading.value = false
+  }
+})
+
+const detailItems = computed<LineItem[]>(() => {
+  const items = detailRecord.value?.items
+  if (!items) return []
+  return items.map(li => ({ name: li.name_snapshot, qty: li.qty, unit: li.unit_price_snapshot, custom: li.service_id == null }))
+})
+
 const timeline = computed(() => {
-  const a = detail.value
-  if (!a) return []
-  const steps: { k: Status, label: string, date: string }[] = [{ k: 'draft', label: 'Created', date: a.created }]
-  if (a.sent) steps.push({ k: 'sent', label: 'Sent', date: a.sent })
-  if (a.viewed) steps.push({ k: 'viewed', label: 'Viewed', date: a.viewed })
-  if (a.end) steps.push({ k: a.end.k, label: a.end.label, date: a.end.date })
+  const rec = detailRecord.value
+  const row = detail.value
+  if (!rec || !row) return []
+  const steps: { k: Status, label: string, date: string }[] = [{ k: 'draft', label: 'Created', date: shortDate(rec.created_at) }]
+  if (rec.sent_at) steps.push({ k: 'sent', label: 'Sent', date: shortDate(rec.sent_at) })
+  if (rec.viewed_at) steps.push({ k: 'viewed', label: 'Viewed', date: shortDate(rec.viewed_at) })
+  const terminalDate: Record<string, string | null | undefined> = {
+    accepted: rec.accepted_at, signed: rec.signed_at, declined: rec.declined_at, expired: rec.expires_at, voided: rec.updated_at
+  }
+  if (['accepted', 'signed', 'declined', 'expired', 'voided'].includes(row.status)) {
+    steps.push({ k: row.status, label: STATUS_META[row.status].label, date: shortDate(terminalDate[row.status] || rec.updated_at) })
+  }
   const bad: Status[] = ['declined', 'expired', 'voided']
   return steps.map((s, i) => {
     const last = i === steps.length - 1
@@ -277,7 +402,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
           <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
             Agreements
           </h1>
-          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-teal-700 tabular-nums">{{ AGREEMENTS.length }}</span>
+          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-teal-700 tabular-nums">{{ agreements.length }}</span>
         </div>
         <p class="mt-1.5 text-sm text-muted">
           Every proposal and contract across all clients, generated and signed through PandaDoc.
@@ -399,7 +524,13 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
       v-if="view === 'table'"
       class="overflow-hidden rounded-card bg-default ring ring-default"
     >
-      <template v-if="filtered.length > 0">
+      <div
+        v-if="pending"
+        class="px-6 py-16 text-center text-sm text-muted"
+      >
+        Loading agreements…
+      </div>
+      <template v-else-if="filtered.length > 0">
         <div class="overflow-x-auto">
           <table class="w-full border-collapse">
             <thead>
@@ -538,7 +669,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
           </table>
         </div>
         <div class="flex items-center justify-between gap-4 border-t border-default px-5 py-3.5">
-          <span class="text-[13px] text-muted tabular-nums">Showing {{ filtered.length }} of {{ AGREEMENTS.length }} agreements</span>
+          <span class="text-[13px] text-muted tabular-nums">Showing {{ filtered.length }} of {{ agreements.length }} agreements</span>
           <UButton
             icon="i-lucide-rotate-cw"
             color="neutral"
@@ -760,7 +891,13 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
             </div>
             <div class="mb-6 overflow-hidden rounded-xl ring-1 ring-default">
               <div
-                v-for="(li, i) in detail.items"
+                v-if="detailLoading && !detailItems.length"
+                class="px-3.5 py-4 text-center text-xs text-muted"
+              >
+                Loading line items…
+              </div>
+              <div
+                v-for="(li, i) in detailItems"
                 :key="i"
                 class="flex items-center justify-between gap-3.5 border-b border-default px-3.5 py-3 last:border-b-0"
               >
