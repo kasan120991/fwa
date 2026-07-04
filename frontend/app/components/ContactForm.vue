@@ -1,16 +1,28 @@
 <script setup lang="ts">
-// Dual-mode client form (create + edit). A client is a contacts row with a
-// client stage (active/past/lost) — create posts a new row with source=manual;
-// edit loads the row and PATCHes changes. Fields map straight onto the contacts
-// schema; `name` is the person, `company` is the business (the headline shown
-// across the app as company||name).
-const props = defineProps<{ mode: 'create' | 'edit', clientId?: string | number }>()
+// Contact form — backs both clients and leads (a lead and a client are the same
+// contacts row at different stages, per CLAUDE.md). `kind` picks the flavour:
+//   client → stage active/past/lost, full billing/logo/since fields
+//   lead   → stage defaults to_contact, billing/logo/since hidden
+// Both create (source=manual) and edit (PATCH). Fields map onto the contacts
+// schema; `name` is the person, `company` is the business (headline = company||name).
+const props = withDefaults(defineProps<{
+  mode: 'create' | 'edit'
+  kind?: 'client' | 'lead'
+  clientId?: string | number
+}>(), { kind: 'client' })
 
 const api = useApi()
 const toast = useToast()
 const { upload, resolveUrl } = useUploads()
 
-type Stage = 'active' | 'past' | 'lost'
+// ---- kind (client vs lead) copy + targets ----
+const noun = props.kind === 'lead' ? 'lead' : 'client'
+const nounCap = props.kind === 'lead' ? 'Lead' : 'Client'
+const rootLabel = props.kind === 'lead' ? 'Leads' : 'Clients'
+const rootTo = props.kind === 'lead' ? '/leads' : '/clients'
+const nameLabel = props.kind === 'lead' ? 'Business name' : 'Client name'
+
+type Stage = 'new' | 'qualifying' | 'to_contact' | 'contacted' | 'engaged' | 'qualified' | 'proposal' | 'active' | 'past' | 'lost'
 
 interface FormState {
   company: string
@@ -57,16 +69,16 @@ function todayISO() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
-function blankForm(): FormState {
+function blankForm(kind: 'client' | 'lead'): FormState {
   return {
-    company: '', logoUrl: '', website: '', stage: 'active',
+    company: '', logoUrl: '', website: '', stage: kind === 'lead' ? 'to_contact' : 'active',
     contactName: '', role: '', email: '', phone: '',
     billStreet: '', billCity: '', billState: '', billZip: '', billCountry: 'United States', billEmail: '',
-    since: todayISO(), notes: ''
+    since: kind === 'lead' ? '' : todayISO(), notes: ''
   }
 }
 
-const form = reactive<FormState>(blankForm())
+const form = reactive<FormState>(blankForm(props.kind))
 const tags = ref<string[]>([])
 const loaded = ref(props.mode === 'create')
 const notFound = ref(false)
@@ -91,7 +103,7 @@ async function load() {
       company: data.company || '',
       logoUrl: data.logo_url || '',
       website: data.website || '',
-      stage: (['active', 'past', 'lost'].includes(data.stage) ? data.stage : 'active') as Stage,
+      stage: data.stage as Stage,
       contactName: data.name || '',
       role: data.title || '',
       email: data.email || '',
@@ -124,8 +136,8 @@ const displayName = computed(() => form.company.trim() || form.contactName.trim(
 
 useHead({
   title: () => props.mode === 'edit'
-    ? `Edit ${displayName.value || 'client'} · Francis Web Agency`
-    : 'New client · Francis Web Agency'
+    ? `Edit ${displayName.value || noun} · Francis Web Agency`
+    : `New ${noun} · Francis Web Agency`
 })
 
 // ---- validation ----
@@ -135,9 +147,17 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function computeErrors() {
   const e: typeof errors.value = {}
-  if (!form.company.trim()) e.company = 'Client name is required.'
-  if (!form.email.trim()) e.email = 'A contact email is required.'
-  else if (!EMAIL_RE.test(form.email.trim())) e.email = 'Enter a valid email address.'
+  if (props.kind === 'lead') {
+    // A lead just needs an identity to hang follow-up on — contact details are
+    // optional (e.g. a phone-only prospect). The API's required `name` is
+    // satisfied by contactName || company, so require at least one of them.
+    if (!form.company.trim() && !form.contactName.trim()) e.company = 'Add a business or contact name.'
+  } else {
+    if (!form.company.trim()) e.company = `${nameLabel} is required.`
+    if (!form.email.trim()) e.email = 'A contact email is required.'
+  }
+  // Format-check email + billing email whenever they're filled in (both kinds).
+  if (form.email.trim() && !EMAIL_RE.test(form.email.trim())) e.email = 'Enter a valid email address.'
   if (form.billEmail.trim() && !EMAIL_RE.test(form.billEmail.trim())) e.billEmail = 'Enter a valid email address.'
   errors.value = e
   return Object.keys(e).length === 0
@@ -170,17 +190,27 @@ async function onLogoChange(e: Event) {
 }
 function removeLogo() { form.logoUrl = '' }
 
-// ---- select options ----
-const stageItems = [
-  { label: 'Active', value: 'active' },
-  { label: 'Past', value: 'past' },
-  { label: 'Lost', value: 'lost' }
-]
-const STAGE_META: Record<Stage, { status: 'success' | 'neutral' | 'error', label: string }> = {
-  active: { status: 'success', label: 'Active' },
-  past: { status: 'neutral', label: 'Past' },
-  lost: { status: 'error', label: 'Lost' }
+// ---- stage options + meta (client stages vs lead pipeline) ----
+const STAGE_LABEL: Record<Stage, string> = {
+  new: 'New', qualifying: 'Qualifying', to_contact: 'To contact', contacted: 'Contacted',
+  engaged: 'Engaged', qualified: 'Qualified', proposal: 'Proposal',
+  active: 'Active', past: 'Past', lost: 'Lost'
 }
+const STAGE_STATUS: Record<Stage, 'success' | 'neutral' | 'error' | 'info'> = {
+  new: 'neutral', qualifying: 'info', to_contact: 'neutral', contacted: 'info',
+  engaged: 'info', qualified: 'success', proposal: 'info',
+  active: 'success', past: 'neutral', lost: 'error'
+}
+const CLIENT_STAGES: Stage[] = ['active', 'past', 'lost']
+const LEAD_STAGES: Stage[] = ['new', 'qualifying', 'to_contact', 'contacted', 'engaged', 'qualified', 'proposal']
+// Show the kind's stages, but always include the loaded stage so editing an
+// off-motion contact (e.g. an inbound lead at 'new') still renders correctly.
+const stageItems = computed(() => {
+  const base = props.kind === 'lead' ? LEAD_STAGES : CLIENT_STAGES
+  const set = base.includes(form.stage) ? base : [form.stage, ...base]
+  return set.map(s => ({ label: STAGE_LABEL[s], value: s }))
+})
+
 const COUNTRIES = ['United States', 'Canada', 'United Kingdom', 'Australia']
 const countryItems = computed(() => {
   const set = [...COUNTRIES]
@@ -231,17 +261,18 @@ async function save({ another = false } = {}) {
       const { data } = await api<{ data: { id: number } }>('/contacts', { method: 'POST', body })
       if (another) {
         const name = displayName.value
-        Object.assign(form, blankForm())
+        Object.assign(form, blankForm(props.kind))
         tags.value = []
         submitted.value = false
         errors.value = {}
         await nextTick()
         markPristine()
         saved.value = true
-        toast.add({ title: 'Client created', description: `${name} was added. Ready for the next one.`, color: 'success' })
+        toast.add({ title: `${nounCap} created`, description: `${name} was added. Ready for the next one.`, color: 'success' })
       } else {
-        toast.add({ title: 'Client created', description: `${displayName.value} was added.`, color: 'success' })
-        await navigateTo(`/clients/${data.id}`)
+        toast.add({ title: `${nounCap} created`, description: `${displayName.value} was added.`, color: 'success' })
+        // Leads have no detail page — return to the Leads list; clients open their profile.
+        await navigateTo(props.kind === 'lead' ? '/leads' : `/clients/${data.id}`)
       }
     } else {
       await api(`/contacts/${props.clientId}`, { method: 'PATCH', body: payload() })
@@ -255,7 +286,7 @@ async function save({ another = false } = {}) {
     if (f?.email) errors.value = { ...errors.value, email: 'Enter a valid email address.' }
     if (f?.billing_email) errors.value = { ...errors.value, billEmail: 'Enter a valid email address.' }
     toast.add({
-      title: props.mode === 'create' ? "Couldn't create client" : "Couldn't save changes",
+      title: props.mode === 'create' ? `Couldn't create ${noun}` : "Couldn't save changes",
       description: err?.data?.error?.message || 'Please check the form and try again.',
       color: 'error'
     })
@@ -267,7 +298,9 @@ async function save({ another = false } = {}) {
 // ---- cancel ----
 const cancelConfirm = ref(false)
 function leave() {
-  navigateTo(props.mode === 'edit' ? `/clients/${props.clientId}` : '/clients')
+  // Clients have a detail page to return to; leads go back to the list.
+  if (props.mode === 'edit' && props.kind === 'client') navigateTo(`/clients/${props.clientId}`)
+  else navigateTo(rootTo)
 }
 function requestCancel() {
   if (dirty.value) cancelConfirm.value = true
@@ -285,40 +318,48 @@ const primaryDisabled = computed(() => saving.value || (props.mode === 'edit' &&
 const primaryLabel = computed(() =>
   saving.value
     ? (props.mode === 'edit' ? 'Saving…' : 'Creating…')
-    : (props.mode === 'edit' ? 'Save changes' : 'Create client'))
+    : (props.mode === 'edit' ? 'Save changes' : `Create ${noun}`))
 
-const title = computed(() => props.mode === 'edit' ? 'Edit client' : 'New client')
-const subtitle = computed(() => props.mode === 'edit'
-  ? 'Update this client’s details. Changes save across the workspace.'
-  : 'Add a business to your workspace. You can fill in the rest later.')
+const title = computed(() => props.mode === 'edit' ? `Edit ${noun}` : `New ${noun}`)
+const subtitle = computed(() => {
+  if (props.kind === 'lead') {
+    return props.mode === 'edit'
+      ? 'Update this lead’s details.'
+      : 'Add a prospect to your pipeline. You can fill in the rest later.'
+  }
+  return props.mode === 'edit'
+    ? 'Update this client’s details. Changes save across the workspace.'
+    : 'Add a business to your workspace. You can fill in the rest later.'
+})
 </script>
 
 <template>
   <div>
     <!-- loading (edit) -->
-    <div v-if="!loaded" class="mx-auto max-w-[720px] py-24 text-center text-sm text-muted">Loading client…</div>
+    <div v-if="!loaded" class="mx-auto max-w-[720px] py-24 text-center text-sm text-muted">Loading {{ noun }}…</div>
 
     <!-- not found (edit) -->
     <div v-else-if="notFound" class="mx-auto flex max-w-[720px] flex-col items-center rounded-card bg-default px-10 py-16 text-center ring ring-default">
       <span class="mb-5 inline-flex size-12 items-center justify-center rounded-[12px] bg-muted text-muted">
         <UIcon name="i-lucide-user-x" class="size-6" />
       </span>
-      <h2 class="font-display text-2xl font-medium tracking-tight text-highlighted">Client not found</h2>
-      <p class="mt-2 text-[15px] text-muted">We couldn't find that client to edit.</p>
-      <UButton to="/clients" variant="soft" color="primary" class="mt-6" icon="i-lucide-arrow-left">Back to clients</UButton>
+      <h2 class="font-display text-2xl font-medium tracking-tight text-highlighted">{{ nounCap }} not found</h2>
+      <p class="mt-2 text-[15px] text-muted">We couldn't find that {{ noun }} to edit.</p>
+      <UButton :to="rootTo" variant="soft" color="primary" class="mt-6" icon="i-lucide-arrow-left">Back to {{ rootLabel.toLowerCase() }}</UButton>
     </div>
 
     <template v-else>
       <div class="mx-auto max-w-[720px] pb-6">
         <!-- breadcrumb -->
         <nav class="mb-3.5 flex flex-wrap items-center gap-1.5 text-[13px] text-muted">
-          <NuxtLink to="/clients" class="font-medium transition-colors hover:text-highlighted">Clients</NuxtLink>
+          <NuxtLink :to="rootTo" class="font-medium transition-colors hover:text-highlighted">{{ rootLabel }}</NuxtLink>
           <UIcon name="i-lucide-chevron-right" class="size-3.5 opacity-50" />
-          <template v-if="mode === 'edit'">
+          <!-- clients have a detail page to link back to; leads don't -->
+          <template v-if="mode === 'edit' && kind === 'client'">
             <NuxtLink :to="`/clients/${clientId}`" class="max-w-[220px] truncate font-medium transition-colors hover:text-highlighted">{{ displayName || 'Client' }}</NuxtLink>
             <UIcon name="i-lucide-chevron-right" class="size-3.5 opacity-50" />
           </template>
-          <span class="font-semibold text-highlighted">{{ mode === 'edit' ? 'Edit' : 'New client' }}</span>
+          <span class="font-semibold text-highlighted">{{ mode === 'edit' ? `Edit ${noun}` : `New ${noun}` }}</span>
         </nav>
 
         <!-- header -->
@@ -327,7 +368,7 @@ const subtitle = computed(() => props.mode === 'edit'
             <h1 class="font-display text-[28px] font-medium tracking-tight text-highlighted">{{ title }}</h1>
             <p class="mt-1.5 text-sm text-muted">{{ subtitle }}</p>
           </div>
-          <StatusChip v-if="mode === 'edit'" :status="STAGE_META[form.stage].status">{{ STAGE_META[form.stage].label }}</StatusChip>
+          <StatusChip v-if="mode === 'edit'" :status="STAGE_STATUS[form.stage]">{{ STAGE_LABEL[form.stage] }}</StatusChip>
         </div>
 
         <div class="flex flex-col gap-3.5">
@@ -338,12 +379,12 @@ const subtitle = computed(() => props.mode === 'edit'
               <p class="mt-1.5 text-[13.5px] text-muted">The business you're working with and how it shows up across the app.</p>
             </div>
 
-            <UFormField label="Client name" required :error="errors.company" class="mb-[18px]">
+            <UFormField :label="nameLabel" :required="kind === 'client'" :error="errors.company" class="mb-[18px]">
               <UInput v-model="form.company" placeholder="Acme Studio" size="lg" class="w-full" />
             </UFormField>
 
-            <!-- logo -->
-            <div class="mb-[18px]">
+            <!-- logo (clients only) -->
+            <div v-if="kind === 'client'" class="mb-[18px]">
               <label class="mb-1.5 block text-sm font-medium text-default">Logo</label>
               <div class="flex items-center gap-4">
                 <span v-if="logoUploading" class="flex size-14 flex-none items-center justify-center rounded-[12px] bg-muted text-muted ring ring-default">
@@ -409,7 +450,7 @@ const subtitle = computed(() => props.mode === 'edit'
             </div>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <UFormField label="Email" required :error="errors.email">
+              <UFormField label="Email" :required="kind === 'client'" :error="errors.email">
                 <UInput v-model="form.email" type="email" placeholder="name@company.com" icon="i-lucide-mail" size="lg" class="w-full" />
               </UFormField>
               <UFormField label="Phone">
@@ -418,8 +459,8 @@ const subtitle = computed(() => props.mode === 'edit'
             </div>
           </section>
 
-          <!-- ===== Billing ===== -->
-          <section class="rounded-card bg-default p-6 ring ring-default">
+          <!-- ===== Billing (clients only) ===== -->
+          <section v-if="kind === 'client'" class="rounded-card bg-default p-6 ring ring-default">
             <div class="mb-5">
               <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-teal-700">Billing</div>
               <p class="mt-1.5 text-[13.5px] text-muted">Where invoices are addressed. Leave the billing email blank to use the contact email.</p>
@@ -458,7 +499,7 @@ const subtitle = computed(() => props.mode === 'edit'
               <p class="mt-1.5 text-[13.5px] text-muted">Only your team sees this. Notes never appear on invoices or the client portal.</p>
             </div>
 
-            <div class="mb-[18px] grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div v-if="kind === 'client'" class="mb-[18px] grid grid-cols-1 gap-4 sm:grid-cols-2">
               <UFormField label="Client since">
                 <UInput v-model="form.since" type="date" icon="i-lucide-calendar" size="lg" class="w-full" />
               </UFormField>
@@ -479,7 +520,7 @@ const subtitle = computed(() => props.mode === 'edit'
             <span class="size-[7px] rounded-full bg-warning" />Unsaved changes
           </span>
           <span v-else-if="saved" class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-success">
-            <UIcon name="i-lucide-check" class="size-4" />{{ mode === 'edit' ? 'All changes saved' : 'Client created' }}
+            <UIcon name="i-lucide-check" class="size-4" />{{ mode === 'edit' ? 'All changes saved' : `${nounCap} created` }}
           </span>
           <div class="flex-1" />
           <UButton color="neutral" variant="outline" class="rounded-full" @click="requestCancel">Cancel</UButton>

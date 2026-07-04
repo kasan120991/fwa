@@ -187,6 +187,7 @@ function stageItems(c: Lead) {
 }
 function rowMenuItems(c: Lead) {
   return [[
+    { label: 'Edit lead', icon: 'i-lucide-pencil', onSelect: () => navigateTo(`/leads/${c.id}/edit`) },
     { label: 'Convert to proposal', icon: 'i-lucide-check', onSelect: () => { convertTarget.value = c } },
     { label: 'Add tag', icon: 'i-lucide-tag' },
     { label: 'Move section', icon: 'i-lucide-arrow-right' }
@@ -220,7 +221,7 @@ const filterItems = [[{ label: 'Website form', icon: 'i-lucide-layout-panel-top'
       <UDropdownMenu :items="overflowItems">
         <UButton icon="i-lucide-ellipsis" color="neutral" variant="outline" square aria-label="More actions" />
       </UDropdownMenu>
-      <UButton icon="i-lucide-plus" color="primary">Add lead</UButton>
+      <UButton to="/leads/new" icon="i-lucide-plus" color="primary">Add lead</UButton>
     </div>
   </div>
 
