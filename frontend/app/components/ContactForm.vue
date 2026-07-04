@@ -277,8 +277,10 @@ async function save({ another = false } = {}) {
     } else {
       await api(`/contacts/${props.clientId}`, { method: 'PATCH', body: payload() })
       markPristine()
-      saved.value = true
       toast.add({ title: 'Changes saved', color: 'success' })
+      // Head back to where the edit was launched from: the client detail page,
+      // or the Leads list (leads have no detail page).
+      leave()
     }
   } catch (e: unknown) {
     const err = e as { data?: { error?: { message?: string, fields?: Record<string, string> } } }
