@@ -12,6 +12,7 @@ const MAP: Record<string, PageMeta> = {
   '/clients': { title: 'Clients', breadcrumb: 'Clients & Work · Clients' },
   '/projects': { title: 'Projects', breadcrumb: 'Clients & Work · Projects' },
   '/tasks': { title: 'Tasks', breadcrumb: 'Clients & Work · Tasks' },
+  '/agreements': { title: 'Agreements', breadcrumb: 'Sales · Agreements' },
   '/proposals': { title: 'Proposals', breadcrumb: 'Sales · Proposals' },
   '/contracts': { title: 'Contracts', breadcrumb: 'Sales · Contracts' },
   '/invoices': { title: 'Invoices', breadcrumb: 'Billing · Invoices' },

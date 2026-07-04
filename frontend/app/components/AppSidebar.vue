@@ -34,6 +34,7 @@ const groups: NavGroup[] = [
   {
     label: 'Sales',
     items: [
+      { label: 'Agreements', to: '/agreements', icon: 'i-lucide-file-signature' },
       { label: 'Proposals', to: '/proposals', icon: 'i-lucide-file-text' },
       { label: 'Contracts', to: '/contracts', icon: 'i-lucide-file-check-2' }
     ]
@@ -86,16 +87,29 @@ function itemClass(to: string) {
     <!-- logo -->
     <div class="flex items-center gap-[11px] px-1.5 pb-5 pt-1">
       <span class="inline-flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[9px] bg-teal-600">
-        <img src="/brand/fwa-mark-white.svg" alt="FWA" class="h-[18px] w-[18px]">
+        <img
+          src="/brand/fwa-mark-white.svg"
+          alt="FWA"
+          class="h-[18px] w-[18px]"
+        >
       </span>
-      <span v-if="!collapsed" class="font-display text-[19px] font-medium tracking-tight text-white">Francis</span>
+      <span
+        v-if="!collapsed"
+        class="font-display text-[19px] font-medium tracking-tight text-white"
+      >Francis</span>
     </div>
 
     <!-- scrollable nav -->
     <nav class="-mx-1 flex flex-1 flex-col overflow-y-auto overflow-x-hidden px-1">
-      <template v-for="(group, gi) in groups" :key="gi">
+      <template
+        v-for="(group, gi) in groups"
+        :key="gi"
+      >
         <!-- divider shown only when collapsed (labels hide) -->
-        <div v-if="gi > 0 && collapsed" class="mx-2.5 mt-3.5 h-px bg-[#1C2422]" />
+        <div
+          v-if="gi > 0 && collapsed"
+          class="mx-2.5 mt-3.5 h-px bg-[#1C2422]"
+        />
         <div :class="gi > 0 ? 'mt-[18px]' : ''">
           <div
             v-if="group.label && !collapsed"
@@ -111,8 +125,14 @@ function itemClass(to: string) {
               :title="item.label"
               :class="itemClass(item.to)"
             >
-              <UIcon :name="item.icon" class="size-[19px] flex-none" />
-              <span v-if="!collapsed" class="overflow-hidden">{{ item.label }}</span>
+              <UIcon
+                :name="item.icon"
+                class="size-[19px] flex-none"
+              />
+              <span
+                v-if="!collapsed"
+                class="overflow-hidden"
+              >{{ item.label }}</span>
             </NuxtLink>
           </div>
         </div>
@@ -130,8 +150,14 @@ function itemClass(to: string) {
           :title="item.label"
           :class="itemClass(item.to)"
         >
-          <UIcon :name="item.icon" class="size-[19px] flex-none" />
-          <span v-if="!collapsed" class="overflow-hidden">{{ item.label }}</span>
+          <UIcon
+            :name="item.icon"
+            class="size-[19px] flex-none"
+          />
+          <span
+            v-if="!collapsed"
+            class="overflow-hidden"
+          >{{ item.label }}</span>
         </NuxtLink>
       </div>
 
@@ -140,12 +166,19 @@ function itemClass(to: string) {
         <span class="inline-flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-teal-600 text-[13px] font-semibold text-white">
           <ClientOnly fallback="—">{{ initials }}</ClientOnly>
         </span>
-        <div v-if="!collapsed" class="overflow-hidden leading-tight">
+        <div
+          v-if="!collapsed"
+          class="overflow-hidden leading-tight"
+        >
           <div class="whitespace-nowrap text-[13px] font-semibold text-white">
-            <ClientOnly fallback="—">{{ displayName }}</ClientOnly>
+            <ClientOnly fallback="—">
+              {{ displayName }}
+            </ClientOnly>
           </div>
           <div class="whitespace-nowrap text-xs text-teal-200">
-            <ClientOnly fallback="—">{{ roleLabel }}</ClientOnly>
+            <ClientOnly fallback="—">
+              {{ roleLabel }}
+            </ClientOnly>
           </div>
         </div>
       </div>

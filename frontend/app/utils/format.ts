@@ -82,6 +82,14 @@ export function formatPhone(input?: string | null): string {
   return d.length > 10 ? `${out} ${d.slice(10)}` : out
 }
 
+/** Whole-dollar money "$18,000" (no cents). Pass cents=true to keep decimals. */
+export function formatMoney(n?: number | null, opts?: { cents?: boolean }): string {
+  if (n == null || Number.isNaN(n)) return ''
+  return '$' + n.toLocaleString('en-US', opts?.cents
+    ? { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+    : { maximumFractionDigits: 0 })
+}
+
 /** Short date "Mar 12, 2023". */
 export function shortDate(input?: string | null): string {
   const d = toDate(input)

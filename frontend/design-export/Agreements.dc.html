@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/styles.css">
+  <script src="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/_ds_bundle.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--cloud);font-family:var(--font-sans);color:var(--text-body);-webkit-font-smoothing:antialiased;animation:fwaFade .4s ease}
+    @keyframes fwaFade{from{opacity:0}to{opacity:1}}
+    @keyframes fwaShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+    @keyframes fwaPop{from{transform:translateY(6px) scale(.98);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+    @keyframes fwaScrim{from{opacity:0}to{opacity:1}}
+    @keyframes fwaSlideIn{from{transform:translateX(28px);opacity:.4}to{transform:translateX(0);opacity:1}}
+    .fwa-dscroll::-webkit-scrollbar,.fwa-board::-webkit-scrollbar{width:9px;height:10px}
+    .fwa-dscroll::-webkit-scrollbar-thumb,.fwa-board::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:9999px;border:2px solid var(--canvas)}
+    @media (max-width:980px){ .fwa-search{display:none !important} .fwa-crumb{display:none !important} .fwa-col-date{display:none !important} }
+    @media (max-width:1160px){ .fwa-col-value{display:none !important} }
+  </style>
+</helmet>
+
+<div style="display:flex;min-height:100vh;width:100%">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside style="{{ asideStyle }}">
+    <div style="display:flex;align-items:center;gap:11px;padding:4px 6px 20px">
+      <span style="width:34px;height:34px;flex:none;border-radius:9px;background:var(--teal-600);display:inline-flex;align-items:center;justify-content:center"><img src="assets/fwa-mark-white.svg" alt="FWA" style="width:18px;height:18px;display:block"></span>
+      <span style="{{ logoWordStyle }}">Francis</span>
+    </div>
+    <nav style="display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;flex:1;margin:0 -4px;padding:0 4px">
+      <a href="AppDashboard.dc.html" title="Dashboard" onClick="{{ pick.dashboard }}" onMouseEnter="{{ enter.dashboard }}" onMouseLeave="{{ leave.dashboard }}" style="{{ nav.dashboard }}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
+        <span style="{{ navLabelStyle }}">Dashboard</span>
+      </a>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Clients &amp; Work</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="Leads.dc.html" title="Leads" onClick="{{ pick.leads }}" onMouseEnter="{{ enter.leads }}" onMouseLeave="{{ leave.leads }}" style="{{ nav.leads }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+            <span style="{{ navLabelStyle }}">Leads</span>
+          </a>
+          <a href="ClientDetail.dc.html" title="Clients" onClick="{{ pick.clients }}" onMouseEnter="{{ enter.clients }}" onMouseLeave="{{ leave.clients }}" style="{{ nav.clients }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <span style="{{ navLabelStyle }}">Clients</span>
+          </a>
+          <a href="Projects.dc.html" title="Projects" onClick="{{ pick.projects }}" onMouseEnter="{{ enter.projects }}" onMouseLeave="{{ leave.projects }}" style="{{ nav.projects }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path><path d="M8 10v4"></path><path d="M12 10v2"></path><path d="M16 10v6"></path></svg>
+            <span style="{{ navLabelStyle }}">Projects</span>
+          </a>
+          <a href="#" title="Tasks" onClick="{{ pick.tasks }}" onMouseEnter="{{ enter.tasks }}" onMouseLeave="{{ leave.tasks }}" style="{{ nav.tasks }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="m3 17 2 2 4-4"></path><path d="m3 7 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>
+            <span style="{{ navLabelStyle }}">Tasks</span>
+          </a>
+        </div>
+      </div>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Sales</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="Agreements.dc.html" title="Agreements" onClick="{{ pick.agreements }}" onMouseEnter="{{ enter.agreements }}" onMouseLeave="{{ leave.agreements }}" style="{{ nav.agreements }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg>
+            <span style="{{ navLabelStyle }}">Agreements</span>
+          </a>
+          <a href="#" title="Proposals" onClick="{{ pick.proposals }}" onMouseEnter="{{ enter.proposals }}" onMouseLeave="{{ leave.proposals }}" style="{{ nav.proposals }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>
+            <span style="{{ navLabelStyle }}">Proposals</span>
+          </a>
+          <a href="#" title="Contracts" onClick="{{ pick.contracts }}" onMouseEnter="{{ enter.contracts }}" onMouseLeave="{{ leave.contracts }}" style="{{ nav.contracts }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg>
+            <span style="{{ navLabelStyle }}">Contracts</span>
+          </a>
+        </div>
+      </div>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Billing</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="#" title="Invoices" onClick="{{ pick.invoices }}" onMouseEnter="{{ enter.invoices }}" onMouseLeave="{{ leave.invoices }}" style="{{ nav.invoices }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 17.5v-11"></path></svg>
+            <span style="{{ navLabelStyle }}">Invoices</span>
+          </a>
+          <a href="#" title="Payments" onClick="{{ pick.payments }}" onMouseEnter="{{ enter.payments }}" onMouseLeave="{{ leave.payments }}" style="{{ nav.payments }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect width="20" height="14" x="2" y="5" rx="2"></rect><line x1="2" x2="22" y1="10" y2="10"></line></svg>
+            <span style="{{ navLabelStyle }}">Payments</span>
+          </a>
+        </div>
+      </div>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Workspace</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="Receptionist.dc.html" title="AI Receptionist" onClick="{{ pick.calls }}" onMouseEnter="{{ enter.calls }}" onMouseLeave="{{ leave.calls }}" style="{{ nav.calls }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z"></path></svg>
+            <span style="{{ navLabelStyle }}">AI Receptionist</span>
+          </a>
+          <a href="#" title="Files" onClick="{{ pick.files }}" onMouseEnter="{{ enter.files }}" onMouseLeave="{{ leave.files }}" style="{{ nav.files }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>
+            <span style="{{ navLabelStyle }}">Files</span>
+          </a>
+        </div>
+      </div>
+    </nav>
+    <div style="flex:none">
+      <div style="height:1px;background:var(--ink-soft);margin:12px 2px"></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 8px">
+        <span style="width:34px;height:34px;flex:none;border-radius:50%;background:var(--teal-600);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">JR</span>
+        <div style="{{ userTextStyle }}">
+          <div style="font-size:13px;font-weight:600;color:#fff;white-space:nowrap">Jordan Rivera</div>
+          <div style="font-size:12px;color:var(--on-dark-muted);white-space:nowrap">Owner</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <header style="height:64px;flex:none;background:var(--canvas);border-bottom:1px solid var(--hairline);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 26px;position:sticky;top:0;z-index:30">
+      <div style="display:flex;align-items:center;gap:14px;min-width:0">
+        <button aria-label="Toggle sidebar" onClick="{{ toggle }}" style="width:38px;height:38px;flex:none;border-radius:10px;border:1px solid var(--hairline);background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);transition:background .15s ease" style-hover="background:var(--cloud)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg>
+        </button>
+        <div style="min-width:0">
+          <div class="fwa-crumb" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted)">Sales · Agreements</div>
+          <h1 style="font-family:var(--font-display);font-weight:500;font-size:22px;letter-spacing:-.4px;color:var(--ink);margin:1px 0 0;white-space:nowrap">Agreements</h1>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex:none">
+        <div class="fwa-search" style="display:flex;align-items:center;gap:9px;background:var(--cloud);border:1px solid var(--hairline);border-radius:9999px;padding:8px 10px 8px 14px;width:220px;cursor:text" style-hover="border-color:var(--border-strong)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <span style="flex:1;font-size:14px;color:var(--text-muted)">Search…</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);border:1px solid var(--hairline);border-radius:6px;padding:1px 6px;background:var(--canvas)">⌘K</span>
+        </div>
+        <button aria-label="Notifications" style="position:relative;width:40px;height:40px;flex:none;border-radius:10px;border:1px solid var(--hairline);background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);transition:background .15s ease" style-hover="background:var(--cloud)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+          <span style="position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--error);border:1.5px solid var(--canvas)"></span>
+        </button>
+        <button aria-label="Account menu" style="display:flex;align-items:center;gap:7px;background:transparent;border:none;cursor:pointer;padding:3px 4px 3px 3px;border-radius:10px;transition:background .15s ease" style-hover="background:var(--cloud)">
+          <span style="width:34px;height:34px;flex:none;border-radius:50%;background:var(--teal-600);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">JR</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <main style="flex:1;padding:26px;overflow-y:auto">
+      <div style="max-width:1380px;margin:0 auto;display:flex;flex-direction:column;gap:18px">
+
+        <!-- page header -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+          <div>
+            <div style="display:flex;align-items:center;gap:11px">
+              <h2 style="font-family:var(--font-display);font-weight:500;font-size:26px;letter-spacing:-.5px;color:var(--ink);margin:0">Agreements</h2>
+              <span style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--teal-700);background:var(--mist);border-radius:9999px;padding:3px 10px">{{ headerCount }}</span>
+            </div>
+            <p style="font-size:14px;color:var(--text-muted);margin:6px 0 0">Every proposal and contract across all clients, generated and signed through PandaDoc.</p>
+          </div>
+          <div style="display:flex;gap:10px;flex:none">
+            <button onClick="{{ noop }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:10px 16px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;color:var(--ink);transition:background .15s ease;white-space:nowrap" style-hover="background:var(--cloud)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg>New contract</button>
+            <button onClick="{{ noop }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--action);color:#fff;border:none;border-radius:9999px;padding:10px 18px 10px 15px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;transition:background .15s ease;white-space:nowrap" style-hover="background:var(--action-hover)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>New proposal</button>
+          </div>
+        </div>
+
+        <!-- summary strip -->
+        <sc-if value="{{ showChrome }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+            <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="3">
+              <button onClick="{{ t.onClick }}" style="{{ t.style }}">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+                  <span style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted)">{{ t.label }}</span>
+                  <span style="{{ t.iconWrap }}">{{ t.icon }}</span>
+                </div>
+                <div style="display:flex;align-items:baseline;gap:8px;margin-top:12px">
+                  <span style="font-family:var(--font-display);font-weight:500;font-size:27px;letter-spacing:-.5px;color:var(--ink);line-height:1;font-variant-numeric:tabular-nums">{{ t.value }}</span>
+                  <span style="font-size:12.5px;color:var(--text-muted)">{{ t.sub }}</span>
+                </div>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- controls row -->
+        <sc-if value="{{ showChrome }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+            <div style="display:inline-flex;align-items:center;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;padding:3px;gap:2px">
+              <sc-for list="{{ segments }}" as="s" hint-placeholder-count="3"><button onClick="{{ s.onClick }}" style="{{ s.style }}">{{ s.label }} <span style="{{ s.badge }}">{{ s.count }}</span></button></sc-for>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="display:flex;align-items:center;gap:9px;background:var(--canvas);border:1px solid var(--hairline);border-radius:9999px;padding:8px 14px;width:230px" style-focus-within="border-color:var(--focus-ring)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+                <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Search title or client…" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:var(--font-sans);font-size:14px;color:var(--ink)">
+              </div>
+              <div data-pop style="position:relative">
+                <button onClick="{{ toggleFilter }}" style="{{ ctrlBtn }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>Filter<sc-if value="{{ filterActive }}" hint-placeholder-val="{{ false }}"><span style="width:6px;height:6px;border-radius:50%;background:var(--teal-500)"></span></sc-if></button>
+                <sc-if value="{{ filterOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;top:44px;right:0;z-index:40;min-width:230px;background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px;animation:fwaPop .12s ease">
+                    <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);padding:6px 10px 4px">Status</div>
+                    <sc-for list="{{ statusOptions }}" as="o" hint-placeholder-count="5"><button onClick="{{ o.pick }}" style="{{ o.style }}"><sc-if value="{{ o.hasDot }}" hint-placeholder-val="{{ false }}"><span style="{{ o.dot }}"></span></sc-if>{{ o.label }}<sc-if value="{{ o.current }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--action)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if></button></sc-for>
+                    <div style="height:1px;background:var(--hairline);margin:5px 4px"></div>
+                    <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);padding:6px 10px 4px">Billing</div>
+                    <button onClick="{{ toggleRecurring }}" style="{{ recurringStyle }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m17 2 4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="m7 22-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>Recurring only</button>
+                  </div>
+                </sc-if>
+              </div>
+              <div data-pop style="position:relative">
+                <button onClick="{{ toggleSort }}" style="{{ ctrlBtn }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 16 4 4 4-4"></path><path d="M7 20V4"></path><path d="M11 4h10"></path><path d="M11 8h7"></path><path d="M11 12h4"></path></svg>Sort</button>
+                <sc-if value="{{ sortOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;top:44px;right:0;z-index:40;min-width:170px;background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px;animation:fwaPop .12s ease">
+                    <button onClick="{{ sortRecent }}" style="{{ sortOpt.recent }}">Most recent</button>
+                    <button onClick="{{ sortValue }}" style="{{ sortOpt.value }}">Value</button>
+                    <button onClick="{{ sortClient }}" style="{{ sortOpt.client }}">Client</button>
+                    <button onClick="{{ sortStatus }}" style="{{ sortOpt.status }}">Status</button>
+                  </div>
+                </sc-if>
+              </div>
+              <div style="display:inline-flex;align-items:center;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;padding:3px;gap:2px">
+                <button onClick="{{ setTable }}" title="Table view" style="{{ viewBtn.table }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="9" y2="9"></line><line x1="3" x2="21" y1="15" y2="15"></line><line x1="9" x2="9" y1="3" y2="21"></line></svg></button>
+                <button onClick="{{ setBoard }}" title="Board view" style="{{ viewBtn.board }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="18" x="3" y="3" rx="1"></rect><rect width="7" height="12" x="14" y="3" rx="1"></rect></svg></button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== TABLE ===== -->
+        <sc-if value="{{ showTable }}" hint-placeholder-val="{{ true }}">
+          <div style="background:var(--canvas);border:1px solid var(--hairline);border-radius:16px">
+            <table style="width:100%;border-collapse:collapse;font-family:var(--font-sans)">
+              <thead>
+                <tr>
+                  <th style="{{ thL }}">Agreement</th>
+                  <th style="{{ thL }}">Client</th>
+                  <th style="{{ thL }}">Type</th>
+                  <th style="{{ thL }}">Status</th>
+                  <th class="fwa-col-value" style="{{ thR }}">Value</th>
+                  <th class="fwa-col-date" style="{{ thL }}">Date</th>
+                  <th style="{{ thAct }}"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+                  <tr onClick="{{ r.open }}" onMouseEnter="{{ r.enter }}" onMouseLeave="{{ r.leave }}" style="{{ r.rowStyle }}">
+                    <td style="padding:14px 16px;max-width:280px">
+                      <div style="display:flex;align-items:center;gap:9px">
+                        <span style="{{ r.iconWrap }}">{{ r.icon }}</span>
+                        <div style="min-width:0">
+                          <div style="font-size:14px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.title }}</div>
+                          <sc-if value="{{ r.hasSecondary }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;display:flex;align-items:center;gap:5px">{{ r.secondaryIcon }}{{ r.secondary }}</div></sc-if>
+                        </div>
+                      </div>
+                    </td>
+                    <td style="padding:14px 16px">
+                      <a href="ClientDetail.dc.html" onClick="{{ r.stop }}" style="display:inline-flex;align-items:center;gap:9px;text-decoration:none" style-hover="opacity:.8">
+                        <span style="{{ r.clientAvatar }}">{{ r.clientInitials }}</span>
+                        <span style="font-size:13.5px;font-weight:500;color:var(--text-body);white-space:nowrap">{{ r.client }}</span>
+                      </a>
+                    </td>
+                    <td style="padding:14px 16px">
+                      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                        <span style="{{ r.typeChip }}">{{ r.typeLabel }}</span>
+                        <sc-if value="{{ r.hasSubtype }}" hint-placeholder-val="{{ false }}"><span style="{{ r.subtypeChip }}">{{ r.subtypeIcon }}{{ r.subtypeLabel }}</span></sc-if>
+                      </div>
+                    </td>
+                    <td style="padding:14px 16px"><span style="{{ r.statusChip }}"><span style="{{ r.statusDot }}"></span>{{ r.statusLabel }}</span></td>
+                    <td class="fwa-col-value" style="padding:14px 16px;text-align:right;white-space:nowrap"><span style="font-size:14px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums">{{ r.valueMain }}</span><sc-if value="{{ r.recurring }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--text-muted);font-weight:500">{{ r.cadence }}</span></sc-if></td>
+                    <td class="fwa-col-date" style="padding:14px 16px"><span style="{{ r.dateStyle }}"><sc-if value="{{ r.dateIcon }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></sc-if>{{ r.dateText }}</span></td>
+                    <td style="padding:14px 12px 14px 8px;width:48px;text-align:right"><button data-pop aria-label="Actions" onClick="{{ r.openMenu }}" style="width:30px;height:30px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--text-muted);transition:background .12s ease" style-hover="background:var(--cloud)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg></button></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px;border-top:1px solid var(--hairline)">
+              <span style="font-size:13px;color:var(--text-muted);font-variant-numeric:tabular-nums">{{ footerText }}</span>
+              <button style="display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:8px 16px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer" style-hover="background:var(--cloud)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>Load more</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== BOARD ===== -->
+        <sc-if value="{{ showBoard }}" hint-placeholder-val="{{ false }}">
+          <div class="fwa-board" style="overflow-x:auto;padding-bottom:6px">
+            <div style="display:flex;gap:14px;min-width:min-content;align-items:flex-start">
+              <sc-for list="{{ boardColumns }}" as="col" hint-placeholder-count="5">
+                <div style="width:288px;flex:none;background:var(--cloud);border:1px solid var(--hairline);border-radius:14px;padding:14px">
+                  <div style="display:flex;align-items:center;gap:8px;padding:2px 4px 12px">
+                    <span style="{{ col.dot }}"></span><span style="font-size:13px;font-weight:600;color:var(--ink)">{{ col.label }}</span>
+                    <span style="font-size:12px;font-weight:600;color:var(--text-muted);font-variant-numeric:tabular-nums;background:var(--canvas);border:1px solid var(--hairline);border-radius:9999px;padding:1px 8px">{{ col.count }}</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:10px;min-height:50px">
+                    <sc-for list="{{ col.cards }}" as="c" hint-placeholder-count="2">
+                      <div onClick="{{ c.open }}" style="background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;padding:13px;cursor:pointer;transition:border-color .12s ease" style-hover="border-color:var(--border-strong)">
+                        <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px">
+                          <span style="{{ c.typeChip }}">{{ c.typeLabel }}</span>
+                          <sc-if value="{{ c.hasSubtype }}" hint-placeholder-val="{{ false }}"><span style="{{ c.subtypeChip }}">{{ c.subtypeIcon }}{{ c.subtypeLabel }}</span></sc-if>
+                        </div>
+                        <div style="font-size:14px;font-weight:600;color:var(--ink);line-height:1.35;margin-bottom:10px">{{ c.title }}</div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">
+                          <span style="{{ c.clientAvatar }}">{{ c.clientInitials }}</span>
+                          <span style="font-size:12.5px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.client }}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                          <span style="font-size:13.5px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums">{{ c.valueMain }}<sc-if value="{{ c.recurring }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;color:var(--text-muted);font-weight:500">{{ c.cadence }}</span></sc-if></span>
+                          <span style="{{ c.dateStyle }}"><sc-if value="{{ c.dateIcon }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></sc-if>{{ c.dateText }}</span>
+                        </div>
+                      </div>
+                    </sc-for>
+                    <sc-if value="{{ col.empty }}" hint-placeholder-val="{{ false }}"><div style="border:1.5px dashed var(--hairline);border-radius:12px;padding:16px;text-align:center;font-size:12.5px;color:var(--text-muted)">None</div></sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- no results -->
+        <sc-if value="{{ showNoResults }}" hint-placeholder-val="{{ false }}">
+          <div style="background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;display:flex;flex-direction:column;align-items:center;text-align:center;padding:72px 24px">
+            <span style="width:54px;height:54px;border-radius:13px;background:var(--cloud);color:var(--text-muted);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg></span>
+            <h3 style="font-family:var(--font-display);font-weight:500;font-size:19px;color:var(--ink);margin:0 0 5px">No agreements match</h3>
+            <p style="font-size:13.5px;color:var(--text-muted);margin:0 0 16px">Try a different segment, status, or search.</p>
+            <button onClick="{{ clearFilters }}" style="background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:8px 15px;cursor:pointer;font-family:var(--font-sans);font-size:13.5px;font-weight:600;color:var(--ink)" style-hover="background:var(--cloud)">Clear filters</button>
+          </div>
+        </sc-if>
+
+        <!-- empty -->
+        <sc-if value="{{ showEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;display:flex;flex-direction:column;align-items:center;text-align:center;padding:88px 24px">
+            <span style="width:64px;height:64px;border-radius:16px;background:var(--mist);color:var(--teal-700);display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg></span>
+            <h3 style="font-family:var(--font-display);font-weight:500;font-size:22px;color:var(--ink);margin:0 0 8px">No agreements yet</h3>
+            <p style="font-size:14.5px;color:var(--text-muted);margin:0 0 22px;max-width:380px;line-height:1.5">Send a proposal or draft a contract. Everything you generate in PandaDoc shows up here with its live status.</p>
+            <div style="display:flex;align-items:center;gap:10px">
+              <button onClick="{{ noop }}" style="display:inline-flex;align-items:center;gap:8px;background:var(--action);color:#fff;border:none;border-radius:9999px;padding:11px 20px 11px 16px;font-family:var(--font-sans);font-weight:600;font-size:15px;cursor:pointer;transition:background .15s ease" style-hover="background:var(--action-hover)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>New proposal</button>
+              <button onClick="{{ noop }}" style="display:inline-flex;align-items:center;gap:8px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:11px 18px;font-family:var(--font-sans);font-weight:600;font-size:15px;cursor:pointer;color:var(--ink)" style-hover="background:var(--cloud)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path></svg>New contract</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- loading -->
+        <sc-if value="{{ showLoading }}" hint-placeholder-val="{{ false }}">
+          <div style="background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;padding:8px 0">
+            <sc-for list="{{ skeletonRows }}" as="sk" hint-placeholder-count="8">
+              <div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-top:1px solid var(--hairline)">
+                <div style="width:30px;height:30px;border-radius:8px;flex:none;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                <div style="flex:1.6;display:flex;flex-direction:column;gap:7px"><div style="width:{{ sk.w1 }};height:11px;border-radius:6px;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div><div style="width:30%;height:9px;border-radius:6px;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div></div>
+                <div style="flex:1;display:flex;align-items:center;gap:9px"><div style="width:26px;height:26px;border-radius:7px;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div><div style="width:55%;height:10px;border-radius:6px;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div></div>
+                <div style="width:92px;height:22px;border-radius:9999px;flex:none;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                <div style="width:70px;height:11px;border-radius:6px;flex:none;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- status legend -->
+        <sc-if value="{{ showTable }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:0 4px">
+            <span style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted)">Status system</span>
+            <sc-for list="{{ statusLegend }}" as="l" hint-placeholder-count="4"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)"><span style="{{ l.dot }}"></span>{{ l.label }}</span></sc-for>
+          </div>
+        </sc-if>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- row actions menu -->
+<sc-if value="{{ rowMenuOpen }}" hint-placeholder-val="{{ false }}">
+  <div data-pop style="{{ rowMenuStyle }}">
+    <button onClick="{{ closeRowMenu }}" style="{{ menuItem }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>Open in PandaDoc</button>
+    <button onClick="{{ closeRowMenu }}" style="{{ menuItem }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>Copy link</button>
+    <button onClick="{{ closeRowMenu }}" style="{{ menuItem }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>Resend</button>
+    <sc-if value="{{ rowMenuRelated }}" hint-placeholder-val="{{ false }}"><button onClick="{{ closeRowMenu }}" style="{{ menuItem }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"></path><path d="M15 7h2a5 5 0 1 1 0 10h-2"></path><line x1="8" x2="16" y1="12" y2="12"></line></svg>View related agreement</button></sc-if>
+    <div style="height:1px;background:var(--hairline);margin:5px 4px"></div>
+    <button onClick="{{ closeRowMenu }}" style="{{ menuItemDanger }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></svg>Void</button>
+  </div>
+</sc-if>
+
+<!-- ============ DETAIL DRAWER ============ -->
+<sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;z-index:80">
+    <div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:var(--scrim);animation:fwaScrim .15s ease"></div>
+    <div style="position:absolute;top:0;right:0;height:100vh;width:480px;max-width:94vw;background:var(--canvas);border-left:1px solid var(--hairline);box-shadow:var(--shadow-pop);display:flex;flex-direction:column;animation:fwaSlideIn .22s cubic-bezier(.22,.61,.36,1)">
+      <div style="flex:none;padding:20px 24px;border-bottom:1px solid var(--hairline)">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div style="display:flex;align-items:center;gap:11px;min-width:0">
+            <span style="{{ d.iconWrap }}">{{ d.icon }}</span>
+            <div style="min-width:0">
+              <div style="font-size:17px;font-weight:600;color:var(--ink);line-height:1.3">{{ d.title }}</div>
+              <a href="ClientDetail.dc.html" style="display:inline-flex;align-items:center;gap:7px;margin-top:6px;text-decoration:none" style-hover="opacity:.8"><span style="{{ d.clientAvatar }}">{{ d.clientInitials }}</span><span style="font-size:13px;font-weight:500;color:var(--teal-700)">{{ d.client }}</span></a>
+            </div>
+          </div>
+          <button onClick="{{ closeDrawer }}" aria-label="Close" style="width:32px;height:32px;flex:none;border-radius:9px;border:1px solid var(--hairline);background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--text-muted)" style-hover="background:var(--cloud)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;margin-top:14px;flex-wrap:wrap">
+          <span style="{{ d.typeChip }}">{{ d.typeLabel }}</span>
+          <sc-if value="{{ d.hasSubtype }}" hint-placeholder-val="{{ false }}"><span style="{{ d.subtypeChip }}">{{ d.subtypeIcon }}{{ d.subtypeLabel }}</span></sc-if>
+          <span style="{{ d.statusChip }}"><span style="{{ d.statusDot }}"></span>{{ d.statusLabel }}</span>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px">
+          <span style="font-family:var(--font-display);font-weight:500;font-size:26px;letter-spacing:-.5px;color:var(--ink);font-variant-numeric:tabular-nums">{{ d.valueMain }}</span>
+          <sc-if value="{{ d.recurring }}" hint-placeholder-val="{{ false }}"><span style="font-size:14px;color:var(--text-muted);font-weight:500">{{ d.cadence }} · recurring</span></sc-if>
+          <sc-if value="{{ d.oneTime }}" hint-placeholder-val="{{ true }}"><span style="font-size:13px;color:var(--text-muted)">one-time total</span></sc-if>
+        </div>
+      </div>
+
+      <div class="fwa-dscroll" style="flex:1;min-height:0;overflow-y:auto;padding:22px 24px">
+        <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Line items</div>
+        <div style="border:1px solid var(--hairline);border-radius:12px;overflow:hidden;margin-bottom:24px">
+          <sc-for list="{{ d.lineItems }}" as="li" hint-placeholder-count="3">
+            <div style="{{ li.rowStyle }}">
+              <div style="min-width:0;flex:1">
+                <div style="font-size:13.5px;font-weight:500;color:var(--ink);display:flex;align-items:center;gap:7px">{{ li.name }}<sc-if value="{{ li.custom }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:600;color:var(--text-muted);background:var(--cloud);border-radius:5px;padding:1px 6px">Custom</span></sc-if><sc-if value="{{ li.catalog }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:600;color:var(--teal-700);background:var(--mist);border-radius:5px;padding:1px 6px">Service</span></sc-if></div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px;font-variant-numeric:tabular-nums">{{ li.qty }} × {{ li.unit }}</div>
+              </div>
+              <span style="font-size:13.5px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap">{{ li.total }}</span>
+            </div>
+          </sc-for>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 15px;background:var(--cloud);border-top:1px solid var(--hairline)">
+            <span style="font-size:13px;font-weight:600;color:var(--ink)">Total</span>
+            <span style="font-size:15px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums">{{ d.valueMain }}<sc-if value="{{ d.recurring }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--text-muted);font-weight:500">{{ d.cadence }}</span></sc-if></span>
+          </div>
+        </div>
+
+        <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px">Status timeline</div>
+        <div style="display:flex;flex-direction:column;margin-bottom:8px">
+          <sc-for list="{{ d.timeline }}" as="ev" hint-placeholder-count="4">
+            <div style="display:flex;gap:13px">
+              <div style="display:flex;flex-direction:column;align-items:center;flex:none">
+                <span style="{{ ev.dot }}"><sc-if value="{{ ev.check }}" hint-placeholder-val="{{ false }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if></span>
+                <sc-if value="{{ ev.line }}" hint-placeholder-val="{{ true }}"><span style="width:2px;flex:1;min-height:22px;background:var(--hairline)"></span></sc-if>
+              </div>
+              <div style="padding-bottom:18px">
+                <div style="font-size:13.5px;font-weight:600;color:{{ ev.color }};line-height:1.2">{{ ev.label }}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:3px;font-variant-numeric:tabular-nums">{{ ev.date }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ d.hasLineage }}" hint-placeholder-val="{{ false }}">
+          <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);margin:16px 0 10px">Related</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ d.lineage }}" as="ln" hint-placeholder-count="1">
+              <a href="{{ ln.href }}" onClick="{{ ln.onClick }}" style="display:flex;align-items:center;gap:11px;padding:12px 14px;border:1px solid var(--hairline);border-radius:12px;text-decoration:none;background:var(--canvas);transition:background .12s ease" style-hover="background:var(--cloud)">
+                <span style="{{ ln.iconWrap }}">{{ ln.icon }}</span>
+                <div style="flex:1;min-width:0"><div style="font-size:11px;font-family:var(--font-mono);letter-spacing:.4px;text-transform:uppercase;color:var(--text-muted)">{{ ln.kicker }}</div><div style="font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">{{ ln.label }}</div></div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="m9 18 6-6-6-6"></path></svg>
+              </a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+
+      <div style="flex:none;padding:14px 24px;border-top:1px solid var(--hairline);display:flex;align-items:center;gap:9px">
+        <button onClick="{{ noop }}" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--action);color:#fff;border:none;border-radius:9999px;padding:11px 16px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer" style-hover="background:var(--action-hover)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>Open in PandaDoc</button>
+        <button onClick="{{ noop }}" title="Download PDF" style="{{ drawerIconBtn }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg></button>
+        <button onClick="{{ noop }}" title="Resend" style="{{ drawerIconBtn }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg></button>
+        <button onClick="{{ noop }}" title="Void" style="{{ drawerIconBtnDanger }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></svg></button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;view&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;populated&quot;,&quot;empty&quot;,&quot;loading&quot;],&quot;default&quot;:&quot;populated&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;State&quot;},&quot;openExample&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;State&quot;},&quot;startCollapsed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;}}">
+class Component extends DCLogic {
+  state = { collapsed: null, navActive: 'agreements', navHover: null, view: 'table', seg: 'all', statusFilter: 'all', recurringOnly: false, sortKey: 'recent', search: '', pop: null, hoverRow: null, rowMenu: null, openId: null };
+
+  CLIENTS = {
+    northwind: { name: 'Northwind Co.', initials: 'NC', ci: 0 },
+    bloom: { name: 'Bloom Floral', initials: 'BF', ci: 1 },
+    delta: { name: 'Delta Kitchens', initials: 'DK', ci: 2 },
+    brooks: { name: 'Brooks Law', initials: 'BL', ci: 3 },
+    fielder: { name: 'Fielder Roofing', initials: 'FR', ci: 4 },
+    anand: { name: 'Anand Dental', initials: 'AD', ci: 0 },
+    chen: { name: 'Chen Studio', initials: 'CS', ci: 1 },
+  };
+  PAL = [ { bg: 'var(--teal-800)', fg: '#fff' }, { bg: 'var(--mist)', fg: 'var(--teal-700)' }, { bg: 'var(--sand)', fg: 'var(--ink)' }, { bg: 'var(--info-bg)', fg: 'var(--info)' }, { bg: 'var(--cloud)', fg: 'var(--text-body)' } ];
+
+  AGREEMENTS = [
+    { id: 'a1', client: 'northwind', kind: 'proposal', title: 'Website redesign & SEO', status: 'accepted', total: 18000, recurring: false, created: 'Apr 2', sent: 'Apr 3', viewed: 'Apr 4', end: { k: 'accepted', label: 'Accepted', date: 'Apr 9' }, dateText: 'Accepted Apr 9', dateKind: 'good', sortT: 90, lineTo: 'a2', items: [ { name: 'Discovery & IA', qty: 1, unit: 3500, custom: false }, { name: 'Responsive redesign (8 pages)', qty: 1, unit: 9500, custom: false }, { name: 'Technical SEO setup', qty: 1, unit: 3500, custom: false }, { name: 'Copy polish pass', qty: 1, unit: 1500, custom: true } ] },
+    { id: 'a2', client: 'northwind', kind: 'contract', ctype: 'project', title: 'Website redesign & SEO', status: 'signed', total: 18000, recurring: false, created: 'Apr 9', sent: 'Apr 9', viewed: 'Apr 10', end: { k: 'signed', label: 'Signed', date: 'Apr 11' }, dateText: 'Signed Apr 11', dateKind: 'good', sortT: 84, fromProposal: 'a1', producedProject: true, items: [ { name: 'Discovery & IA', qty: 1, unit: 3500, custom: false }, { name: 'Responsive redesign (8 pages)', qty: 1, unit: 9500, custom: false }, { name: 'Technical SEO setup', qty: 1, unit: 3500, custom: false }, { name: 'Copy polish pass', qty: 1, unit: 1500, custom: true } ] },
+    { id: 'a3', client: 'bloom', kind: 'contract', ctype: 'care_plan', title: 'Website Care Plan', status: 'signed', total: 99, recurring: true, created: 'Jan 15', sent: 'Jan 15', viewed: 'Jan 16', end: { k: 'signed', label: 'Signed', date: 'Jan 18' }, dateText: 'Signed Jan 18', dateKind: 'good', sortT: 170, items: [ { name: 'Managed hosting & backups', qty: 1, unit: 39, custom: false }, { name: 'Monthly updates & monitoring', qty: 1, unit: 60, custom: false } ] },
+    { id: 'a4', client: 'delta', kind: 'proposal', title: 'Booking site build', status: 'sent', total: 12000, recurring: false, created: 'Jun 28', sent: 'Jun 30', end: null, dateText: 'Expires in 3d', dateKind: 'expiring', sortT: 4, items: [ { name: 'Booking flow design', qty: 1, unit: 4500, custom: false }, { name: 'Calendar integration', qty: 1, unit: 4500, custom: false }, { name: 'Responsive build', qty: 1, unit: 3000, custom: false } ] },
+    { id: 'a5', client: 'brooks', kind: 'proposal', title: 'Consultation funnel', status: 'viewed', total: 9800, recurring: false, created: 'Jun 27', sent: 'Jun 28', viewed: 'Jul 2', end: null, dateText: 'Expires in 2d', dateKind: 'expiring', sortT: 2, items: [ { name: 'Landing + intake form', qty: 1, unit: 5800, custom: false }, { name: 'Email automation setup', qty: 1, unit: 4000, custom: false } ] },
+    { id: 'a6', client: 'fielder', kind: 'proposal', title: 'Lead-gen site', status: 'draft', total: 14200, recurring: false, created: 'Jul 2', sent: null, end: null, dateText: 'Created 2d ago', dateKind: 'muted', sortT: 2, items: [ { name: 'Lead-gen site (6 pages)', qty: 1, unit: 10200, custom: false }, { name: 'Quote request forms', qty: 1, unit: 4000, custom: false } ] },
+    { id: 'a7', client: 'anand', kind: 'proposal', title: 'Patient portal', status: 'accepted', total: 32000, recurring: false, created: 'May 20', sent: 'May 21', viewed: 'May 22', end: { k: 'accepted', label: 'Accepted', date: 'May 28' }, dateText: 'Accepted May 28', dateKind: 'good', sortT: 40, lineTo: 'a8', items: [ { name: 'Portal UX & design', qty: 1, unit: 12000, custom: false }, { name: 'Auth & records module', qty: 1, unit: 20000, custom: false } ] },
+    { id: 'a8', client: 'anand', kind: 'contract', ctype: 'project', title: 'Patient portal', status: 'sent', total: 32000, recurring: false, created: 'May 28', sent: 'May 29', end: null, dateText: 'Awaiting signature', dateKind: 'muted', sortT: 5, fromProposal: 'a7', items: [ { name: 'Portal UX & design', qty: 1, unit: 12000, custom: false }, { name: 'Auth & records module', qty: 1, unit: 20000, custom: false } ] },
+    { id: 'a9', client: 'chen', kind: 'contract', ctype: 'care_plan', title: 'Care Plan — Studio', status: 'signed', total: 79, recurring: true, created: 'Mar 3', sent: 'Mar 3', viewed: 'Mar 4', end: { k: 'signed', label: 'Signed', date: 'Mar 6' }, dateText: 'Signed Mar 6', dateKind: 'good', sortT: 123, items: [ { name: 'Hosting & backups', qty: 1, unit: 29, custom: false }, { name: 'Content updates (2/mo)', qty: 1, unit: 50, custom: false } ] },
+    { id: 'a10', client: 'bloom', kind: 'proposal', title: 'E-commerce phase 2', status: 'declined', total: 24500, recurring: false, created: 'May 8', sent: 'May 10', viewed: 'May 12', end: { k: 'declined', label: 'Declined', date: 'May 22' }, dateText: 'Declined May 22', dateKind: 'bad', sortT: 43, items: [ { name: 'Storefront rebuild', qty: 1, unit: 18500, custom: false }, { name: 'Subscriptions module', qty: 1, unit: 6000, custom: false } ] },
+    { id: 'a11', client: 'delta', kind: 'proposal', title: 'Rush microsite', status: 'expired', total: 4000, recurring: false, created: 'Jun 1', sent: 'Jun 2', viewed: 'Jun 3', end: { k: 'expired', label: 'Expired', date: 'Jun 16' }, dateText: 'Expired 18d ago', dateKind: 'bad', sortT: 18, items: [ { name: 'One-page microsite', qty: 1, unit: 4000, custom: false } ] },
+    { id: 'a12', client: 'fielder', kind: 'contract', ctype: 'project', title: 'SEO addendum', status: 'voided', total: 2500, recurring: false, created: 'Mar 4', sent: 'Mar 5', end: { k: 'voided', label: 'Voided', date: 'Mar 8' }, dateText: 'Voided Mar 8', dateKind: 'bad', sortT: 121, items: [ { name: 'Additional keyword targets', qty: 1, unit: 2500, custom: true } ] },
+  ];
+
+  STATUS_META = {
+    draft:    ['Draft', 'var(--cloud)', 'var(--text-body)', 'var(--text-muted)'],
+    sent:     ['Sent', 'var(--info-bg)', 'var(--info)', 'var(--info)'],
+    viewed:   ['Viewed', 'var(--mist)', 'var(--teal-700)', 'var(--teal-600)'],
+    accepted: ['Accepted', 'var(--success-bg)', 'var(--success)', 'var(--success)'],
+    signed:   ['Signed', 'var(--success-bg)', 'var(--success)', 'var(--success)'],
+    declined: ['Declined', 'var(--error-bg)', 'var(--error)', 'var(--error)'],
+    expired:  ['Expired', 'var(--error-bg)', 'var(--error)', 'var(--error)'],
+    voided:   ['Voided', 'var(--error-bg)', 'var(--error)', 'var(--error)'],
+  };
+  STATUS_RANK = { draft: 0, sent: 1, viewed: 2, accepted: 3, signed: 3, declined: 4, expired: 5, voided: 6 };
+  BOARD_COLS = [['draft','Draft',['draft']],['sent','Sent',['sent']],['viewed','Viewed',['viewed']],['won','Won',['accepted','signed']],['closed','Closed',['declined','expired','voided']]];
+  BOARD_DOT = { draft: 'var(--text-muted)', sent: 'var(--info)', viewed: 'var(--teal-600)', won: 'var(--success)', closed: 'var(--error)' };
+
+  componentDidMount() {
+    this._doc = (e) => { if (!e.target.closest('[data-pop]')) this.setState({ pop: null, rowMenu: null }); };
+    document.addEventListener('mousedown', this._doc);
+    if ((this.props.openExample ?? false) && (this.props.view ?? 'populated') === 'populated') this.setState({ openId: 'a2' });
+  }
+  componentWillUnmount() { document.removeEventListener('mousedown', this._doc); }
+
+  navItemStyle(on, hov, collapsed) {
+    return ['display:flex','align-items:center','gap:' + (collapsed ? '0' : '12px'),'justify-content:' + (collapsed ? 'center' : 'flex-start'),'padding:' + (collapsed ? '11px 0' : '9px 11px'),'border-radius:10px','text-decoration:none','font-family:var(--font-sans)','font-size:14px','font-weight:' + (on ? '600' : '500'),'cursor:pointer','position:relative','white-space:nowrap','border-left:3px solid ' + ((on && !collapsed) ? 'var(--teal-400)' : 'transparent'),'transition:background .15s ease, color .15s ease','color:' + (on ? '#fff' : (hov ? '#fff' : 'var(--on-dark-muted)')),'background:' + (on ? 'var(--teal-800)' : (hov ? 'var(--ink-soft)' : 'transparent'))].join(';');
+  }
+
+  money(n) { return '$' + n.toLocaleString('en-US'); }
+  statusChip(k) { const m = this.STATUS_META[k]; return 'display:inline-flex;align-items:center;gap:6px;background:' + m[1] + ';color:' + m[2] + ';font-family:var(--font-sans);font-size:12px;font-weight:600;line-height:1.4;padding:4px 11px;border-radius:9999px;white-space:nowrap'; }
+  statusDot(k) { const m = this.STATUS_META[k]; return 'width:6px;height:6px;border-radius:50%;background:' + m[3]; }
+  typeChip(kind) { return kind === 'proposal' ? 'display:inline-flex;align-items:center;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:9999px;background:var(--canvas);border:1px solid var(--border-strong);color:var(--ink)' : 'display:inline-flex;align-items:center;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:9999px;background:var(--teal-800);color:#fff'; }
+  subtypeChip(ct) { return ct === 'care_plan' ? 'display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:9999px;background:var(--mist);color:var(--teal-700)' : 'display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:9999px;background:var(--cloud);color:var(--text-body)'; }
+  iconWrap(kind) { const bg = kind === 'proposal' ? 'var(--cloud)' : 'var(--mist)'; const fg = kind === 'proposal' ? 'var(--text-muted)' : 'var(--teal-700)'; return 'width:30px;height:30px;flex:none;border-radius:8px;background:' + bg + ';color:' + fg + ';display:inline-flex;align-items:center;justify-content:center'; }
+  iconSvg(kind) { const paths = kind === 'proposal' ? '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path>' : '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path>'; return React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', dangerouslySetInnerHTML: { __html: paths } }); }
+  clientAvatar(cKey, sm) { const c = this.CLIENTS[cKey]; const p = this.PAL[c.ci % 5]; return 'width:' + (sm ? '22px;height:22px;font-size:9.5px' : '26px;height:26px;font-size:10px') + ';flex:none;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-weight:600;background:' + p.bg + ';color:' + p.fg; }
+  repeatIcon() { return React.createElement('svg', { width: 11, height: 11, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', dangerouslySetInnerHTML: { __html: '<path d="m17 2 4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="m7 22-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path>' } }); }
+  boltIcon() { return React.createElement('svg', { width: 11, height: 11, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', dangerouslySetInnerHTML: { __html: '<rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 8h7"></path><path d="M8 12h8"></path><path d="M11 16h5"></path>' } }); }
+  dateColor(kind) { return kind === 'bad' ? 'var(--error)' : (kind === 'expiring' ? 'var(--warning)' : (kind === 'good' ? 'var(--text-body)' : 'var(--text-muted)')); }
+  titleOf(id) { const a = this.AGREEMENTS.find(x => x.id === id); return a ? a.title : ''; }
+
+  buildRow(a, board) {
+    const hover = this.state.hoverRow === a.id;
+    const c = this.CLIENTS[a.client];
+    return {
+      id: a.id, title: a.title, icon: this.iconSvg(a.kind), iconWrap: this.iconWrap(a.kind),
+      client: c.name, clientInitials: c.initials, clientAvatar: this.clientAvatar(a.client, board),
+      hasSecondary: !!(a.fromProposal || a.lineTo),
+      secondary: a.fromProposal ? 'from Proposal: ' + this.titleOf(a.fromProposal) : (a.lineTo ? 'Produced contract' : ''),
+      secondaryIcon: React.createElement('svg', { width: 11, height: 11, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', style: { flex: 'none', opacity: .7 }, dangerouslySetInnerHTML: { __html: a.fromProposal ? '<path d="M9 14 4 9l5-5"></path><path d="M4 9h10a6 6 0 0 1 6 6v0"></path>' : '<path d="m15 14 5-5-5-5"></path><path d="M20 9H10a6 6 0 0 0-6 6v0"></path>' } }),
+      typeLabel: a.kind === 'proposal' ? 'Proposal' : 'Contract', typeChip: this.typeChip(a.kind),
+      hasSubtype: a.kind === 'contract', subtypeLabel: a.ctype === 'care_plan' ? 'Care Plan' : 'Project', subtypeChip: this.subtypeChip(a.ctype), subtypeIcon: a.ctype === 'care_plan' ? this.repeatIcon() : this.boltIcon(),
+      statusLabel: this.STATUS_META[a.status][0], statusChip: this.statusChip(a.status), statusDot: this.statusDot(a.status),
+      valueMain: this.money(a.total), recurring: a.recurring, cadence: '/mo',
+      dateText: a.dateText, dateIcon: a.dateKind === 'bad' || a.dateKind === 'expiring',
+      dateStyle: 'display:inline-flex;align-items:center;gap:5px;font-size:' + (board ? '12px' : '13px') + ';white-space:nowrap;font-variant-numeric:tabular-nums;color:' + this.dateColor(a.dateKind) + (a.dateKind === 'bad' || a.dateKind === 'expiring' ? ';font-weight:600' : ''),
+      rowStyle: 'border-top:1px solid var(--hairline);cursor:pointer;transition:background .12s ease;background:' + (hover ? 'var(--cloud)' : 'var(--canvas)'),
+      open: () => this.setState({ openId: a.id }),
+      stop: (e) => e.stopPropagation(),
+      enter: () => this.setState({ hoverRow: a.id }),
+      leave: () => this.setState({ hoverRow: null }),
+      openMenu: (e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); this.setState({ pop: null, rowMenu: { id: a.id, related: !!(a.lineTo || a.fromProposal), top: r.bottom + 6, right: window.innerWidth - r.right } }); },
+    };
+  }
+
+  buildDrawer(a) {
+    const c = this.CLIENTS[a.client];
+    const items = a.items.map(it => ({ name: it.name, qty: it.qty, unit: this.money(it.unit) + (a.recurring ? '/mo' : ''), total: this.money(it.unit * it.qty) + (a.recurring ? '/mo' : ''), custom: it.custom, catalog: !it.custom, rowStyle: 'display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 15px;border-bottom:1px solid var(--hairline)' }));
+    const steps = [{ k: 'created', label: 'Created', date: a.created }];
+    if (a.sent) steps.push({ k: 'sent', label: 'Sent', date: a.sent });
+    if (a.viewed) steps.push({ k: 'viewed', label: 'Viewed', date: a.viewed });
+    if (a.end) steps.push({ k: a.end.k, label: a.end.label, date: a.end.date });
+    const bad = { declined: 1, expired: 1, voided: 1 };
+    const timeline = steps.map((s, i) => {
+      const last = i === steps.length - 1; const isBad = !!bad[s.k]; const good = s.k === 'accepted' || s.k === 'signed';
+      return { label: s.label, date: s.date, color: last ? (isBad ? 'var(--error)' : (good ? 'var(--success)' : 'var(--ink)')) : 'var(--ink)', line: !last, check: good || !isBad,
+        dot: 'width:20px;height:20px;flex:none;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:' + (isBad && last ? 'var(--error)' : (good && last ? 'var(--success)' : 'var(--teal-600)')) };
+    });
+    const lineage = [];
+    if (a.fromProposal) { const p = this.AGREEMENTS.find(x => x.id === a.fromProposal); lineage.push({ kicker: 'From proposal', label: p ? p.title : 'Proposal', icon: this.iconSvg('proposal'), iconWrap: this.iconWrap('proposal'), href: '#', onClick: (e) => { e.preventDefault(); this.setState({ openId: a.fromProposal }); } }); }
+    if (a.lineTo) { const cc = this.AGREEMENTS.find(x => x.id === a.lineTo); lineage.push({ kicker: 'Produced contract', label: cc ? cc.title : 'Contract', icon: this.iconSvg('contract'), iconWrap: this.iconWrap('contract'), href: '#', onClick: (e) => { e.preventDefault(); this.setState({ openId: a.lineTo }); } }); }
+    if (a.producedProject) { lineage.push({ kicker: 'Project created', label: a.title, icon: React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', dangerouslySetInnerHTML: { __html: '<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path>' } }), iconWrap: this.iconWrap('contract'), href: 'Projects.dc.html', onClick: () => {} }); }
+    return {
+      title: a.title, icon: this.iconSvg(a.kind), iconWrap: this.iconWrap(a.kind),
+      client: c.name, clientInitials: c.initials, clientAvatar: this.clientAvatar(a.client, false),
+      typeLabel: a.kind === 'proposal' ? 'Proposal' : 'Contract', typeChip: this.typeChip(a.kind),
+      hasSubtype: a.kind === 'contract', subtypeLabel: a.ctype === 'care_plan' ? 'Care Plan' : 'Project', subtypeChip: this.subtypeChip(a.ctype), subtypeIcon: a.ctype === 'care_plan' ? this.repeatIcon() : this.boltIcon(),
+      statusLabel: this.STATUS_META[a.status][0], statusChip: this.statusChip(a.status), statusDot: this.statusDot(a.status),
+      valueMain: this.money(a.total), recurring: a.recurring, oneTime: !a.recurring, cadence: '/mo',
+      lineItems: items, timeline, hasLineage: lineage.length > 0, lineage,
+    };
+  }
+
+  renderVals() {
+    const collapsed = this.state.collapsed ?? (this.props.startCollapsed ?? false);
+    const active = this.state.navActive, navHover = this.state.navHover;
+    const ids = ['dashboard','leads','clients','projects','tasks','agreements','proposals','contracts','invoices','payments','calls','files'];
+    const linked = { dashboard: 1, leads: 1, clients: 1, projects: 1, agreements: 1, calls: 1 };
+    const nav = {}, pick = {}, enter = {}, leave = {};
+    ids.forEach((id) => { nav[id] = this.navItemStyle(active === id, navHover === id, collapsed); pick[id] = (e) => { if (e && e.preventDefault && !linked[id]) e.preventDefault(); this.setState({ navActive: id }); }; enter[id] = () => this.setState({ navHover: id }); leave[id] = () => this.setState({ navHover: null }); });
+    const asideStyle = ['width:' + (collapsed ? '74px' : '260px'),'flex:none','background:var(--ink)','color:var(--on-dark)','display:flex','flex-direction:column','padding:' + (collapsed ? '18px 12px' : '20px 16px'),'height:100vh','position:sticky','top:0','box-sizing:border-box','overflow:hidden','transition:width .2s ease, padding .2s ease'].join(';');
+
+    const view = this.props.view ?? 'populated';
+    const isEmpty = view === 'empty', isLoading = view === 'loading';
+    const all = this.AGREEMENTS;
+
+    // tiles
+    const awaitingResp = all.filter(a => a.kind === 'proposal' && (a.status === 'sent' || a.status === 'viewed'));
+    const awaitingSign = all.filter(a => a.kind === 'contract' && (a.status === 'sent' || a.status === 'viewed'));
+    const inFlight = all.filter(a => a.status === 'sent' || a.status === 'viewed');
+    const inFlightVal = inFlight.reduce((s, a) => s + (a.recurring ? 0 : a.total), 0);
+    const tileIcon = (paths, danger) => ({ __html: paths });
+    const mkTileIcon = (paths) => React.createElement('svg', { width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round', dangerouslySetInnerHTML: { __html: paths } });
+    const tileWrap = (accent) => 'width:28px;height:28px;flex:none;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:' + (accent === 'warn' ? 'var(--warning-bg)' : 'var(--mist)') + ';color:' + (accent === 'warn' ? 'var(--warning)' : 'var(--teal-700)');
+    const tileBtn = (on) => 'text-align:left;background:var(--canvas);border:1px solid ' + (on ? 'var(--teal-600)' : 'var(--hairline)') + ';border-radius:14px;padding:15px 16px;cursor:pointer;transition:border-color .12s ease,background .12s ease;' + (on ? 'background:var(--mist)' : '');
+    const tiles = [
+      { key: 'resp', label: 'Awaiting response', value: isEmpty ? '0' : String(awaitingResp.length), sub: 'proposals out', icon: mkTileIcon('<circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>'), iconWrap: tileWrap(), style: tileBtn(this.state.seg === 'proposals' && this.state.statusFilter === 'inflight'), onClick: () => this.setState({ seg: 'proposals', statusFilter: 'inflight', recurringOnly: false }) },
+      { key: 'sign', label: 'Awaiting signature', value: isEmpty ? '0' : String(awaitingSign.length), sub: 'contracts out', icon: mkTileIcon('<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path>'), iconWrap: tileWrap(), style: tileBtn(this.state.seg === 'contracts' && this.state.statusFilter === 'inflight'), onClick: () => this.setState({ seg: 'contracts', statusFilter: 'inflight', recurringOnly: false }) },
+      { key: 'val', label: 'Value in flight', value: isEmpty ? '$0' : this.money(inFlightVal), sub: 'awaiting close', icon: mkTileIcon('<line x1="12" x2="12" y1="2" y2="22"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>'), iconWrap: tileWrap(), style: tileBtn(this.state.statusFilter === 'inflight' && this.state.seg === 'all'), onClick: () => this.setState({ seg: 'all', statusFilter: 'inflight', recurringOnly: false }) },
+    ];
+
+    // segments
+    const counts = { all: all.length, proposals: all.filter(a => a.kind === 'proposal').length, contracts: all.filter(a => a.kind === 'contract').length };
+    const seg = this.state.seg;
+    const segments = [['all','All'],['proposals','Proposals'],['contracts','Contracts']].map(([k, label]) => {
+      const on = seg === k;
+      return { key: k, label, count: isEmpty ? 0 : counts[k], onClick: () => this.setState({ seg: k }),
+        style: 'display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:8px;border:none;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:' + (on ? '600' : '500') + ';transition:all .12s ease;background:' + (on ? 'var(--canvas)' : 'transparent') + ';color:' + (on ? 'var(--ink)' : 'var(--text-muted)') + ';box-shadow:' + (on ? 'var(--shadow-soft)' : 'none'),
+        badge: 'font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;padding:1px 7px;border-radius:9999px;background:' + (on ? 'var(--mist)' : 'var(--cloud)') + ';color:' + (on ? 'var(--teal-700)' : 'var(--text-muted)') };
+    });
+
+    // filter + sort
+    const GROUP = { positive: ['accepted','signed'], inflight: ['sent','viewed'], draft: ['draft'], negative: ['declined','expired','voided'] };
+    const q = this.state.search.trim().toLowerCase();
+    let list = all.slice();
+    if (seg === 'proposals') list = list.filter(a => a.kind === 'proposal');
+    else if (seg === 'contracts') list = list.filter(a => a.kind === 'contract');
+    const sf = this.state.statusFilter;
+    if (sf !== 'all') list = list.filter(a => GROUP[sf].includes(a.status));
+    if (this.state.recurringOnly) list = list.filter(a => a.recurring);
+    if (q) list = list.filter(a => (a.title + ' ' + this.CLIENTS[a.client].name).toLowerCase().includes(q));
+    const sk = this.state.sortKey;
+    list.sort((a, b) => sk === 'value' ? b.total - a.total : (sk === 'client' ? this.CLIENTS[a.client].name.localeCompare(this.CLIENTS[b.client].name) : (sk === 'status' ? this.STATUS_RANK[a.status] - this.STATUS_RANK[b.status] : a.sortT - b.sortT)));
+
+    const rows = list.map(a => this.buildRow(a, false));
+
+    // board
+    const boardColumns = this.BOARD_COLS.map(([k, label, statuses]) => {
+      const cards = list.filter(a => statuses.includes(a.status)).map(a => this.buildRow(a, true));
+      return { key: k, label, count: cards.length, cards, empty: cards.length === 0, dot: 'width:8px;height:8px;flex:none;border-radius:50%;background:' + this.BOARD_DOT[k] };
+    });
+
+    // status filter options
+    const SFO = [['all','All statuses',null],['positive','Accepted / Signed','var(--success)'],['inflight','Sent / Viewed','var(--info)'],['draft','Draft','var(--text-muted)'],['negative','Declined / Expired / Voided','var(--error)']];
+    const statusOptions = SFO.map(([k, label, dot]) => ({ key: k, label, current: sf === k, hasDot: !!dot, dot: 'width:8px;height:8px;flex:none;border-radius:50%;background:' + (dot || 'transparent'),
+      style: 'display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:13.5px;text-align:left;color:var(--text-body);font-weight:' + (sf === k ? '600' : '400'),
+      pick: () => this.setState({ statusFilter: k, pop: null }) }));
+
+    const optS = (on) => 'display:flex;align-items:center;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;text-align:left;color:' + (on ? 'var(--action)' : 'var(--text-body)') + ';font-weight:' + (on ? '600' : '400');
+    const thBase = 'position:sticky;top:64px;z-index:5;background:var(--canvas);font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);font-weight:500;padding:12px 16px;box-shadow:inset 0 -1px 0 var(--hairline);';
+
+    const hasRows = !isEmpty && !isLoading && rows.length > 0;
+    const noResults = !isEmpty && !isLoading && rows.length === 0;
+    const openA = this.state.openId ? this.AGREEMENTS.find(a => a.id === this.state.openId) : null;
+    const d = openA ? this.buildDrawer(openA) : null;
+    const rm = this.state.rowMenu;
+    const legend = [ ['Accepted / Signed', 'var(--success)'], ['Sent / Viewed', 'var(--info)'], ['Draft', 'var(--text-muted)'], ['Declined / Expired / Voided', 'var(--error)'] ];
+
+    return {
+      collapsed, nav, pick, enter, leave, toggle: () => this.setState({ collapsed: !collapsed }), asideStyle,
+      logoWordStyle: 'font-family:var(--font-display);font-weight:500;font-size:19px;letter-spacing:-.3px;color:#fff;white-space:nowrap;display:' + (collapsed ? 'none' : 'block'),
+      groupLabelStyle: 'font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--on-dark-muted);opacity:.6;padding:0 11px;margin:0 0 7px;white-space:nowrap;display:' + (collapsed ? 'none' : 'block'),
+      groupDivider: 'height:1px;background:var(--ink-soft);margin:14px 10px 0;display:' + (collapsed ? 'block' : 'none'),
+      navLabelStyle: 'overflow:hidden;display:' + (collapsed ? 'none' : 'inline'),
+      userTextStyle: 'line-height:1.3;overflow:hidden;display:' + (collapsed ? 'none' : 'block'),
+      noop: () => {},
+
+      headerCount: isEmpty ? 0 : all.length,
+      showChrome: !isEmpty && !isLoading,
+      tiles,
+      segments,
+      search: this.state.search, onSearch: (e) => this.setState({ search: e.target.value }),
+      ctrlBtn: 'display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:8px 13px;cursor:pointer;font-family:var(--font-sans);font-size:13.5px;font-weight:500;color:var(--ink);transition:background .15s ease',
+      filterActive: sf !== 'all' || this.state.recurringOnly,
+      filterOpen: this.state.pop === 'filter', sortOpen: this.state.pop === 'sort',
+      toggleFilter: () => this.setState(s => ({ pop: s.pop === 'filter' ? null : 'filter' })),
+      toggleSort: () => this.setState(s => ({ pop: s.pop === 'sort' ? null : 'sort' })),
+      statusOptions,
+      recurringStyle: 'display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:13.5px;text-align:left;color:' + (this.state.recurringOnly ? 'var(--teal-700)' : 'var(--text-body)') + ';font-weight:' + (this.state.recurringOnly ? '600' : '400'),
+      toggleRecurring: () => this.setState(s => ({ recurringOnly: !s.recurringOnly })),
+      sortRecent: () => this.setState({ sortKey: 'recent', pop: null }),
+      sortValue: () => this.setState({ sortKey: 'value', pop: null }),
+      sortClient: () => this.setState({ sortKey: 'client', pop: null }),
+      sortStatus: () => this.setState({ sortKey: 'status', pop: null }),
+      sortOpt: { recent: optS(sk === 'recent'), value: optS(sk === 'value'), client: optS(sk === 'client'), status: optS(sk === 'status') },
+      viewBtn: {
+        table: 'display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;border-radius:8px;border:none;cursor:pointer;transition:all .12s ease;background:' + (this.state.view === 'table' ? 'var(--canvas)' : 'transparent') + ';color:' + (this.state.view === 'table' ? 'var(--ink)' : 'var(--text-muted)') + ';box-shadow:' + (this.state.view === 'table' ? 'var(--shadow-soft)' : 'none'),
+        board: 'display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;border-radius:8px;border:none;cursor:pointer;transition:all .12s ease;background:' + (this.state.view === 'board' ? 'var(--canvas)' : 'transparent') + ';color:' + (this.state.view === 'board' ? 'var(--ink)' : 'var(--text-muted)') + ';box-shadow:' + (this.state.view === 'board' ? 'var(--shadow-soft)' : 'none'),
+      },
+      setTable: () => this.setState({ view: 'table' }), setBoard: () => this.setState({ view: 'board' }),
+
+      thL: thBase + 'text-align:left', thR: thBase + 'text-align:right', thAct: thBase + 'width:48px',
+      rows, boardColumns,
+      showTable: hasRows && this.state.view === 'table',
+      showBoard: hasRows && this.state.view === 'board',
+      showNoResults: noResults, showEmpty: isEmpty, showLoading: isLoading,
+      footerText: 'Showing ' + rows.length + ' of ' + all.length + ' agreements',
+      clearFilters: () => this.setState({ seg: 'all', statusFilter: 'all', recurringOnly: false, search: '' }),
+      skeletonRows: [ { w1: '44%' }, { w1: '36%' }, { w1: '52%' }, { w1: '32%' }, { w1: '46%' }, { w1: '38%' }, { w1: '48%' }, { w1: '34%' } ],
+      statusLegend: legend.map(([label, c]) => ({ label, dot: 'width:8px;height:8px;border-radius:50%;background:' + c })),
+
+      rowMenuOpen: !!rm, rowMenuRelated: rm ? rm.related : false,
+      rowMenuStyle: rm ? ('position:fixed;top:' + rm.top + 'px;right:' + rm.right + 'px;z-index:100;min-width:200px;background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px;animation:fwaPop .12s ease') : 'display:none',
+      menuItem: 'display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;color:var(--text-body);text-align:left',
+      menuItemDanger: 'display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;color:var(--error);text-align:left',
+      closeRowMenu: () => this.setState({ rowMenu: null }),
+
+      drawerOpen: !!d, d, closeDrawer: () => this.setState({ openId: null }),
+      drawerIconBtn: 'width:42px;height:42px;flex:none;border-radius:9999px;border:1px solid var(--border-strong);background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);transition:background .12s ease',
+      drawerIconBtnDanger: 'width:42px;height:42px;flex:none;border-radius:9999px;border:1px solid var(--border-strong);background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--error);transition:background .12s ease',
+    };
+  }
+}
+</script>
+</body>
+</html>

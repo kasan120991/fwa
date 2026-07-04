@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/styles.css">
+  <script src="_ds/fwa-design-system-49b56bb7-cf51-445e-8cfd-61e479726f26/_ds_bundle.js"></script>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--cloud);font-family:var(--font-sans);color:var(--text-body);-webkit-font-smoothing:antialiased;animation:fwaFade .4s ease}
+    @keyframes fwaFade{from{opacity:0}to{opacity:1}}
+    @keyframes fwaShimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+    @keyframes fwaPop{from{transform:translateY(6px) scale(.98);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+    .fwa-boardscroll::-webkit-scrollbar{height:10px}
+    .fwa-boardscroll::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:9999px;border:2px solid var(--cloud)}
+    @media (max-width:900px){ .fwa-search{display:none !important} .fwa-crumb{display:none !important} }
+    @media (max-width:1120px){ .fwa-col-value,.fwa-col-updated{display:none !important} }
+    @media (max-width:940px){ .fwa-col-tasks,.fwa-col-progress{display:none !important} }
+  </style>
+</helmet>
+
+<div style="display:flex;min-height:100vh;width:100%">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside style="{{ asideStyle }}">
+    <div style="display:flex;align-items:center;gap:11px;padding:4px 6px 20px">
+      <span style="width:34px;height:34px;flex:none;border-radius:9px;background:var(--teal-600);display:inline-flex;align-items:center;justify-content:center">
+        <img src="assets/fwa-mark-white.svg" alt="FWA" style="width:18px;height:18px;display:block">
+      </span>
+      <span style="{{ logoWordStyle }}">Francis</span>
+    </div>
+    <nav style="display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;flex:1;margin:0 -4px;padding:0 4px">
+      <a href="AppDashboard.dc.html" title="Dashboard" onClick="{{ pick.dashboard }}" onMouseEnter="{{ enter.dashboard }}" onMouseLeave="{{ leave.dashboard }}" style="{{ nav.dashboard }}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
+        <span style="{{ navLabelStyle }}">Dashboard</span>
+      </a>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Clients &amp; Work</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="Leads.dc.html" title="Leads" onClick="{{ pick.leads }}" onMouseEnter="{{ enter.leads }}" onMouseLeave="{{ leave.leads }}" style="{{ nav.leads }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+            <span style="{{ navLabelStyle }}">Leads</span>
+          </a>
+          <a href="ClientDetail.dc.html" title="Clients" onClick="{{ pick.clients }}" onMouseEnter="{{ enter.clients }}" onMouseLeave="{{ leave.clients }}" style="{{ nav.clients }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <span style="{{ navLabelStyle }}">Clients</span>
+          </a>
+          <a href="Projects.dc.html" title="Projects" onClick="{{ pick.projects }}" onMouseEnter="{{ enter.projects }}" onMouseLeave="{{ leave.projects }}" style="{{ nav.projects }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path><path d="M8 10v4"></path><path d="M12 10v2"></path><path d="M16 10v6"></path></svg>
+            <span style="{{ navLabelStyle }}">Projects</span>
+          </a>
+          <a href="#" title="Tasks" onClick="{{ pick.tasks }}" onMouseEnter="{{ enter.tasks }}" onMouseLeave="{{ leave.tasks }}" style="{{ nav.tasks }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="m3 17 2 2 4-4"></path><path d="m3 7 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>
+            <span style="{{ navLabelStyle }}">Tasks</span>
+          </a>
+        </div>
+      </div>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Sales</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="#" title="Proposals" onClick="{{ pick.proposals }}" onMouseEnter="{{ enter.proposals }}" onMouseLeave="{{ leave.proposals }}" style="{{ nav.proposals }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M16 13H8"></path><path d="M16 17H8"></path><path d="M10 9H8"></path></svg>
+            <span style="{{ navLabelStyle }}">Proposals</span>
+          </a>
+          <a href="#" title="Contracts" onClick="{{ pick.contracts }}" onMouseEnter="{{ enter.contracts }}" onMouseLeave="{{ leave.contracts }}" style="{{ nav.contracts }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m9 15 2 2 4-4"></path></svg>
+            <span style="{{ navLabelStyle }}">Contracts</span>
+          </a>
+        </div>
+      </div>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Billing</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="#" title="Invoices" onClick="{{ pick.invoices }}" onMouseEnter="{{ enter.invoices }}" onMouseLeave="{{ leave.invoices }}" style="{{ nav.invoices }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path><path d="M12 17.5v-11"></path></svg>
+            <span style="{{ navLabelStyle }}">Invoices</span>
+          </a>
+          <a href="#" title="Payments" onClick="{{ pick.payments }}" onMouseEnter="{{ enter.payments }}" onMouseLeave="{{ leave.payments }}" style="{{ nav.payments }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect width="20" height="14" x="2" y="5" rx="2"></rect><line x1="2" x2="22" y1="10" y2="10"></line></svg>
+            <span style="{{ navLabelStyle }}">Payments</span>
+          </a>
+        </div>
+      </div>
+      <div style="{{ groupDivider }}"></div>
+      <div style="margin-top:18px">
+        <div style="{{ groupLabelStyle }}">Workspace</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="Receptionist.dc.html" title="AI Receptionist" onClick="{{ pick.calls }}" onMouseEnter="{{ enter.calls }}" onMouseLeave="{{ leave.calls }}" style="{{ nav.calls }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z"></path></svg>
+            <span style="{{ navLabelStyle }}">AI Receptionist</span>
+          </a>
+          <a href="#" title="Files" onClick="{{ pick.files }}" onMouseEnter="{{ enter.files }}" onMouseLeave="{{ leave.files }}" style="{{ nav.files }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>
+            <span style="{{ navLabelStyle }}">Files</span>
+          </a>
+          <a href="#" title="Calendar" onClick="{{ pick.calendar }}" onMouseEnter="{{ enter.calendar }}" onMouseLeave="{{ leave.calendar }}" style="{{ nav.calendar }}">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>
+            <span style="{{ navLabelStyle }}">Calendar</span>
+          </a>
+        </div>
+      </div>
+    </nav>
+    <div style="flex:none">
+      <div style="height:1px;background:var(--ink-soft);margin:12px 2px"></div>
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 8px">
+        <span style="width:34px;height:34px;flex:none;border-radius:50%;background:var(--teal-600);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">JR</span>
+        <div style="{{ userTextStyle }}">
+          <div style="font-size:13px;font-weight:600;color:#fff;white-space:nowrap">Jordan Rivera</div>
+          <div style="font-size:12px;color:var(--on-dark-muted);white-space:nowrap">Owner</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+    <header style="height:64px;flex:none;background:var(--canvas);border-bottom:1px solid var(--hairline);display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 26px;position:sticky;top:0;z-index:30">
+      <div style="display:flex;align-items:center;gap:14px;min-width:0">
+        <button aria-label="Toggle sidebar" onClick="{{ toggle }}" style="width:38px;height:38px;flex:none;border-radius:10px;border:1px solid var(--hairline);background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);transition:background .15s ease" style-hover="background:var(--cloud)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg>
+        </button>
+        <div style="min-width:0">
+          <div class="fwa-crumb" style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted)">Clients &amp; Work · Projects</div>
+          <h1 style="font-family:var(--font-display);font-weight:500;font-size:22px;letter-spacing:-.4px;color:var(--ink);margin:1px 0 0;white-space:nowrap">Projects</h1>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex:none">
+        <div class="fwa-search" style="display:flex;align-items:center;gap:9px;background:var(--cloud);border:1px solid var(--hairline);border-radius:9999px;padding:8px 10px 8px 14px;width:240px;cursor:text" style-hover="border-color:var(--border-strong)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+          <span style="flex:1;font-size:14px;color:var(--text-muted)">Search…</span>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);border:1px solid var(--hairline);border-radius:6px;padding:1px 6px;background:var(--canvas)">⌘K</span>
+        </div>
+        <button aria-label="Notifications" style="position:relative;width:40px;height:40px;flex:none;border-radius:10px;border:1px solid var(--hairline);background:var(--canvas);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);transition:background .15s ease" style-hover="background:var(--cloud)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+          <span style="position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--error);border:1.5px solid var(--canvas)"></span>
+        </button>
+        <button aria-label="Account menu" style="display:flex;align-items:center;gap:7px;background:transparent;border:none;cursor:pointer;padding:3px 4px 3px 3px;border-radius:10px;transition:background .15s ease" style-hover="background:var(--cloud)">
+          <span style="width:34px;height:34px;flex:none;border-radius:50%;background:var(--teal-600);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:600">JR</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <main style="flex:1;padding:26px;overflow-y:auto">
+      <div style="max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:18px">
+
+        <!-- page header -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+          <div>
+            <div style="display:flex;align-items:center;gap:11px">
+              <h1 style="font-family:var(--font-display);font-weight:500;font-size:26px;letter-spacing:-.5px;color:var(--ink);margin:0">Projects</h1>
+              <span style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--teal-700);background:var(--mist);border-radius:9999px;padding:3px 10px">{{ headerCount }}</span>
+            </div>
+            <p style="font-size:14px;color:var(--text-muted);margin:6px 0 0">Every project across the agency. Each one belongs to an active client and rolls up its tasks.</p>
+          </div>
+          <button onClick="{{ noop }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--action);color:#fff;border:none;border-radius:9999px;padding:10px 18px 10px 15px;font-family:var(--font-sans);font-weight:600;font-size:14px;cursor:pointer;transition:background .15s ease;white-space:nowrap;flex:none" style-hover="background:var(--action-hover)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+            New project
+          </button>
+        </div>
+
+        <!-- controls row -->
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+            <sc-for list="{{ statusTabs }}" as="t" hint-placeholder-count="6">
+              <button onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }} <span style="{{ t.badge }}">{{ t.count }}</span></button>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="display:flex;align-items:center;gap:9px;background:var(--canvas);border:1px solid var(--hairline);border-radius:9999px;padding:8px 14px;width:240px" style-focus-within="border-color:var(--focus-ring)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+              <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Search project or client…" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-family:var(--font-sans);font-size:14px;color:var(--ink)">
+            </div>
+
+            <div data-pop style="position:relative">
+              <button onClick="{{ toggleFilter }}" style="{{ filterBtn }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>Filter<sc-if value="{{ filterActive }}" hint-placeholder-val="{{ false }}"><span style="width:6px;height:6px;border-radius:50%;background:var(--teal-500)"></span></sc-if></button>
+              <sc-if value="{{ filterOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:44px;right:0;z-index:40;min-width:210px;background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px;animation:fwaPop .12s ease">
+                  <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);padding:6px 10px 4px">By client</div>
+                  <sc-for list="{{ clientFilters }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.pick }}" style="{{ c.style }}"><span style="{{ c.dot }}">{{ c.initials }}</span>{{ c.label }}<sc-if value="{{ c.current }}" hint-placeholder-val="{{ false }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--action)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto"><polyline points="20 6 9 17 4 12"></polyline></svg></sc-if></button></sc-for>
+                  <div style="height:1px;background:var(--hairline);margin:5px 4px"></div>
+                  <button onClick="{{ toggleOverdueFilter }}" style="{{ overdueFilterStyle }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg>Overdue only</button>
+                </div>
+              </sc-if>
+            </div>
+
+            <div data-pop style="position:relative">
+              <button onClick="{{ toggleSort }}" style="{{ filterBtn }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3 16 4 4 4-4"></path><path d="M7 20V4"></path><path d="M11 4h10"></path><path d="M11 8h7"></path><path d="M11 12h4"></path></svg>Sort</button>
+              <sc-if value="{{ sortOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute;top:44px;right:0;z-index:40;min-width:190px;background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px;animation:fwaPop .12s ease">
+                  <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);padding:6px 10px 4px">Sort by</div>
+                  <button onClick="{{ sortByUpdated }}" style="{{ sortOpt.updated }}">Last updated</button>
+                  <button onClick="{{ sortByDue }}" style="{{ sortOpt.due }}">Due date</button>
+                  <button onClick="{{ sortByName }}" style="{{ sortOpt.name }}">Project name</button>
+                  <button onClick="{{ sortByProgress }}" style="{{ sortOpt.progress }}">Progress</button>
+                  <div style="height:1px;background:var(--hairline);margin:5px 4px"></div>
+                  <button onClick="{{ setAsc }}" style="{{ dirOpt.asc }}">Ascending</button>
+                  <button onClick="{{ setDesc }}" style="{{ dirOpt.desc }}">Descending</button>
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="display:inline-flex;align-items:center;background:var(--cloud);border:1px solid var(--hairline);border-radius:10px;padding:3px;gap:2px">
+              <button onClick="{{ setTable }}" title="Table view" style="{{ viewBtn.table }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><line x1="3" x2="21" y1="9" y2="9"></line><line x1="3" x2="21" y1="15" y2="15"></line><line x1="9" x2="9" y1="3" y2="21"></line></svg></button>
+              <button onClick="{{ setBoard }}" title="Board view" style="{{ viewBtn.board }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="18" x="3" y="3" rx="1"></rect><rect width="7" height="12" x="14" y="3" rx="1"></rect></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== TABLE VIEW ===== -->
+        <sc-if value="{{ showTable }}" hint-placeholder-val="{{ true }}">
+          <div style="background:var(--canvas);border:1px solid var(--hairline);border-radius:16px">
+            <table style="width:100%;border-collapse:collapse;font-family:var(--font-sans)">
+              <thead>
+                <tr>
+                  <th onClick="{{ sortByName }}" style="{{ thSortable }}">Project {{ sortArrow.name }}</th>
+                  <th style="{{ thPlain }}">Client</th>
+                  <th style="{{ thPlain }}">Status</th>
+                  <th onClick="{{ sortByProgress }}" class="fwa-col-progress" style="{{ thSortable }}">Progress {{ sortArrow.progress }}</th>
+                  <th onClick="{{ sortByDue }}" style="{{ thSortable }}">Due {{ sortArrow.due }}</th>
+                  <th class="fwa-col-tasks" style="{{ thPlain }}">Open tasks</th>
+                  <th class="fwa-col-value" style="{{ thRight }}">Value</th>
+                  <th onClick="{{ sortByUpdated }}" class="fwa-col-updated" style="{{ thSortable }}">Updated {{ sortArrow.updated }}</th>
+                  <th style="{{ thAction }}"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ visibleProjects }}" as="p" hint-placeholder-count="8">
+                  <tr onClick="{{ p.open }}" onMouseEnter="{{ p.enter }}" onMouseLeave="{{ p.leave }}" style="{{ p.rowStyle }}">
+                    <td style="padding:14px 16px">
+                      <div style="font-size:14px;font-weight:600;color:var(--ink);white-space:nowrap">{{ p.name }}</div>
+                      <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:.3px;color:var(--text-muted);margin-top:2px">{{ p.code }}</div>
+                    </td>
+                    <td style="padding:14px 16px">
+                      <a href="ClientDetail.dc.html" onClick="{{ p.stop }}" style="display:inline-flex;align-items:center;gap:9px;text-decoration:none" style-hover="opacity:.8">
+                        <span style="{{ p.avatarStyle }}">{{ p.clientInitials }}</span>
+                        <span style="font-size:13.5px;font-weight:500;color:var(--text-body);white-space:nowrap">{{ p.client }}</span>
+                      </a>
+                    </td>
+                    <td style="padding:14px 16px"><span style="{{ p.statusChip }}"><span style="{{ p.statusDot }}"></span>{{ p.statusLabel }}</span></td>
+                    <td class="fwa-col-progress" style="padding:14px 16px;min-width:130px">
+                      <div style="display:flex;align-items:center;gap:9px">
+                        <div style="flex:1;height:6px;border-radius:9999px;background:var(--cloud);overflow:hidden;min-width:60px"><div style="{{ p.barStyle }}"></div></div>
+                        <span style="font-size:12.5px;font-weight:600;color:var(--text-body);font-variant-numeric:tabular-nums;width:34px;text-align:right">{{ p.progress }}%</span>
+                      </div>
+                    </td>
+                    <td style="padding:14px 16px"><span style="{{ p.dueStyle }}"><sc-if value="{{ p.overdue }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></sc-if>{{ p.due }}</span></td>
+                    <td class="fwa-col-tasks" style="padding:14px 16px;font-size:13.5px;color:var(--text-body);white-space:nowrap;font-variant-numeric:tabular-nums">{{ p.openTasks }}</td>
+                    <td class="fwa-col-value" style="padding:14px 16px;font-size:14px;font-weight:600;color:var(--ink);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums">{{ p.value }}</td>
+                    <td class="fwa-col-updated" style="padding:14px 16px;font-size:13.5px;color:var(--text-muted);white-space:nowrap;font-variant-numeric:tabular-nums">{{ p.updated }}</td>
+                    <td style="padding:14px 12px 14px 8px;width:52px;text-align:right"><button data-pop aria-label="Row actions" onClick="{{ p.openMenu }}" style="width:30px;height:30px;border-radius:8px;border:none;background:transparent;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:var(--text-muted);transition:background .12s ease" style-hover="background:var(--cloud)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg></button></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px;border-top:1px solid var(--hairline)">
+              <span style="font-size:13px;color:var(--text-muted);font-variant-numeric:tabular-nums">{{ footerText }}</span>
+              <button style="display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:8px 16px;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer" style-hover="background:var(--cloud)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>Load more</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== BOARD VIEW ===== -->
+        <sc-if value="{{ showBoard }}" hint-placeholder-val="{{ false }}">
+          <div class="fwa-boardscroll" style="overflow-x:auto;padding-bottom:6px">
+            <div style="display:flex;gap:14px;min-width:min-content;align-items:flex-start">
+              <sc-for list="{{ boardColumns }}" as="col" hint-placeholder-count="5">
+                <div onDragOver="{{ col.onDragOver }}" onDrop="{{ col.onDrop }}" style="{{ col.wrapStyle }}">
+                  <div style="display:flex;align-items:center;gap:8px;padding:2px 4px 12px">
+                    <span style="{{ col.dot }}"></span>
+                    <span style="font-size:13px;font-weight:600;color:var(--ink)">{{ col.label }}</span>
+                    <span style="font-size:12px;font-weight:600;color:var(--text-muted);font-variant-numeric:tabular-nums;background:var(--canvas);border:1px solid var(--hairline);border-radius:9999px;padding:1px 8px">{{ col.count }}</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:10px;min-height:60px">
+                    <sc-for list="{{ col.cards }}" as="c" hint-placeholder-count="2">
+                      <div draggable="true" onDragStart="{{ c.onDragStart }}" onDragEnd="{{ c.onDragEnd }}" onClick="{{ c.open }}" style="{{ c.cardStyle }}">
+                        <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:9px;line-height:1.35">{{ c.name }}</div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                          <span style="{{ c.avatarStyle }}">{{ c.clientInitials }}</span>
+                          <span style="font-size:12.5px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.client }}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+                          <div style="flex:1;height:5px;border-radius:9999px;background:var(--cloud);overflow:hidden"><div style="{{ c.barStyle }}"></div></div>
+                          <span style="font-size:11.5px;font-weight:600;color:var(--text-body);font-variant-numeric:tabular-nums">{{ c.progress }}%</span>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                          <span style="{{ c.dueStyle }}"><sc-if value="{{ c.overdue }}" hint-placeholder-val="{{ false }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></sc-if>{{ c.due }}</span>
+                          <span style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--text-muted);font-variant-numeric:tabular-nums"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="m3 17 2 2 4-4"></path><path d="m3 7 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>{{ c.openTasks }}</span>
+                        </div>
+                      </div>
+                    </sc-for>
+                    <sc-if value="{{ col.empty }}" hint-placeholder-val="{{ false }}"><div style="border:1.5px dashed var(--hairline);border-radius:12px;padding:18px;text-align:center;font-size:12.5px;color:var(--text-muted)">Drop here</div></sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ===== EMPTY ===== -->
+        <sc-if value="{{ showEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;display:flex;flex-direction:column;align-items:center;text-align:center;padding:88px 24px">
+            <span style="width:64px;height:64px;border-radius:16px;background:var(--mist);color:var(--teal-700);display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path><path d="M8 10v4"></path><path d="M12 10v2"></path><path d="M16 10v6"></path></svg></span>
+            <h3 style="font-family:var(--font-display);font-weight:500;font-size:22px;color:var(--ink);margin:0 0 8px">No projects yet</h3>
+            <p style="font-size:15px;color:var(--text-muted);margin:0 0 22px;max-width:360px;line-height:1.5">Projects live under your active clients. Create your first one to start tracking tasks, due dates, and progress.</p>
+            <button onClick="{{ noop }}" style="display:inline-flex;align-items:center;gap:8px;background:var(--action);color:#fff;border:none;border-radius:9999px;padding:12px 22px 12px 18px;font-family:var(--font-sans);font-weight:600;font-size:15px;cursor:pointer;transition:background .15s ease" style-hover="background:var(--action-hover)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Create your first project</button>
+          </div>
+        </sc-if>
+
+        <!-- ===== NO RESULTS ===== -->
+        <sc-if value="{{ showNoResults }}" hint-placeholder-val="{{ false }}">
+          <div style="background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;display:flex;flex-direction:column;align-items:center;text-align:center;padding:76px 24px">
+            <span style="width:56px;height:56px;border-radius:14px;background:var(--cloud);display:inline-flex;align-items:center;justify-content:center;color:var(--text-muted);margin-bottom:18px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg></span>
+            <h3 style="font-family:var(--font-display);font-weight:500;font-size:20px;color:var(--ink);margin:0 0 6px">No projects match</h3>
+            <p style="font-size:14px;color:var(--text-muted);margin:0 0 20px;max-width:320px">Try a different search or clear the status filter.</p>
+            <button onClick="{{ clearFilters }}" style="display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:9px 16px;cursor:pointer;font-family:var(--font-sans);font-size:14px;font-weight:600;color:var(--ink)" style-hover="background:var(--cloud)">Clear filters</button>
+          </div>
+        </sc-if>
+
+        <!-- ===== LOADING ===== -->
+        <sc-if value="{{ showLoading }}" hint-placeholder-val="{{ false }}">
+          <div style="background:var(--canvas);border:1px solid var(--hairline);border-radius:16px;padding:8px 0">
+            <sc-for list="{{ skeletonRows }}" as="sk" hint-placeholder-count="8">
+              <div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-top:1px solid var(--hairline)">
+                <div style="flex:2;display:flex;flex-direction:column;gap:7px"><div style="width:{{ sk.w1 }};height:11px;border-radius:6px;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div><div style="width:40%;height:9px;border-radius:6px;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div></div>
+                <div style="flex:1.4;display:flex;align-items:center;gap:9px"><div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div><div style="width:60%;height:10px;border-radius:6px;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div></div>
+                <div style="width:88px;height:22px;border-radius:9999px;flex:none;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                <div style="width:110px;height:8px;border-radius:9999px;flex:none;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                <div style="width:70px;height:10px;border-radius:6px;flex:none;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+                <div style="width:60px;height:10px;border-radius:6px;flex:none;background:linear-gradient(90deg,var(--cloud) 25%,#ECEEEC 37%,var(--cloud) 63%);background-size:200% 100%;animation:fwaShimmer 1.4s ease infinite"></div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- row action menu -->
+<sc-if value="{{ rowMenuOpen }}" hint-placeholder-val="{{ false }}">
+  <div data-pop style="{{ rowMenuStyle }}">
+    <div style="font-size:12px;font-weight:600;color:var(--text-muted);padding:6px 10px 8px;border-bottom:1px solid var(--hairline);margin-bottom:5px;white-space:nowrap">{{ rowMenuName }}</div>
+    <button onClick="{{ rowMenuOpen_ }}" style="{{ menuItem }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>View project</button>
+    <button onClick="{{ closeRowMenu }}" style="{{ menuItem }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>Edit</button>
+    <button onClick="{{ closeRowMenu }}" style="{{ menuItem }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 2 2 4-4"></path><path d="m3 7 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg>New task</button>
+    <button onClick="{{ closeRowMenu }}" style="{{ menuItem }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"></path><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path></svg>New invoice</button>
+    <div style="height:1px;background:var(--hairline);margin:5px 4px"></div>
+    <button onClick="{{ closeRowMenu }}" style="{{ menuItemDanger }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"></rect><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"></path><path d="M10 12h4"></path></svg>Archive</button>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;tableState&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;populated&quot;,&quot;empty&quot;,&quot;loading&quot;],&quot;default&quot;:&quot;populated&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;State&quot;},&quot;startCollapsed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;}}">
+class Component extends DCLogic {
+  state = {
+    collapsed: null, navActive: 'projects', navHover: null,
+    view: 'table', statusTab: 'all', search: '', sortKey: 'updated', sortDir: 'asc',
+    clientFilter: null, overdueOnly: false, pop: null, hoverRow: null,
+    rowMenu: null, statusOverride: {}, dragId: null, dragOverCol: null,
+  };
+
+  TODAY = new Date('2026-07-03T12:00:00');
+  pd(d) { return new Date(d + 'T12:00:00'); }
+
+  STATUS_DEFS = [['planning','Planning'],['in_progress','In progress'],['in_review','In review'],['on_hold','On hold'],['completed','Completed']];
+
+  PROJECTS = [
+    { id: 'p1', name: 'Marketing site rebuild', code: 'WEB-104', client: 'Northwind Co.', ci: 0, status: 'in_progress', done: 8, total: 13, due: '2026-07-20', value: 18000, updated: '2d ago', up: 2 },
+    { id: 'p2', name: 'E-commerce storefront', code: 'WEB-098', client: 'Bloom Floral', ci: 1, status: 'in_progress', done: 9, total: 20, due: '2026-06-28', value: 24500, updated: '5h ago', up: 0.2 },
+    { id: 'p3', name: 'Consultation funnel', code: 'WEB-101', client: 'Brooks Law', ci: 2, status: 'in_review', done: 15, total: 17, due: '2026-07-05', value: 9800, updated: '3h ago', up: 0.12 },
+    { id: 'p4', name: 'Booking site', code: 'WEB-110', client: 'Delta Kitchens', ci: 3, status: 'planning', done: 1, total: 9, due: '2026-08-15', value: 12000, updated: '1d ago', up: 1 },
+    { id: 'p5', name: 'Patient portal', code: 'WEB-092', client: 'Anand Dental', ci: 4, status: 'in_progress', done: 11, total: 20, due: '2026-06-25', value: 32000, updated: '1d ago', up: 1 },
+    { id: 'p6', name: 'Lead-gen site', code: 'WEB-107', client: 'Fielder Roofing', ci: 0, status: 'on_hold', done: 3, total: 10, due: '2026-07-30', value: 14200, updated: '6d ago', up: 6 },
+    { id: 'p7', name: 'IDX listings site', code: 'WEB-112', client: 'Okafor Realty', ci: 1, status: 'planning', done: 0, total: 11, due: '2026-09-01', value: 21000, updated: '4d ago', up: 4 },
+    { id: 'p8', name: 'Portfolio redesign', code: 'WEB-095', client: 'Chen Studio', ci: 2, status: 'in_review', done: 12, total: 13, due: '2026-07-08', value: 7600, updated: '8h ago', up: 0.33 },
+    { id: 'p9', name: 'Program landing page', code: 'WEB-088', client: 'Webb Fitness', ci: 3, status: 'completed', done: 6, total: 6, due: '2026-06-10', value: 4500, updated: '2w ago', up: 14 },
+    { id: 'p10', name: 'Inventory site', code: 'WEB-081', client: 'Reyes Auto Group', ci: 4, status: 'completed', done: 14, total: 14, due: '2026-05-20', value: 16800, updated: '3w ago', up: 21 },
+  ];
+
+  PAL = [ { bg: 'var(--teal-800)', fg: '#fff' }, { bg: 'var(--mist)', fg: 'var(--teal-700)' }, { bg: 'var(--sand)', fg: 'var(--ink)' }, { bg: 'var(--info-bg)', fg: 'var(--info)' }, { bg: 'var(--cloud)', fg: 'var(--text-body)' } ];
+
+  componentDidMount() {
+    this._doc = (e) => { if (!e.target.closest('[data-pop]')) this.setState({ pop: null, rowMenu: null }); };
+    document.addEventListener('mousedown', this._doc);
+  }
+  componentWillUnmount() { document.removeEventListener('mousedown', this._doc); }
+
+  navItemStyle(on, hov, collapsed) {
+    return ['display:flex','align-items:center','gap:' + (collapsed ? '0' : '12px'),'justify-content:' + (collapsed ? 'center' : 'flex-start'),'padding:' + (collapsed ? '11px 0' : '9px 11px'),'border-radius:10px','text-decoration:none','font-family:var(--font-sans)','font-size:14px','font-weight:' + (on ? '600' : '500'),'cursor:pointer','position:relative','white-space:nowrap','border-left:3px solid ' + ((on && !collapsed) ? 'var(--teal-400)' : 'transparent'),'transition:background .15s ease, color .15s ease','color:' + (on ? '#fff' : (hov ? '#fff' : 'var(--on-dark-muted)')),'background:' + (on ? 'var(--teal-800)' : (hov ? 'var(--ink-soft)' : 'transparent'))].join(';');
+  }
+
+  statusMeta(k) {
+    const M = {
+      planning: ['Planning', 'var(--cloud)', 'var(--text-body)', 'var(--text-muted)', 'var(--text-muted)'],
+      in_progress: ['In progress', 'var(--info-bg)', 'var(--info)', 'var(--info)', 'var(--teal-500)'],
+      in_review: ['In review', 'var(--mist)', 'var(--teal-700)', 'var(--teal-600)', 'var(--teal-500)'],
+      on_hold: ['On hold', 'var(--warning-bg)', 'var(--warning)', 'var(--warning)', 'var(--warning)'],
+      completed: ['Completed', 'var(--success-bg)', 'var(--success)', 'var(--success)', 'var(--success)'],
+    };
+    return M[k] || M.planning;
+  }
+  eff(p) { return this.state.statusOverride[p.id] ?? p.status; }
+  isOverdue(p) { return this.pd(p.due) < this.TODAY && this.eff(p) !== 'completed'; }
+  initialsOf(name) { return name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase(); }
+  fmtDue(d) { return this.pd(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+  fmtMoney(n) { return '$' + n.toLocaleString('en-US'); }
+
+  chip(k) { const m = this.statusMeta(k); return 'display:inline-flex;align-items:center;gap:6px;background:' + m[1] + ';color:' + m[2] + ';font-family:var(--font-sans);font-size:12px;font-weight:600;line-height:1.4;padding:4px 11px;border-radius:9999px;white-space:nowrap'; }
+  barStyle(k, pct) { const m = this.statusMeta(k); return 'width:' + pct + '%;height:100%;border-radius:9999px;background:' + m[4] + ';transition:width .3s ease'; }
+
+  buildProject(p, forBoard) {
+    const k = this.eff(p);
+    const m = this.statusMeta(k);
+    const pct = Math.round(p.done / p.total * 100);
+    const open = p.total - p.done;
+    const over = this.isOverdue(p);
+    const hover = this.state.hoverRow === p.id;
+    return {
+      id: p.id, name: p.name, code: p.code, client: p.client,
+      clientInitials: this.initialsOf(p.client),
+      avatarStyle: 'width:' + (forBoard ? '22px;height:22px;font-size:10px' : '28px;height:28px;font-size:11px') + ';flex:none;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-weight:600;background:' + this.PAL[p.ci % 5].bg + ';color:' + this.PAL[p.ci % 5].fg,
+      statusLabel: m[0], statusChip: this.chip(k),
+      statusDot: 'width:6px;height:6px;border-radius:50%;background:' + m[3],
+      progress: pct, barStyle: this.barStyle(k, pct),
+      due: this.fmtDue(p.due), overdue: over,
+      dueStyle: 'display:inline-flex;align-items:center;gap:5px;font-size:' + (forBoard ? '11.5px' : '13.5px') + ';white-space:nowrap;font-variant-numeric:tabular-nums;' + (over ? 'color:var(--warning);font-weight:600' : 'color:var(--text-body)'),
+      openTasks: forBoard ? open : (open + ' open'),
+      value: this.fmtMoney(p.value), updated: p.updated,
+      rowStyle: 'border-top:1px solid var(--hairline);cursor:pointer;transition:background .12s ease;background:' + (hover ? 'var(--cloud)' : 'var(--canvas)'),
+      open: () => { window.location.href = 'ClientDetail.dc.html'; },
+      stop: (e) => e.stopPropagation(),
+      enter: () => this.setState({ hoverRow: p.id }),
+      leave: () => this.setState({ hoverRow: null }),
+      openMenu: (e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); this.setState({ pop: null, rowMenu: { id: p.id, name: p.name, top: r.bottom + 6, right: window.innerWidth - r.right } }); },
+      cardStyle: 'background:var(--canvas);border:1px solid ' + (this.state.dragId === p.id ? 'var(--teal-500)' : 'var(--hairline)') + ';border-radius:12px;padding:14px;cursor:grab;transition:border-color .12s ease,box-shadow .12s ease;opacity:' + (this.state.dragId === p.id ? '.5' : '1'),
+      onDragStart: (e) => { this.setState({ dragId: p.id }); if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', p.id); } catch (x) {} } },
+      onDragEnd: () => this.setState({ dragId: null, dragOverCol: null }),
+    };
+  }
+
+  renderVals() {
+    const collapsed = this.state.collapsed ?? (this.props.startCollapsed ?? false);
+    const active = this.state.navActive, navHover = this.state.navHover;
+    const ids = ['dashboard','leads','clients','projects','tasks','proposals','contracts','invoices','payments','calls','files','calendar'];
+    const linked = { dashboard: 1, leads: 1, clients: 1, projects: 1, calls: 1 };
+    const nav = {}, pick = {}, enter = {}, leave = {};
+    ids.forEach((id) => {
+      nav[id] = this.navItemStyle(active === id, navHover === id, collapsed);
+      pick[id] = (e) => { if (e && e.preventDefault && !linked[id]) e.preventDefault(); this.setState({ navActive: id }); };
+      enter[id] = () => this.setState({ navHover: id });
+      leave[id] = () => this.setState({ navHover: null });
+    });
+    const asideStyle = ['width:' + (collapsed ? '74px' : '260px'),'flex:none','background:var(--ink)','color:var(--on-dark)','display:flex','flex-direction:column','padding:' + (collapsed ? '18px 12px' : '20px 16px'),'height:100vh','position:sticky','top:0','box-sizing:border-box','overflow:hidden','transition:width .2s ease, padding .2s ease'].join(';');
+
+    const ts = this.props.tableState ?? 'populated';
+    const isEmpty = ts === 'empty';
+    const isLoading = ts === 'loading';
+    const all = this.PROJECTS;
+
+    // counts per status tab
+    const counts = { all: all.length };
+    this.STATUS_DEFS.forEach(([k]) => { counts[k] = all.filter(p => this.eff(p) === k).length; });
+    const TAB_DEFS = [['all', 'All']].concat(this.STATUS_DEFS);
+    const statusTab = this.state.statusTab;
+    const statusTabs = TAB_DEFS.map(([k, label]) => {
+      const on = statusTab === k;
+      return { key: k, label, count: isEmpty ? 0 : counts[k],
+        onClick: () => this.setState({ statusTab: k }),
+        style: 'display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:9999px;cursor:pointer;font-family:var(--font-sans);font-size:13px;font-weight:' + (on ? '600' : '500') + ';transition:all .12s ease;border:1px solid ' + (on ? 'var(--teal-600)' : 'var(--hairline)') + ';background:' + (on ? 'var(--mist)' : 'var(--canvas)') + ';color:' + (on ? 'var(--teal-700)' : 'var(--text-muted)'),
+        badge: 'font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;padding:0 6px;border-radius:9999px;background:' + (on ? 'var(--canvas)' : 'var(--cloud)') + ';color:' + (on ? 'var(--teal-700)' : 'var(--text-muted)') };
+    });
+
+    // filter + sort
+    const q = this.state.search.trim().toLowerCase();
+    let rows = all.slice();
+    if (statusTab !== 'all') rows = rows.filter(p => this.eff(p) === statusTab);
+    if (this.state.clientFilter) rows = rows.filter(p => p.client === this.state.clientFilter);
+    if (this.state.overdueOnly) rows = rows.filter(p => this.isOverdue(p));
+    if (q) rows = rows.filter(p => (p.name + ' ' + p.client + ' ' + p.code).toLowerCase().includes(q));
+
+    const sk = this.state.sortKey, dir = this.state.sortDir === 'asc' ? 1 : -1;
+    rows.sort((a, b) => {
+      let r = 0;
+      if (sk === 'name') r = a.name.localeCompare(b.name);
+      else if (sk === 'due') r = this.pd(a.due) - this.pd(b.due);
+      else if (sk === 'progress') r = (a.done / a.total) - (b.done / b.total);
+      else r = a.up - b.up; // updated (smaller = more recent)
+      return r * dir;
+    });
+
+    const visibleProjects = rows.map(p => this.buildProject(p, false));
+
+    // client filter options
+    const clientNames = [...new Set(all.map(p => p.client))].slice(0, 6);
+    const clientFilters = clientNames.map(name => {
+      const ci = (all.find(p => p.client === name) || {}).ci || 0;
+      const on = this.state.clientFilter === name;
+      return { key: name, label: name, initials: this.initialsOf(name), current: on,
+        dot: 'width:22px;height:22px;flex:none;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;background:' + this.PAL[ci % 5].bg + ';color:' + this.PAL[ci % 5].fg,
+        style: 'display:flex;align-items:center;gap:9px;width:100%;padding:7px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:13.5px;text-align:left;color:var(--text-body);font-weight:' + (on ? '600' : '400'),
+        pick: () => this.setState(s => ({ clientFilter: s.clientFilter === name ? null : name })) };
+    });
+
+    // board columns
+    const boardColumns = this.STATUS_DEFS.map(([k, label]) => {
+      const m = this.statusMeta(k);
+      const cards = rows.filter(p => this.eff(p) === k).map(p => this.buildProject(p, true));
+      const over = this.state.dragOverCol === k;
+      return { key: k, label, count: cards.length, cards, empty: cards.length === 0,
+        dot: 'width:8px;height:8px;flex:none;border-radius:50%;background:' + m[3],
+        wrapStyle: 'width:280px;flex:none;background:' + (over ? 'var(--mist)' : 'var(--cloud)') + ';border:1px solid ' + (over ? 'var(--teal-100)' : 'var(--hairline)') + ';border-radius:14px;padding:14px;transition:background .12s ease,border-color .12s ease',
+        onDragOver: (e) => { e.preventDefault(); if (this.state.dragOverCol !== k) this.setState({ dragOverCol: k }); },
+        onDrop: (e) => { e.preventDefault(); const id = this.state.dragId; if (id) this.setState(s => ({ statusOverride: { ...s.statusOverride, [id]: k }, dragId: null, dragOverCol: null })); } };
+    });
+
+    // sort option styles
+    const optS = (on) => 'display:flex;align-items:center;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;text-align:left;color:' + (on ? 'var(--action)' : 'var(--text-body)') + ';font-weight:' + (on ? '600' : '400');
+    const arrow = (key) => sk === key ? (this.state.sortDir === 'asc' ? '↑' : '↓') : '';
+
+    const thBase = 'position:sticky;top:64px;z-index:5;background:var(--canvas);font-family:var(--font-mono);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);font-weight:500;padding:12px 16px;box-shadow:inset 0 -1px 0 var(--hairline);text-align:left;';
+
+    const view = this.state.view;
+    const hasRows = !isEmpty && !isLoading && visibleProjects.length > 0;
+    const noResults = !isEmpty && !isLoading && visibleProjects.length === 0;
+
+    const rm = this.state.rowMenu;
+
+    return {
+      collapsed, nav, pick, enter, leave,
+      toggle: () => this.setState({ collapsed: !collapsed }),
+      asideStyle,
+      logoWordStyle: 'font-family:var(--font-display);font-weight:500;font-size:19px;letter-spacing:-.3px;color:#fff;white-space:nowrap;display:' + (collapsed ? 'none' : 'block'),
+      groupLabelStyle: 'font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--on-dark-muted);opacity:.6;padding:0 11px;margin:0 0 7px;white-space:nowrap;display:' + (collapsed ? 'none' : 'block'),
+      groupDivider: 'height:1px;background:var(--ink-soft);margin:14px 10px 0;display:' + (collapsed ? 'block' : 'none'),
+      navLabelStyle: 'overflow:hidden;display:' + (collapsed ? 'none' : 'inline'),
+      userTextStyle: 'line-height:1.3;overflow:hidden;display:' + (collapsed ? 'none' : 'block'),
+      noop: () => {},
+
+      headerCount: isEmpty ? 0 : all.length,
+      statusTabs,
+
+      search: this.state.search,
+      onSearch: (e) => this.setState({ search: e.target.value }),
+      filterBtn: 'display:inline-flex;align-items:center;gap:7px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:9999px;padding:8px 14px;cursor:pointer;font-family:var(--font-sans);font-size:14px;font-weight:500;color:var(--ink);transition:background .15s ease',
+      filterActive: !!this.state.clientFilter || this.state.overdueOnly,
+      filterOpen: this.state.pop === 'filter', sortOpen: this.state.pop === 'sort',
+      toggleFilter: () => this.setState(s => ({ pop: s.pop === 'filter' ? null : 'filter' })),
+      toggleSort: () => this.setState(s => ({ pop: s.pop === 'sort' ? null : 'sort' })),
+      clientFilters,
+      overdueFilterStyle: 'display:flex;align-items:center;gap:9px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:13.5px;text-align:left;color:' + (this.state.overdueOnly ? 'var(--warning)' : 'var(--text-body)') + ';font-weight:' + (this.state.overdueOnly ? '600' : '400'),
+      toggleOverdueFilter: () => this.setState(s => ({ overdueOnly: !s.overdueOnly })),
+
+      sortByUpdated: () => this.setState(s => ({ sortKey: 'updated', sortDir: s.sortKey === 'updated' ? (s.sortDir === 'asc' ? 'desc' : 'asc') : 'asc', pop: null })),
+      sortByDue: () => this.setState(s => ({ sortKey: 'due', sortDir: s.sortKey === 'due' ? (s.sortDir === 'asc' ? 'desc' : 'asc') : 'asc', pop: null })),
+      sortByName: () => this.setState(s => ({ sortKey: 'name', sortDir: s.sortKey === 'name' ? (s.sortDir === 'asc' ? 'desc' : 'asc') : 'asc', pop: null })),
+      sortByProgress: () => this.setState(s => ({ sortKey: 'progress', sortDir: s.sortKey === 'progress' ? (s.sortDir === 'asc' ? 'desc' : 'asc') : 'desc', pop: null })),
+      setAsc: () => this.setState({ sortDir: 'asc', pop: null }),
+      setDesc: () => this.setState({ sortDir: 'desc', pop: null }),
+      sortOpt: { updated: optS(sk === 'updated'), due: optS(sk === 'due'), name: optS(sk === 'name'), progress: optS(sk === 'progress') },
+      dirOpt: { asc: optS(this.state.sortDir === 'asc'), desc: optS(this.state.sortDir === 'desc') },
+      sortArrow: { name: arrow('name'), due: arrow('due'), progress: arrow('progress'), updated: arrow('updated') },
+
+      viewBtn: {
+        table: 'display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;border-radius:8px;border:none;cursor:pointer;transition:all .12s ease;background:' + (view === 'table' ? 'var(--canvas)' : 'transparent') + ';color:' + (view === 'table' ? 'var(--ink)' : 'var(--text-muted)') + ';box-shadow:' + (view === 'table' ? 'var(--shadow-soft)' : 'none'),
+        board: 'display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;border-radius:8px;border:none;cursor:pointer;transition:all .12s ease;background:' + (view === 'board' ? 'var(--canvas)' : 'transparent') + ';color:' + (view === 'board' ? 'var(--ink)' : 'var(--text-muted)') + ';box-shadow:' + (view === 'board' ? 'var(--shadow-soft)' : 'none'),
+      },
+      setTable: () => this.setState({ view: 'table' }),
+      setBoard: () => this.setState({ view: 'board' }),
+
+      thPlain: thBase, thRight: thBase + 'text-align:right;',
+      thSortable: thBase + 'cursor:pointer;user-select:none;',
+      thAction: thBase + 'width:52px;',
+
+      visibleProjects, boardColumns,
+      showTable: hasRows && view === 'table',
+      showBoard: hasRows && view === 'board',
+      showEmpty: isEmpty,
+      showNoResults: noResults,
+      showLoading: isLoading,
+      footerText: 'Showing ' + visibleProjects.length + ' of ' + all.length + ' projects',
+      clearFilters: () => this.setState({ search: '', statusTab: 'all', clientFilter: null, overdueOnly: false }),
+      skeletonRows: [ { w1: '46%' }, { w1: '38%' }, { w1: '52%' }, { w1: '34%' }, { w1: '44%' }, { w1: '40%' }, { w1: '48%' }, { w1: '36%' } ],
+
+      rowMenuOpen: !!rm,
+      rowMenuName: rm ? rm.name : '',
+      rowMenuStyle: rm ? ('position:fixed;top:' + rm.top + 'px;right:' + rm.right + 'px;z-index:100;min-width:190px;background:var(--canvas);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px;animation:fwaPop .12s ease') : 'display:none',
+      menuItem: 'display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;color:var(--text-body);text-align:left',
+      menuItemDanger: 'display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:none;background:transparent;cursor:pointer;border-radius:8px;font-family:var(--font-sans);font-size:14px;color:var(--error);text-align:left',
+      closeRowMenu: () => this.setState({ rowMenu: null }),
+      rowMenuOpen_: () => { this.setState({ rowMenu: null }); window.location.href = 'ClientDetail.dc.html'; },
+    };
+  }
+}
+</script>
+</body>
+</html>
