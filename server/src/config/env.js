@@ -14,6 +14,10 @@ export const config = {
     dir: process.env.UPLOADS_DIR || path.join(serverRoot, 'uploads'),
     maxBytes: Number(process.env.UPLOADS_MAX_BYTES) || 10 * 1024 * 1024
   },
+  stripe: {
+    // Secret key (sk_test_… / sk_live_…). Empty = Stripe disabled (no-ops).
+    secretKey: process.env.STRIPE_SECRET_KEY || ''
+  },
   db: {
     host: process.env.DB_HOST || '127.0.0.1',
     port: Number(process.env.DB_PORT) || 3306,

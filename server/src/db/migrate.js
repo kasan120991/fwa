@@ -27,7 +27,8 @@ const ADDITIVE_COLUMNS = {
     ['postal_code', 'VARCHAR(20) NULL'],
     ['country', 'VARCHAR(120) NULL'],
     ['billing_email', 'VARCHAR(254) NULL AFTER country'],
-    ['client_since', 'DATE NULL']
+    ['client_since', 'DATE NULL'],
+    ['stripe_customer_id', 'VARCHAR(255) NULL AFTER client_since']
   ],
   calls: [
     ['reviewed_at', 'DATETIME NULL AFTER extracted']

@@ -2,8 +2,26 @@ import { Router } from 'express'
 import {
   listContacts, getContact, createContact, updateContact, deleteContact
 } from '../repositories/contacts.repo.js'
+import { createStripeCustomer } from '../services/stripe.js'
 
 export const contactsRouter = Router()
+
+/**
+ * Ensure an active client has a Stripe customer. Runs after a contact write:
+ * the first time a contact is active without a customer id, create one and
+ * persist it. Best-effort — a Stripe failure is logged, not thrown, so it never
+ * blocks the contact write (the customer can be created on a later edit).
+ */
+async function ensureStripeCustomer(contact) {
+  if (contact.stage !== 'active' || contact.stripe_customer_id) return contact
+  try {
+    const customerId = await createStripeCustomer(contact)
+    if (customerId) return await updateContact(contact.id, { stripe_customer_id: customerId })
+  } catch (err) {
+    console.error(`Stripe customer creation failed for contact ${contact.id}:`, err.message)
+  }
+  return contact
+}
 
 const SOURCES = ['website', 'call', 'manual', 'referral']
 const STAGES = ['new', 'qualifying', 'to_contact', 'contacted', 'engaged', 'qualified', 'proposal', 'active', 'past', 'lost']
@@ -125,7 +143,7 @@ contactsRouter.get('/:id', async (req, res) => {
 // POST /api/contacts
 contactsRouter.post('/', async (req, res) => {
   const data = validateContact(req.body ?? {}, { partial: false })
-  const contact = await createContact(data)
+  const contact = await ensureStripeCustomer(await createContact(data))
   res.status(201).json({ data: contact })
 })
 
@@ -134,7 +152,7 @@ contactsRouter.patch('/:id', async (req, res) => {
   const id = parseId(req)
   if (!await getContact(id)) return res.status(404).json({ error: { message: 'Contact not found' } })
   const data = validateContact(req.body ?? {}, { partial: true })
-  const contact = await updateContact(id, data)
+  const contact = await ensureStripeCustomer(await updateContact(id, data))
   res.json({ data: contact })
 })
 

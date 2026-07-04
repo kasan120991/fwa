@@ -5,7 +5,9 @@ export const WRITABLE = [
   'source', 'stage', 'name', 'email', 'phone', 'company', 'title', 'website', 'logo_url',
   'message', 'notes', 'tags',
   'address_line1', 'address_line2', 'city', 'region', 'postal_code', 'country', 'billing_email',
-  'client_since', 'last_contacted_at', 'next_action_at'
+  'client_since', 'last_contacted_at', 'next_action_at',
+  // Set internally by the Stripe integration, never from request bodies.
+  'stripe_customer_id'
 ]
 
 const SORTABLE = new Set(['created_at', 'updated_at', 'name', 'company', 'stage', 'last_contacted_at', 'next_action_at'])

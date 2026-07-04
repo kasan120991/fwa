@@ -62,6 +62,9 @@ CREATE TABLE IF NOT EXISTS contacts (
   -- Date the contact became a client (stage -> active).
   client_since       DATE NULL,
 
+  -- Stripe customer id (cus_…), created when the contact becomes an active client.
+  stripe_customer_id VARCHAR(255) NULL,
+
   -- Outreach follow-up cadence. next_action_at in the past = overdue touch.
   last_contacted_at  DATETIME NULL,
   next_action_at     DATETIME NULL,
@@ -79,7 +82,9 @@ CREATE TABLE IF NOT EXISTS contacts (
   -- Outreach cadence: surface overdue/upcoming touches cheaply.
   KEY idx_contacts_next_action (next_action_at),
   KEY idx_contacts_email (email),
-  KEY idx_contacts_phone (phone)
+  KEY idx_contacts_phone (phone),
+  -- Reverse lookup from a Stripe customer (e.g. webhook handling later).
+  KEY idx_contacts_stripe (stripe_customer_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
