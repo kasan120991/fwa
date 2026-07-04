@@ -20,6 +20,15 @@ export const config = {
     // Webhook signing secret (whsec_…) for verifying incoming Stripe events.
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || ''
   },
+  pandadoc: {
+    // API key for PandaDoc (document generation, sending, e-sign). Empty =
+    // integration disabled: proposals/contracts still persist locally, but no
+    // document is created/sent until a key is configured.
+    apiKey: process.env.PANDADOC_API_KEY || '',
+    // Shared key used to verify incoming webhook signatures (HMAC-SHA256 of the
+    // raw body, delivered in the ?signature query param).
+    webhookKey: process.env.PANDADOC_WEBHOOK_KEY || ''
+  },
   db: {
     host: process.env.DB_HOST || '127.0.0.1',
     port: Number(process.env.DB_PORT) || 3306,
