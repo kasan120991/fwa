@@ -2,23 +2,39 @@ import { Router } from 'express'
 import {
   listContacts, getContact, createContact, updateContact, deleteContact
 } from '../repositories/contacts.repo.js'
-import { createStripeCustomer } from '../services/stripe.js'
+import { createStripeCustomer, updateStripeCustomer } from '../services/stripe.js'
 
 export const contactsRouter = Router()
 
+// Contact fields mirrored onto the Stripe customer — only these changing is
+// worth a sync call.
+const STRIPE_SYNC_FIELDS = ['company', 'name', 'email', 'billing_email', 'phone', 'address_line1', 'address_line2', 'city', 'region', 'postal_code', 'country']
+function stripeFieldsChanged(a, b) {
+  return STRIPE_SYNC_FIELDS.some(f => (a?.[f] ?? null) !== (b?.[f] ?? null))
+}
+
 /**
- * Ensure an active client has a Stripe customer. Runs after a contact write:
- * the first time a contact is active without a customer id, create one and
- * persist it. Best-effort — a Stripe failure is logged, not thrown, so it never
- * blocks the contact write (the customer can be created on a later edit).
+ * Keep Stripe in step with a contact after a write. Best-effort — failures are
+ * logged, never thrown, so Stripe never blocks a contact write.
+ *   - becomes an active client without a customer  → create the customer
+ *   - already has a customer and a mirrored field changed → update it
  */
-async function ensureStripeCustomer(contact) {
-  if (contact.stage !== 'active' || contact.stripe_customer_id) return contact
-  try {
-    const customerId = await createStripeCustomer(contact)
-    if (customerId) return await updateContact(contact.id, { stripe_customer_id: customerId })
-  } catch (err) {
-    console.error(`Stripe customer creation failed for contact ${contact.id}:`, err.message)
+async function syncStripeCustomer(contact, previous = null) {
+  if (contact.stage === 'active' && !contact.stripe_customer_id) {
+    try {
+      const customerId = await createStripeCustomer(contact)
+      if (customerId) return await updateContact(contact.id, { stripe_customer_id: customerId })
+    } catch (err) {
+      console.error(`Stripe customer creation failed for contact ${contact.id}:`, err.message)
+    }
+    return contact
+  }
+  if (contact.stripe_customer_id && previous && stripeFieldsChanged(previous, contact)) {
+    try {
+      await updateStripeCustomer(contact)
+    } catch (err) {
+      console.error(`Stripe customer update failed for contact ${contact.id}:`, err.message)
+    }
   }
   return contact
 }
@@ -143,16 +159,17 @@ contactsRouter.get('/:id', async (req, res) => {
 // POST /api/contacts
 contactsRouter.post('/', async (req, res) => {
   const data = validateContact(req.body ?? {}, { partial: false })
-  const contact = await ensureStripeCustomer(await createContact(data))
+  const contact = await syncStripeCustomer(await createContact(data))
   res.status(201).json({ data: contact })
 })
 
 // PATCH /api/contacts/:id
 contactsRouter.patch('/:id', async (req, res) => {
   const id = parseId(req)
-  if (!await getContact(id)) return res.status(404).json({ error: { message: 'Contact not found' } })
+  const existing = await getContact(id)
+  if (!existing) return res.status(404).json({ error: { message: 'Contact not found' } })
   const data = validateContact(req.body ?? {}, { partial: true })
-  const contact = await ensureStripeCustomer(await updateContact(id, data))
+  const contact = await syncStripeCustomer(await updateContact(id, data), existing)
   res.json({ data: contact })
 })
 

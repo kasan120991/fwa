@@ -59,6 +59,11 @@ export async function getContact(id) {
   return rows[0] ?? null
 }
 
+export async function getContactByStripeCustomerId(customerId) {
+  const rows = await query('SELECT * FROM contacts WHERE stripe_customer_id = :cid LIMIT 1', { cid: customerId })
+  return rows[0] ?? null
+}
+
 export async function createContact(data) {
   const params = toParams(data)
   const cols = Object.keys(params)

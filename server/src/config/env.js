@@ -16,7 +16,9 @@ export const config = {
   },
   stripe: {
     // Secret key (sk_test_… / sk_live_…). Empty = Stripe disabled (no-ops).
-    secretKey: process.env.STRIPE_SECRET_KEY || ''
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    // Webhook signing secret (whsec_…) for verifying incoming Stripe events.
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || ''
   },
   db: {
     host: process.env.DB_HOST || '127.0.0.1',

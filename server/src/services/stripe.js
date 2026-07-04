@@ -46,3 +46,28 @@ export async function createStripeCustomer(contact) {
   }, { idempotencyKey: `fwa-contact-${contact.id}` })
   return customer.id
 }
+
+/**
+ * Push a contact's current details to its existing Stripe customer. No-ops when
+ * Stripe is disabled or the contact has no customer. metadata is left untouched
+ * so the fwa_contact_id link is preserved.
+ */
+export async function updateStripeCustomer(contact) {
+  if (!stripe || !contact.stripe_customer_id) return
+  await stripe.customers.update(contact.stripe_customer_id, {
+    name: contact.company || contact.name || undefined,
+    email: contact.billing_email || contact.email || undefined,
+    phone: contact.phone || undefined,
+    address: toAddress(contact)
+  })
+}
+
+/**
+ * Verify + parse an incoming Stripe webhook. Throws if Stripe or the webhook
+ * secret isn't configured, or if the signature doesn't validate.
+ */
+export function constructWebhookEvent(rawBody, signature) {
+  if (!stripe) throw new Error('Stripe is not configured')
+  if (!config.stripe.webhookSecret) throw new Error('Stripe webhook secret is not configured')
+  return stripe.webhooks.constructEvent(rawBody, signature, config.stripe.webhookSecret)
+}
