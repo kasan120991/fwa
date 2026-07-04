@@ -296,7 +296,7 @@ onMounted(() => {
               </div>
               <div class="min-w-0 flex-1">
                 <div class="flex items-center justify-between gap-2">
-                  <span class="truncate text-sm text-highlighted" :class="c.unread ? 'font-bold' : 'font-semibold'">{{ c.name || c.number }}</span>
+                  <span class="truncate text-sm text-highlighted" :class="c.unread ? 'font-bold' : 'font-semibold'">{{ c.name || formatPhone(c.number) }}</span>
                   <span class="flex-none whitespace-nowrap text-xs text-muted tabular-nums">{{ c.time }}</span>
                 </div>
                 <div class="mt-px truncate text-[12.5px] text-muted">{{ c.business || (c.name ? '' : 'Unknown caller') }}</div>
@@ -326,8 +326,8 @@ onMounted(() => {
               <div class="flex min-w-0 items-center gap-3">
                 <span class="inline-flex size-[46px] flex-none items-center justify-center rounded-xl bg-mist text-[15px] font-semibold text-teal-700">{{ initialsOf(cur) }}</span>
                 <div class="min-w-0">
-                  <div class="truncate text-lg font-semibold text-highlighted">{{ cur.name || cur.number }}</div>
-                  <div class="truncate text-[13px] text-muted tabular-nums">{{ (cur.business ? cur.business + ' · ' : '') + cur.number }}</div>
+                  <div class="truncate text-lg font-semibold text-highlighted">{{ cur.name || formatPhone(cur.number) }}</div>
+                  <div class="truncate text-[13px] text-muted tabular-nums">{{ (cur.business ? cur.business + ' · ' : '') + formatPhone(cur.number) }}</div>
                 </div>
               </div>
               <UDropdownMenu :items="reclassItems">
@@ -418,7 +418,7 @@ onMounted(() => {
       <template #body>
         <span class="mb-4 inline-flex size-[46px] items-center justify-center rounded-xl bg-mist text-teal-700"><UIcon name="i-lucide-arrow-down-to-line" class="size-5" /></span>
         <p class="text-[14.5px] leading-relaxed text-default">
-          Create a contact for <strong class="text-highlighted">{{ convertTarget?.name || convertTarget?.number }}</strong>
+          Create a contact for <strong class="text-highlighted">{{ convertTarget?.name || formatPhone(convertTarget?.number) }}</strong>
           with source <strong class="text-highlighted">Call</strong>. They'll appear in
           <strong class="text-highlighted">Leads → Inbound</strong> at the New stage, and this call will be linked to the new contact.
         </p>

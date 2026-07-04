@@ -141,7 +141,7 @@ const visibleRows = computed(() => {
 })
 
 const headerCount = computed(() => secCount.value.all)
-const secondaryOf = (c: Lead) => c.email || c.phone || '—'
+const secondaryOf = (c: Lead) => c.email || formatPhone(c.phone) || '—'
 
 const selCount = computed(() => Object.values(selected.value).filter(Boolean).length)
 const allChecked = computed(() => visibleRows.value.length > 0 && visibleRows.value.every(c => selected.value[c.id]))

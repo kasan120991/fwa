@@ -107,7 +107,7 @@ async function load() {
       contactName: data.name || '',
       role: data.title || '',
       email: data.email || '',
-      phone: data.phone || '',
+      phone: phoneDigits(data.phone), // raw digits; PhoneInput masks for display
       billStreet: data.address_line1 || '',
       billCity: data.city || '',
       billState: data.region || '',
@@ -456,7 +456,7 @@ const subtitle = computed(() => {
                 <UInput v-model="form.email" type="email" placeholder="name@company.com" icon="i-lucide-mail" size="lg" class="w-full" />
               </UFormField>
               <UFormField label="Phone">
-                <UInput v-model="form.phone" type="tel" placeholder="(555) 000-0000" icon="i-lucide-phone" size="lg" class="w-full" />
+                <PhoneInput v-model="form.phone" />
               </UFormField>
             </div>
           </section>

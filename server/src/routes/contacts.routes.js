@@ -87,6 +87,9 @@ function validateContact(body, { partial } = {}) {
     data[f] = body[f].trim() || null
   }
 
+  // Store phone numbers as raw digits only; the frontend owns all formatting.
+  if (data.phone) data.phone = data.phone.replace(/\D/g, '') || null
+
   if (body.email != null && data.email && !EMAIL_RE.test(data.email)) {
     fields.email = 'must be a valid email'
   }

@@ -316,8 +316,8 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
               <a :href="`mailto:${client.email}`" class="flex items-center gap-2.5 text-[13.5px] text-default hover:text-primary">
                 <UIcon name="i-lucide-mail" class="size-[15px] flex-none text-muted" />{{ client.email }}
               </a>
-              <a :href="`tel:${client.phone}`" class="flex items-center gap-2.5 text-[13.5px] text-default hover:text-primary">
-                <UIcon name="i-lucide-phone" class="size-[15px] flex-none text-muted" />{{ client.phone }}
+              <a :href="`tel:${phoneDigits(client.phone)}`" class="flex items-center gap-2.5 text-[13.5px] text-default hover:text-primary">
+                <UIcon name="i-lucide-phone" class="size-[15px] flex-none text-muted" />{{ formatPhone(client.phone) }}
               </a>
             </div>
           </div>

@@ -60,6 +60,28 @@ export function initials(name?: string | null): string {
   return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase()
 }
 
+/** Strip a phone number to raw digits — what we store in the DB. */
+export function phoneDigits(input?: string | null): string {
+  return String(input ?? '').replace(/\D/g, '')
+}
+
+/** Format a phone number for display (US-style). Strips to digits first, so it
+ *  accepts raw or already-formatted input; unusual lengths degrade gracefully. */
+export function formatPhone(input?: string | null): string {
+  const d = phoneDigits(input)
+  if (!d) return ''
+  if (d.length === 11 && d[0] === '1') {
+    return `+1 (${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7)}`
+  }
+  const p = d.slice(0, 10)
+  let out
+  if (p.length <= 3) out = `(${p}`
+  else if (p.length <= 6) out = `(${p.slice(0, 3)}) ${p.slice(3)}`
+  else out = `(${p.slice(0, 3)}) ${p.slice(3, 6)}-${p.slice(6)}`
+  // keep any extra digits (non-US lengths) rather than dropping them
+  return d.length > 10 ? `${out} ${d.slice(10)}` : out
+}
+
 /** Short date "Mar 12, 2023". */
 export function shortDate(input?: string | null): string {
   const d = toDate(input)
