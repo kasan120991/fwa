@@ -13,8 +13,6 @@ const MAP: Record<string, PageMeta> = {
   '/projects': { title: 'Projects', breadcrumb: 'Clients & Work · Projects' },
   '/tasks': { title: 'Tasks', breadcrumb: 'Clients & Work · Tasks' },
   '/agreements': { title: 'Agreements', breadcrumb: 'Sales · Agreements' },
-  '/proposals': { title: 'Proposals', breadcrumb: 'Sales · Proposals' },
-  '/contracts': { title: 'Contracts', breadcrumb: 'Sales · Contracts' },
   '/invoices': { title: 'Invoices', breadcrumb: 'Billing · Invoices' },
   '/payments': { title: 'Payments', breadcrumb: 'Billing · Payments' },
   '/files': { title: 'Files', breadcrumb: 'Workspace · Files' },

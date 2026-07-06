@@ -21,7 +21,10 @@ const roleLabel = computed(() => {
 // that the original dashboard prototype omitted. ✓ items are in scope this phase;
 // the rest are deferred stub routes.
 const groups: NavGroup[] = [
-  { items: [{ label: 'Dashboard', to: '/', icon: 'i-lucide-layout-dashboard' }] },
+  { items: [
+    { label: 'Dashboard', to: '/', icon: 'i-lucide-layout-dashboard' },
+    { label: 'AI Receptionist', to: '/receptionist', icon: 'i-lucide-phone-call' }
+  ] },
   {
     label: 'Clients & Work',
     items: [
@@ -34,9 +37,7 @@ const groups: NavGroup[] = [
   {
     label: 'Sales',
     items: [
-      { label: 'Agreements', to: '/agreements', icon: 'i-lucide-file-signature' },
-      { label: 'Proposals', to: '/proposals', icon: 'i-lucide-file-text' },
-      { label: 'Contracts', to: '/contracts', icon: 'i-lucide-file-check-2' }
+      { label: 'Agreements', to: '/agreements', icon: 'i-lucide-file-signature' }
     ]
   },
   {
@@ -51,8 +52,7 @@ const groups: NavGroup[] = [
     items: [
       { label: 'Files', to: '/files', icon: 'i-lucide-folder' },
       { label: 'Calendar', to: '/calendar', icon: 'i-lucide-calendar' },
-      { label: 'Websites', to: '/websites', icon: 'i-lucide-globe' },
-      { label: 'AI Receptionist', to: '/receptionist', icon: 'i-lucide-phone-call' }
+      { label: 'Websites', to: '/websites', icon: 'i-lucide-globe' }
     ]
   }
 ]
