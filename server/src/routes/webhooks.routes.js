@@ -1,7 +1,9 @@
+import crypto from 'node:crypto'
 import { Router } from 'express'
+import { config } from '../config/env.js'
 import { constructWebhookEvent, createStripeCustomer, mapStripeInvoice } from '../services/stripe.js'
 import { verifyWebhookSignature, pandadocEnabled, createDocumentFromTemplate, sendDocument } from '../services/pandadoc.js'
-import { getContact, getContactByStripeCustomerId, updateContact } from '../repositories/contacts.repo.js'
+import { getContact, getContactByStripeCustomerId, updateContact, createContact, getRecentWebsiteContactByEmail } from '../repositories/contacts.repo.js'
 import { getInvoice, getInvoiceByStripeId, updateInvoice, upsertFromStripe } from '../repositories/invoices.repo.js'
 import { createPayment, getPaymentByIntentId } from '../repositories/payments.repo.js'
 import { emitInvoiceChanged, emitPaymentCreated } from '../realtime/io.js'
@@ -13,6 +15,89 @@ import { getActiveTemplate } from '../repositories/documentTemplates.repo.js'
 import { notify } from '../services/notifications.service.js'
 
 export const webhooksRouter = Router()
+
+// ---------------------------------------------------------------------------
+// Website contact form — the marketing site's server posts submissions here and
+// they land as inbound website leads. Authenticated by a shared secret (not the
+// session cookie), so it's mounted outside requireAuth.
+// ---------------------------------------------------------------------------
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const str = v => (v == null ? '' : String(v).trim())
+
+// Constant-time compare of the provided token against the configured secret.
+function tokenValid(header) {
+  const secret = config.contactForm.webhookSecret
+  if (!secret) return false
+  const raw = typeof header === 'string' && header.startsWith('Bearer ') ? header.slice(7) : header
+  const a = Buffer.from(String(raw || ''))
+  const b = Buffer.from(secret)
+  return a.length === b.length && crypto.timingSafeEqual(a, b)
+}
+
+// POST /api/webhooks/contact-form
+webhooksRouter.post('/contact-form', async (req, res) => {
+  if (!config.contactForm.webhookSecret) {
+    return res.status(503).json({ error: { message: 'Contact webhook is not configured' } })
+  }
+  if (!tokenValid(req.headers.authorization || req.headers['x-fwa-webhook-secret'])) {
+    return res.status(401).json({ error: { message: 'Invalid webhook token' } })
+  }
+
+  const body = req.body ?? {}
+  // Honeypot — real users leave it empty; bots fill it. Accept silently, no lead.
+  if (str(body.hp)) return res.json({ ok: true })
+
+  const name = str(body.name)
+  const email = str(body.email)
+  const phone = str(body.phone).replace(/\D/g, '') // contacts store raw digits
+  const interested = str(body.interested_in)
+  const details = str(body.details)
+  const budget = str(body.budget)
+  const heard = str(body.heard_about)
+  const company = str(body.company)
+
+  if (!name && !email) return res.status(400).json({ error: { message: 'A name or email is required' } })
+  if (email && !EMAIL_RE.test(email)) return res.status(400).json({ error: { message: 'Invalid email address' } })
+
+  // Dedupe double-submits of the same email within a short window.
+  if (email) {
+    const existing = await getRecentWebsiteContactByEmail(email)
+    if (existing) return res.json({ ok: true, id: existing.id, deduped: true })
+  }
+
+  // Inquiry = project details + a labeled block for the extra fields.
+  const extras = [
+    interested && `Interested in: ${interested}`,
+    budget && `Budget: ${budget}`,
+    heard && `Heard about us: ${heard}`
+  ].filter(Boolean).join('\n')
+  const message = [details, extras].filter(Boolean).join('\n\n') || null
+
+  const contact = await createContact({
+    source: 'website',
+    stage: 'new',
+    name: name || email,
+    email: email || null,
+    phone: phone || null,
+    company: company || null,
+    message,
+    tags: interested ? [interested] : null
+  })
+
+  // Live bell alert (best-effort) — mirrors the seeded "New inbound lead".
+  try {
+    await notify({
+      category: 'lead', tone: 'brand', icon: 'i-lucide-user-plus',
+      title: 'New inbound lead',
+      body: `${contact.name} submitted the contact form${interested ? ` — ${interested}` : ''}.`,
+      link: '/leads'
+    })
+  } catch (err) {
+    console.error('Contact-form lead notification failed:', err.message)
+  }
+
+  res.status(201).json({ ok: true, id: contact.id })
+})
 
 // POST /api/webhooks/stripe — receives Stripe events. Authenticated by signature
 // (not the session cookie), so it's mounted outside requireAuth. Needs the raw

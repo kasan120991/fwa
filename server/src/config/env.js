@@ -29,6 +29,11 @@ export const config = {
     // raw body, delivered in the ?signature query param).
     webhookKey: process.env.PANDADOC_WEBHOOK_KEY || ''
   },
+  contactForm: {
+    // Shared secret the marketing site sends (Authorization: Bearer …) with each
+    // contact-form submission. Empty = the webhook is disabled (fails closed).
+    webhookSecret: process.env.CONTACT_FORM_WEBHOOK_SECRET || ''
+  },
   db: {
     host: process.env.DB_HOST || '127.0.0.1',
     port: Number(process.env.DB_PORT) || 3306,

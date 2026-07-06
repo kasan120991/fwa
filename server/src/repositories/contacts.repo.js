@@ -64,6 +64,19 @@ export async function getContactByStripeCustomerId(customerId) {
   return rows[0] ?? null
 }
 
+/** A recent website lead with this email — used to dedupe double-submitted
+ *  contact-form webhooks. `minutes` inlined (mysql2 can't bind INTERVAL). */
+export async function getRecentWebsiteContactByEmail(email, minutes = 10) {
+  const m = Math.max(1, Math.floor(Number(minutes) || 10))
+  const rows = await query(
+    `SELECT * FROM contacts
+     WHERE email = :email AND source = 'website' AND created_at >= (NOW() - INTERVAL ${m} MINUTE)
+     ORDER BY created_at DESC LIMIT 1`,
+    { email }
+  )
+  return rows[0] ?? null
+}
+
 export async function createContact(data) {
   const params = toParams(data)
   const cols = Object.keys(params)
