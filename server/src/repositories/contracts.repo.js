@@ -46,12 +46,12 @@ async function insertItems(q, contractId, items) {
 }
 
 /** Create a standalone contract (e.g. a Care Plan) with fresh line items. */
-export async function createContract({ contact_id, proposal_id = null, type, title, currency = 'USD', total = 0, billing_interval = 'one_time', start_date = null, items = [] }) {
+export async function createContract({ contact_id, proposal_id = null, project_id = null, type, title, currency = 'USD', total = 0, billing_interval = 'one_time', start_date = null, items = [] }) {
   const id = await withTransaction(async (q) => {
     const rows = await q(
-      `INSERT INTO contracts (contact_id, proposal_id, type, title, currency, total, billing_interval, start_date, status)
-       VALUES (:contact_id, :proposal_id, :type, :title, :currency, :total, :billing_interval, :start_date, 'draft')`,
-      { contact_id, proposal_id, type, title, currency, total, billing_interval, start_date }
+      `INSERT INTO contracts (contact_id, proposal_id, project_id, type, title, currency, total, billing_interval, start_date, status)
+       VALUES (:contact_id, :proposal_id, :project_id, :type, :title, :currency, :total, :billing_interval, :start_date, 'draft')`,
+      { contact_id, proposal_id, project_id, type, title, currency, total, billing_interval, start_date }
     )
     const contractId = rows.insertId
     await insertItems(q, contractId, items)
@@ -111,6 +111,7 @@ export async function listContracts(opts = {}) {
   const where = []
   const params = {}
   if (opts.contact_id) { where.push('contact_id = :contact_id'); params.contact_id = opts.contact_id }
+  if (opts.project_id) { where.push('project_id = :project_id'); params.project_id = opts.project_id }
   if (opts.type) { where.push('type = :type'); params.type = opts.type }
   if (opts.statuses?.length) {
     where.push(`status IN (${opts.statuses.map((_, i) => `:s${i}`).join(', ')})`)

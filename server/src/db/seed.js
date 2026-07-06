@@ -7,10 +7,20 @@ const force = process.argv.includes('--force')
 const pool = getPool()
 
 const now = Date.now()
-const fmt = ms => new Date(ms).toISOString().slice(0, 19).replace('T', ' ')
+// Local wall-clock 'YYYY-MM-DD HH:MM:SS' — matches MySQL's CURRENT_TIMESTAMP
+// (session tz) and the frontend's timeAgo(), which parses these as local. Using
+// toISOString() here would write UTC and skew every relative time by the tz offset.
+const pad = n => String(n).padStart(2, '0')
+const fmt = (ms) => {
+  const d = new Date(ms)
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
 const daysAgo = d => fmt(now - d * 86400e3)
 const hoursAgo = h => fmt(now - h * 3600e3)
 const daysAhead = d => fmt(now + d * 86400e3)
+// DATE-column variants (no time component).
+const dateAgo = d => daysAgo(d).slice(0, 10)
+const dateAhead = d => daysAhead(d).slice(0, 10)
 
 // ---- clients (stage active/past) ----
 const CLIENTS = [
@@ -77,6 +87,93 @@ const CALLS = [
     transcript: [{ r: true, t: 'Francis Web Agency, how can I help?' }, { r: false, t: 'I need a site that brings in roofing leads.' }] }
 ]
 
+// ---- notifications ---- (top-bar feed; user_id NULL = broadcast to admins)
+const NOTIFICATIONS = [
+  { category: 'lead', tone: 'brand', icon: 'i-lucide-user-plus', title: 'New inbound lead', body: 'Aiden Brooks submitted the contact form on your site.', link: '/leads', read: false, created_at: hoursAgo(1) },
+  { category: 'call', tone: 'error', icon: 'i-lucide-phone-missed', title: 'Missed call logged', body: 'The receptionist captured a call from (415) 555-0148.', link: '/receptionist', read: false, created_at: hoursAgo(0.3) },
+  { category: 'proposal', tone: 'info', icon: 'i-lucide-file-text', title: 'Proposal viewed', body: 'Fielder Roofing opened the proposal you sent.', link: '/agreements', read: false, created_at: hoursAgo(3) },
+  { category: 'invoice', tone: 'success', icon: 'i-lucide-check-circle-2', title: 'Invoice paid', body: 'Northwind Co. paid invoice #1042 in full — $3,200.', link: '/invoices', read: true, created_at: daysAgo(1) },
+  { category: 'call', tone: 'info', icon: 'i-lucide-phone-call', title: 'Client call logged', body: 'Dana Cole (Northwind) called about an invoice question.', link: '/receptionist', read: true, created_at: daysAgo(1) },
+  { category: 'task', tone: 'warning', icon: 'i-lucide-clock', title: 'Follow-up due', body: 'Your outreach touch for Lawson Interiors is overdue.', link: '/leads', read: true, created_at: daysAgo(2) }
+]
+
+// ---- projects ---- (SOW hub; each belongs to an active client by company)
+const PROJECTS = [
+  { key: 'northwind-rebuild', company: 'Northwind Co.', code: 'WEB-0001', name: 'Marketing site rebuild', status: 'in_progress',
+    goals: 'Modernize the marketing site and lift consultation requests. Faster, mobile-first, clearer conversion path.',
+    pages_included: 'Home, About, Services, Case Studies, Contact', key_features: 'Contact form, blog, analytics, newsletter signup',
+    design_deliverables: 'Custom design, mobile-responsive, brand colors', content_provided_by: 'mix', revision_rounds: 2,
+    third_party_costs: 'Client covers hosting + premium fonts', project_fee: 18000, hourly_rate: 120,
+    content_deadline: dateAhead(7), start_date: dateAgo(20), target_launch_date: dateAhead(20), special_terms: null },
+  { key: 'mintleaf-store', company: 'Mintleaf', code: 'WEB-0002', name: 'E-commerce storefront', status: 'in_progress',
+    goals: 'Launch an online storefront with same-day local delivery scheduling.',
+    pages_included: 'Home, Shop, Product, Cart, Checkout, About, Contact', key_features: 'Stripe checkout, delivery scheduler, inventory, order emails',
+    design_deliverables: 'Custom design, mobile-responsive', content_provided_by: 'client', revision_rounds: 2,
+    third_party_costs: 'Client covers Stripe fees + stock photography', project_fee: 24500, hourly_rate: 120,
+    content_deadline: dateAgo(2), start_date: dateAgo(30), target_launch_date: dateAhead(10), special_terms: 'Phased launch: catalog first, delivery scheduling in phase 2.' },
+  { key: 'harborview-booking', company: 'Harborview', code: 'WEB-0003', name: 'Booking site', status: 'planning',
+    goals: 'A booking-focused site so clients can reserve consultations online.',
+    pages_included: 'Home, Services, Booking, About, Contact', key_features: 'Calendar booking, reminders, maps',
+    design_deliverables: 'Custom design, mobile-responsive, brand colors', content_provided_by: 'developer', revision_rounds: 2,
+    third_party_costs: 'FWA advances booking-tool subscription, invoiced at cost', project_fee: 12000, hourly_rate: 110,
+    content_deadline: dateAhead(14), start_date: dateAhead(3), target_launch_date: dateAhead(45), special_terms: null },
+  { key: 'ridgeline-dashboard', company: 'Ridgeline', code: 'WEB-0004', name: 'Customer dashboard', status: 'in_review',
+    goals: 'Design + build a customer-facing dashboard for their SaaS.',
+    pages_included: 'Login, Dashboard, Reports, Settings, Billing', key_features: 'Auth, charts, CSV export, role-based access',
+    design_deliverables: 'Custom design, mobile-responsive, design system', content_provided_by: 'client', revision_rounds: 3,
+    third_party_costs: 'Client owns all infra and third-party APIs', project_fee: 32000, hourly_rate: 140,
+    content_deadline: dateAgo(10), start_date: dateAgo(40), target_launch_date: dateAgo(2), special_terms: 'NDA on file. Two extra revision rounds included.' },
+  { key: 'lumen-marketing', company: 'Lumen Labs', code: 'WEB-0005', name: 'SaaS marketing site', status: 'planning',
+    goals: 'A launch marketing site to support their product release.',
+    pages_included: 'Home, Features, Pricing, Docs, Contact', key_features: 'Pricing table, docs, demo request form',
+    design_deliverables: 'Custom design, mobile-responsive, brand colors', content_provided_by: 'mix', revision_rounds: 2,
+    third_party_costs: 'Client covers hosting', project_fee: 15000, hourly_rate: 120,
+    content_deadline: dateAhead(21), start_date: dateAhead(7), target_launch_date: dateAhead(60), special_terms: null }
+]
+
+// ---- tasks ---- (projectKey references a PROJECTS.key; null = standalone)
+const TASKS = [
+  { projectKey: 'northwind-rebuild', title: 'Kickoff + discovery call', status: 'done', priority: 'high', position: 0, doneAgo: 18 },
+  { projectKey: 'northwind-rebuild', title: 'Sitemap + wireframes', status: 'done', priority: 'high', position: 1, doneAgo: 12 },
+  { projectKey: 'northwind-rebuild', title: 'Homepage design', status: 'done', priority: 'medium', position: 2, doneAgo: 6 },
+  { projectKey: 'northwind-rebuild', title: 'Build responsive templates', status: 'in_progress', priority: 'high', position: 3, due: dateAhead(4) },
+  { projectKey: 'northwind-rebuild', title: 'Migrate blog content', status: 'todo', priority: 'medium', position: 4, due: dateAhead(9) },
+  { projectKey: 'northwind-rebuild', title: 'QA + launch checklist', status: 'todo', priority: 'medium', position: 5, due: dateAhead(18) },
+  { projectKey: 'mintleaf-store', title: 'Product catalog import', status: 'done', priority: 'high', position: 0, doneAgo: 8 },
+  { projectKey: 'mintleaf-store', title: 'Stripe checkout integration', status: 'in_progress', priority: 'high', position: 1, due: dateAhead(3) },
+  { projectKey: 'mintleaf-store', title: 'Delivery scheduler', status: 'blocked', priority: 'high', position: 2, due: dateAhead(8) },
+  { projectKey: 'mintleaf-store', title: 'Order confirmation emails', status: 'todo', priority: 'medium', position: 3, due: dateAhead(6) },
+  { projectKey: 'harborview-booking', title: 'Choose booking tool', status: 'todo', priority: 'high', position: 0, due: dateAhead(5) },
+  { projectKey: 'harborview-booking', title: 'Draft content outline', status: 'todo', priority: 'low', position: 1 },
+  { projectKey: 'ridgeline-dashboard', title: 'Design review with stakeholders', status: 'in_progress', priority: 'high', position: 0, due: dateAhead(1) },
+  { projectKey: 'ridgeline-dashboard', title: 'Accessibility audit', status: 'todo', priority: 'medium', position: 1, due: dateAgo(1) },
+  // Standalone (no project) — ad-hoc admin tasks.
+  { projectKey: null, title: 'Renew business license (BL-2026-4471)', status: 'todo', priority: 'medium', position: 0, due: dateAhead(12) },
+  { projectKey: null, title: 'Update portfolio with latest launches', status: 'todo', priority: 'low', position: 1 }
+]
+
+// ---- invoices ---- (key = seed handle; projectKey optional; historical mock,
+// so stripe ids are null — real ones come from the Stripe-backed flows)
+const INVOICES = [
+  { key: 'inv-northwind-dep', company: 'Northwind Co.', projectKey: 'northwind-rebuild', number: 'FWA-0001', kind: 'deposit', status: 'paid',
+    amount_due: 9000, amount_paid: 9000, description: 'Deposit (50%) — Marketing site rebuild', line: 'Deposit (50%) — Marketing site rebuild',
+    finalized_at: daysAgo(12), due_date: dateAgo(5), paid_at: daysAgo(5) },
+  { key: 'inv-mintleaf-dep', company: 'Mintleaf', projectKey: 'mintleaf-store', number: 'FWA-0002', kind: 'deposit', status: 'open',
+    amount_due: 12250, amount_paid: 0, description: 'Deposit (50%) — E-commerce storefront', line: 'Deposit (50%) — E-commerce storefront',
+    finalized_at: daysAgo(3), due_date: dateAhead(10), paid_at: null },
+  { key: 'inv-ridgeline-bal', company: 'Ridgeline', projectKey: 'ridgeline-dashboard', number: 'FWA-0003', kind: 'balance', status: 'open',
+    amount_due: 16000, amount_paid: 0, description: 'Final payment — Customer dashboard', line: 'Final (50%) — Customer dashboard',
+    finalized_at: daysAgo(20), due_date: dateAgo(5), paid_at: null },
+  { key: 'inv-harborview-custom', company: 'Harborview', projectKey: null, number: null, kind: 'custom', status: 'draft',
+    amount_due: 1500, amount_paid: 0, description: 'Discovery workshop', line: 'Discovery workshop (half day)',
+    finalized_at: null, due_date: dateAhead(14), paid_at: null }
+]
+
+// ---- payments ---- (invoiceKey references an INVOICES.key)
+const PAYMENTS = [
+  { invoiceKey: 'inv-northwind-dep', company: 'Northwind Co.', amount: 9000, method: 'card', paid_at: daysAgo(5), note: null }
+]
+
 function cols(obj) {
   const keys = Object.keys(obj)
   return { sql: `(${keys.join(', ')}) VALUES (${keys.map(k => `:${k}`).join(', ')})`, params: obj }
@@ -91,6 +188,13 @@ async function insertContact(row) {
 }
 
 try {
+  // Ensure the base project type exists (config, not sample data) on every run,
+  // even for an existing DB that skips the sample seed below.
+  await pool.query(
+    "INSERT IGNORE INTO project_types (`key`, name, description, code_prefix, sort_order) VALUES ('website', 'Website Design & Development', 'Custom website design + build under the FWA Website Design & Development Agreement.', 'WEB', 0)"
+  )
+  const [[websiteType]] = await pool.query("SELECT id FROM project_types WHERE `key` = 'website' LIMIT 1")
+
   const [[{ n }]] = await pool.query('SELECT COUNT(*) AS n FROM contacts')
   if (n > 0 && !force) {
     console.log(`Contacts already present (${n}). Use "npm run seed -- --force" to reseed.`)
@@ -98,9 +202,15 @@ try {
     process.exit(0)
   }
   if (force) {
+    // Children first: billing + tasks -> projects before contacts (FKs to contacts).
+    await pool.query('DELETE FROM payments')
+    await pool.query('DELETE FROM invoices') // cascades invoice_line_items
+    await pool.query('DELETE FROM tasks')
+    await pool.query('DELETE FROM projects')
+    await pool.query('DELETE FROM notifications')
     await pool.query('DELETE FROM calls')
     await pool.query('DELETE FROM contacts')
-    console.log('Cleared calls + contacts.')
+    console.log('Cleared payments + invoices + tasks + projects + notifications + calls + contacts.')
   }
 
   const slugToId = {}
@@ -133,9 +243,63 @@ try {
     await pool.query(`INSERT INTO calls ${sql}`, params)
   }
 
+  for (const note of NOTIFICATIONS) {
+    const { read, ...rest } = note
+    const row = { ...rest, user_id: null, read_at: read ? daysAgo(0) : null }
+    const { sql, params } = cols(row)
+    await pool.query(`INSERT INTO notifications ${sql}`, params)
+  }
+
+  const projectKeyToId = {}
+  for (const p of PROJECTS) {
+    const { key, company, ...rest } = p
+    const row = { ...rest, contact_id: companyToId[company], project_type_id: websiteType.id }
+    const { sql, params } = cols(row)
+    const [res] = await pool.query(`INSERT INTO projects ${sql}`, params)
+    projectKeyToId[key] = res.insertId
+  }
+
+  for (const t of TASKS) {
+    const { projectKey, due, doneAgo, ...rest } = t
+    const row = {
+      ...rest,
+      project_id: projectKey ? projectKeyToId[projectKey] : null,
+      due_date: due ?? null,
+      completed_at: rest.status === 'done' ? daysAgo(doneAgo ?? 1) : null
+    }
+    const { sql, params } = cols(row)
+    await pool.query(`INSERT INTO tasks ${sql}`, params)
+  }
+
+  const invoiceKeyToId = {}
+  for (const inv of INVOICES) {
+    const { key, company, projectKey, line, ...rest } = inv
+    const row = { ...rest, contact_id: companyToId[company], project_id: projectKey ? projectKeyToId[projectKey] : null }
+    const { sql, params } = cols(row)
+    const [res] = await pool.query(`INSERT INTO invoices ${sql}`, params)
+    invoiceKeyToId[key] = res.insertId
+    // One snapshot line item mirroring the total.
+    await pool.query(
+      'INSERT INTO invoice_line_items (invoice_id, name_snapshot, unit_price_snapshot, qty, sort_order) VALUES (?, ?, ?, 1, 0)',
+      [res.insertId, line, rest.amount_due]
+    )
+  }
+
+  for (const p of PAYMENTS) {
+    const { invoiceKey, company, ...rest } = p
+    const row = { ...rest, contact_id: companyToId[company], invoice_id: invoiceKeyToId[invoiceKey] ?? null }
+    const { sql, params } = cols(row)
+    await pool.query(`INSERT INTO payments ${sql}`, params)
+  }
+
   const [[cc]] = await pool.query('SELECT COUNT(*) AS n FROM contacts')
   const [[kc]] = await pool.query('SELECT COUNT(*) AS n FROM calls')
-  console.log(`✔ Seeded ${cc.n} contacts and ${kc.n} calls.`)
+  const [[nc]] = await pool.query('SELECT COUNT(*) AS n FROM notifications')
+  const [[pc]] = await pool.query('SELECT COUNT(*) AS n FROM projects')
+  const [[tc]] = await pool.query('SELECT COUNT(*) AS n FROM tasks')
+  const [[ic]] = await pool.query('SELECT COUNT(*) AS n FROM invoices')
+  const [[yc]] = await pool.query('SELECT COUNT(*) AS n FROM payments')
+  console.log(`✔ Seeded ${cc.n} contacts, ${kc.n} calls, ${nc.n} notifications, ${pc.n} projects, ${tc.n} tasks, ${ic.n} invoices, and ${yc.n} payments.`)
 } finally {
   await closePool()
 }

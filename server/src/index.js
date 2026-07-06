@@ -1,12 +1,16 @@
 import { createApp } from './app.js'
 import { config } from './config/env.js'
 import { closePool } from './db/pool.js'
+import { initRealtime } from './realtime/io.js'
 
 const app = createApp()
 
 const server = app.listen(config.port, () => {
   console.log(`FWA API listening on http://localhost:${config.port} (${config.nodeEnv})`)
 })
+
+// Attach Socket.IO to the same HTTP server (shares the port).
+initRealtime(server)
 
 // Graceful shutdown — stop accepting connections, then close the DB pool.
 async function shutdown(signal) {

@@ -9,6 +9,12 @@ export async function listTemplates() {
   return query('SELECT * FROM document_templates ORDER BY purpose ASC, id ASC')
 }
 
+/** A template by its id (used when a project type pins a specific template). */
+export async function getTemplate(id) {
+  const rows = await query('SELECT * FROM document_templates WHERE id = :id LIMIT 1', { id })
+  return rows[0] ?? null
+}
+
 /** The active template UUID for a purpose, or null if none is configured. */
 export async function getActiveTemplate(purpose) {
   const rows = await query(

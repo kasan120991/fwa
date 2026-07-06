@@ -32,6 +32,17 @@ const ADDITIVE_COLUMNS = {
   ],
   calls: [
     ['reviewed_at', 'DATETIME NULL AFTER extracted']
+  ],
+  // Soft project back-links (no FK — projects is created after these tables in
+  // schema.sql, and a trailing ADD CONSTRAINT wouldn't be idempotent).
+  proposals: [
+    ['project_id', 'BIGINT UNSIGNED NULL AFTER contact_id']
+  ],
+  contracts: [
+    ['project_id', 'BIGINT UNSIGNED NULL AFTER proposal_id']
+  ],
+  projects: [
+    ['deposit_pct', 'DECIMAL(5,2) NOT NULL DEFAULT 50.00 AFTER project_fee']
   ]
 }
 

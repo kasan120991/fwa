@@ -1,0 +1,110 @@
+import { Server } from 'socket.io'
+import { config } from '../config/env.js'
+import { SESSION_COOKIE, getSessionUser } from '../auth/session.js'
+
+let io = null
+
+// Minimal cookie-header parser — we only need one value and don't want to pull
+// the request through Express's cookie-parser here.
+function parseCookies(header = '') {
+  const out = {}
+  for (const part of header.split(';')) {
+    const eq = part.indexOf('=')
+    if (eq === -1) continue
+    const key = part.slice(0, eq).trim()
+    if (key) out[key] = decodeURIComponent(part.slice(eq + 1).trim())
+  }
+  return out
+}
+
+/**
+ * Attach Socket.IO to the existing HTTP server. Connections are authenticated
+ * with the same httpOnly session cookie the REST API uses (it rides along on
+ * the handshake when the client connects with withCredentials). Each socket
+ * joins a per-user room and a per-role room so we can target emits precisely.
+ */
+export function initRealtime(httpServer) {
+  io = new Server(httpServer, {
+    // Same origin allow-list + credentials as the REST CORS, so the cookie flows.
+    cors: { origin: config.corsOrigin, credentials: true }
+  })
+
+  io.use(async (socket, next) => {
+    try {
+      const cookies = parseCookies(socket.handshake.headers.cookie)
+      const user = await getSessionUser(cookies[SESSION_COOKIE])
+      if (!user) return next(new Error('unauthorized'))
+      socket.data.user = user
+      next()
+    } catch (err) {
+      next(err)
+    }
+  })
+
+  io.on('connection', (socket) => {
+    const { id, role } = socket.data.user
+    socket.join(`user:${id}`)
+    socket.join(`role:${role}`)
+  })
+
+  return io
+}
+
+export function getIo() {
+  return io
+}
+
+// --- notification emitters ------------------------------------------------
+// Broadcast notifications (user_id NULL) fan out to every admin; targeted ones
+// go to that single user's room. Read events sync the acting user's own tabs.
+
+function newRoom(userId) {
+  return userId ? `user:${userId}` : 'role:admin'
+}
+
+export function emitNotificationNew(notification) {
+  io?.to(newRoom(notification.user_id)).emit('notification:new', notification)
+}
+
+export function emitNotificationRead(userId, id) {
+  io?.to(`user:${userId}`).emit('notification:read', { id })
+}
+
+export function emitNotificationReadAll(userId) {
+  io?.to(`user:${userId}`).emit('notification:read-all')
+}
+
+// --- project + task emitters ----------------------------------------------
+// Single-admin app today, so these broadcast to every admin. Payloads are the
+// full mapped row (or { id } for deletes) so listeners can upsert/remove in place.
+
+export function emitProjectCreated(project) {
+  io?.to('role:admin').emit('project:created', project)
+}
+export function emitProjectUpdated(project) {
+  io?.to('role:admin').emit('project:updated', project)
+}
+export function emitProjectDeleted(id) {
+  io?.to('role:admin').emit('project:deleted', { id })
+}
+
+export function emitTaskCreated(task) {
+  io?.to('role:admin').emit('task:created', task)
+}
+export function emitTaskUpdated(task) {
+  io?.to('role:admin').emit('task:updated', task)
+}
+export function emitTaskDeleted(id, project_id = null) {
+  io?.to('role:admin').emit('task:deleted', { id, project_id })
+}
+
+// --- billing emitters -----------------------------------------------------
+// Broadcast so the Invoices/Payments pages refresh live. Payload is minimal;
+// listeners refetch (list pages) rather than upsert in place.
+
+export function emitInvoiceChanged(id) {
+  io?.to('role:admin').emit('invoice:changed', { id })
+}
+export function emitPaymentCreated(id) {
+  io?.to('role:admin').emit('payment:created', { id })
+}

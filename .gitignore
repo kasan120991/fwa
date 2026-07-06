@@ -19,3 +19,9 @@ node_modules
 .env
 .env.*
 !.env.example
+
+# Design-system skill — a symlink to the (gitignored, local-only) design system
+.claude/skills/fwa-design
+
+# Playwright MCP session artifacts (screenshots, snapshots, console logs)
+.playwright-mcp

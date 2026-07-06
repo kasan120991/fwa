@@ -90,6 +90,7 @@ async function load() {
 onMounted(() => {
   load()
   loadContracts()
+  loadProjects()
 })
 
 useHead({ title: () => `${client.value?.name ?? 'Client'} · Francis Web Agency` })
@@ -114,12 +115,55 @@ const ownerInitials = computed(() => {
 
 const notes = ref('')
 
+// ---------- new-project form ----------
+const projectFormOpen = ref(false)
+function openNewProject() {
+  projectFormOpen.value = true
+}
+function onProjectSaved() {
+  loadProjects()
+}
+
+// ---------- projects (real, from /projects?contact_id=) ----------
+type PStatus = 'planning' | 'in_progress' | 'in_review' | 'on_hold' | 'completed'
+interface ApiProject {
+  id: number
+  name: string
+  status: PStatus
+  project_fee: number | null
+  target_launch_date: string | null
+  task_total: number
+  task_done: number
+}
+const PROJECT_META: Record<PStatus, { label: string, status: 'neutral' | 'info' | 'warning' | 'success', bar: string }> = {
+  planning: { label: 'Planning', status: 'neutral', bar: 'bg-ink-400' },
+  in_progress: { label: 'In progress', status: 'info', bar: 'bg-info' },
+  in_review: { label: 'In review', status: 'info', bar: 'bg-teal-500' },
+  on_hold: { label: 'On hold', status: 'warning', bar: 'bg-warning' },
+  completed: { label: 'Completed', status: 'success', bar: 'bg-success' }
+}
+const projects = ref<{ id: number, name: string, status: 'neutral' | 'info' | 'warning' | 'success', statusLabel: string, progress: number, bar: string, due: string, value: string, tasks: number }[]>([])
+async function loadProjects() {
+  try {
+    const { data } = await api<{ data: ApiProject[] }>('/projects', { query: { contact_id: route.params.id } })
+    projects.value = data.map((p) => {
+      const meta = PROJECT_META[p.status]
+      return {
+        id: p.id,
+        name: p.name,
+        status: meta.status,
+        statusLabel: meta.label,
+        progress: p.task_total ? Math.round((p.task_done / p.task_total) * 100) : 0,
+        bar: meta.bar,
+        due: p.target_launch_date ? shortDate(p.target_launch_date) : '—',
+        value: p.project_fee != null ? formatMoney(p.project_fee) : '—',
+        tasks: p.task_total - p.task_done
+      }
+    })
+  } catch { /* leave empty on failure */ }
+}
+
 // ---------- tab sample data (representative until API) ----------
-const projects = [
-  { id: 'p1', name: 'Storefront rebuild', status: 'info', statusLabel: 'In build', progress: 65, bar: 'bg-info', due: 'Aug 14', value: '$9,000', tasks: 4 },
-  { id: 'p2', name: 'SEO & analytics setup', status: 'success', statusLabel: 'Live', progress: 100, bar: 'bg-success', due: '—', value: '$3,500', tasks: 0 },
-  { id: 'p3', name: 'Email capture flow', status: 'warning', statusLabel: 'Review due', progress: 80, bar: 'bg-warning', due: 'Jul 5', value: '$2,200', tasks: 2 }
-] as const
 
 function spark(arr: number[], w: number, h: number) {
   const min = Math.min(...arr), max = Math.max(...arr), span = (max - min) || 1
@@ -256,7 +300,7 @@ const activity = [
 const activeTab = ref<'overview' | 'projects' | 'websites' | 'invoices' | 'contracts' | 'files' | 'support' | 'activity'>('overview')
 const tabs = computed(() => [
   { key: 'overview' as const, label: 'Overview', badge: null },
-  { key: 'projects' as const, label: 'Projects', badge: projects.length },
+  { key: 'projects' as const, label: 'Projects', badge: projects.value.length || null },
   { key: 'websites' as const, label: 'Websites', badge: websites.length },
   { key: 'invoices' as const, label: 'Invoices', badge: null },
   { key: 'contracts' as const, label: 'Contracts', badge: contracts.value.length || null },
@@ -266,7 +310,7 @@ const tabs = computed(() => [
 ])
 
 const metrics = computed(() => [
-  { label: 'Active projects', value: String(projects.length), sub: '', tone: 'text-highlighted' },
+  { label: 'Active projects', value: String(projects.value.length), sub: '', tone: 'text-highlighted' },
   { label: 'Outstanding', value: money(client.value?.outstanding ?? 0), sub: '2 unpaid', tone: (client.value?.outstanding ?? 0) > 0 ? 'text-error' : 'text-highlighted' },
   { label: 'Total billed', value: '$84.5k', sub: 'lifetime', tone: 'text-highlighted' },
   { label: 'Open tickets', value: String(tickets.filter(t => t.open).length), sub: '', tone: 'text-highlighted' },
@@ -385,6 +429,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
         <UButton
           icon="i-lucide-plus"
           color="primary"
+          @click="openNewProject"
         >
           New project
         </UButton>
@@ -713,6 +758,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
               icon="i-lucide-plus"
               color="primary"
               size="sm"
+              @click="openNewProject"
             >
               New project
             </UButton>
@@ -747,6 +793,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                   v-for="p in projects"
                   :key="p.id"
                   class="cursor-pointer border-t border-default transition-colors hover:bg-muted first:border-t-0"
+                  @click="navigateTo(`/projects/${p.id}`)"
                 >
                   <td class="px-4 py-3.5 text-sm font-semibold text-highlighted">
                     {{ p.name }}
@@ -786,6 +833,28 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                 </tr>
               </tbody>
             </table>
+            <div
+              v-if="!projects.length"
+              class="flex flex-col items-center px-6 py-12 text-center"
+            >
+              <span class="mb-3 inline-flex size-11 items-center justify-center rounded-[12px] bg-muted text-muted"><UIcon
+                name="i-lucide-folder-plus"
+                class="size-5"
+              /></span>
+              <p class="text-sm text-muted">
+                No projects yet for this client.
+              </p>
+              <UButton
+                color="neutral"
+                variant="outline"
+                size="sm"
+                class="mt-4 rounded-full"
+                icon="i-lucide-plus"
+                @click="openNewProject"
+              >
+                New project
+              </UButton>
+            </div>
           </div>
         </div>
 
@@ -1225,5 +1294,13 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
         </div>
       </div>
     </div>
+
+    <ProjectForm
+      v-model:open="projectFormOpen"
+      mode="create"
+      :contact-id="Number(route.params.id)"
+      :contact-label="client?.name"
+      @saved="onProjectSaved"
+    />
   </template>
 </template>

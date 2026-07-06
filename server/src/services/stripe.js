@@ -62,6 +62,63 @@ export async function updateStripeCustomer(contact) {
   })
 }
 
+// Map a Stripe invoice object to the fields we persist locally.
+export function mapStripeInvoice(inv) {
+  return {
+    id: inv.id,
+    number: inv.number ?? null,
+    hosted_invoice_url: inv.hosted_invoice_url ?? null,
+    invoice_pdf: inv.invoice_pdf ?? null,
+    status: inv.status,
+    amount_due: (inv.amount_due ?? 0) / 100,
+    amount_paid: (inv.amount_paid ?? 0) / 100,
+    due_date: inv.due_date ? new Date(inv.due_date * 1000).toISOString().slice(0, 10) : null
+  }
+}
+
+/**
+ * Create and send an invoice to a contact's Stripe customer. Adds one invoice
+ * item per line, opens an invoice with collection_method 'send_invoice', then
+ * finalizes + emails the hosted link. Returns the mapped invoice (id, number,
+ * urls, status, amounts, due_date) or null when Stripe is disabled. The caller
+ * must ensure `contact.stripe_customer_id` is set.
+ */
+export async function createAndSendInvoice(contact, { items, description, metadata = {}, daysUntilDue = 7 }) {
+  if (!stripe) return null
+  const customer = contact.stripe_customer_id
+  for (const li of items) {
+    await stripe.invoiceItems.create({ customer, amount: li.amountCents, currency: 'usd', description: li.description })
+  }
+  const invoice = await stripe.invoices.create({
+    customer,
+    collection_method: 'send_invoice',
+    days_until_due: daysUntilDue,
+    description,
+    metadata,
+    pending_invoice_items_behavior: 'include'
+  })
+  const sent = await stripe.invoices.sendInvoice(invoice.id)
+  return mapStripeInvoice(sent)
+}
+
+/** Convenience wrapper for a single-line invoice (e.g. a project deposit). */
+export async function sendDepositInvoice(contact, { amountCents, description, metadata = {}, daysUntilDue = 7 }) {
+  return createAndSendInvoice(contact, { items: [{ amountCents, description }], description, metadata, daysUntilDue })
+}
+
+/** Void an open/draft invoice in Stripe. No-ops when disabled. */
+export async function voidStripeInvoice(stripeInvoiceId) {
+  if (!stripe) return null
+  return stripe.invoices.voidInvoice(stripeInvoiceId)
+}
+
+/** Mark a Stripe invoice paid out of band (records an offline payment without
+ *  charging a card). No-ops when disabled. */
+export async function payStripeInvoiceOutOfBand(stripeInvoiceId) {
+  if (!stripe) return null
+  return stripe.invoices.pay(stripeInvoiceId, { paid_out_of_band: true })
+}
+
 /**
  * Verify + parse an incoming Stripe webhook. Throws if Stripe or the webhook
  * secret isn't configured, or if the signature doesn't validate.

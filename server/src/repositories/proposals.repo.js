@@ -49,12 +49,12 @@ async function insertItems(q, proposalId, items) {
 
 /** Create a proposal and its snapshotted line items atomically. `items` are
  *  ready-to-insert snapshot rows; `total` is the caller-computed sum. */
-export async function createProposal({ contact_id, title, currency = 'USD', total = 0, items = [] }) {
+export async function createProposal({ contact_id, project_id = null, title, currency = 'USD', total = 0, items = [] }) {
   const id = await withTransaction(async (q) => {
     const rows = await q(
-      `INSERT INTO proposals (contact_id, title, currency, total, status)
-       VALUES (:contact_id, :title, :currency, :total, 'draft')`,
-      { contact_id, title, currency, total }
+      `INSERT INTO proposals (contact_id, project_id, title, currency, total, status)
+       VALUES (:contact_id, :project_id, :title, :currency, :total, 'draft')`,
+      { contact_id, project_id, title, currency, total }
     )
     const proposalId = rows.insertId
     await insertItems(q, proposalId, items)
@@ -82,6 +82,7 @@ export async function listProposals(opts = {}) {
   const where = []
   const params = {}
   if (opts.contact_id) { where.push('contact_id = :contact_id'); params.contact_id = opts.contact_id }
+  if (opts.project_id) { where.push('project_id = :project_id'); params.project_id = opts.project_id }
   if (opts.statuses?.length) {
     where.push(`status IN (${opts.statuses.map((_, i) => `:s${i}`).join(', ')})`)
     opts.statuses.forEach((s, i) => { params[`s${i}`] = s })

@@ -220,6 +220,7 @@ CREATE TABLE IF NOT EXISTS services (
 CREATE TABLE IF NOT EXISTS proposals (
   id                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   contact_id           BIGINT UNSIGNED NOT NULL,
+  project_id           BIGINT UNSIGNED NULL,       -- soft link: the originating project (no FK, see migrate.js)
   title                VARCHAR(255)    NOT NULL,
   status               ENUM('draft', 'sent', 'viewed', 'accepted',
                             'declined', 'expired', 'voided')
@@ -246,6 +247,7 @@ CREATE TABLE IF NOT EXISTS proposals (
   PRIMARY KEY (id),
   UNIQUE KEY uq_proposals_pandadoc_doc (pandadoc_document_id),
   KEY idx_proposals_contact (contact_id),
+  KEY idx_proposals_project (project_id),
   KEY idx_proposals_status  (status),
   CONSTRAINT fk_proposals_contact
     FOREIGN KEY (contact_id) REFERENCES contacts (id)
@@ -288,6 +290,7 @@ CREATE TABLE IF NOT EXISTS contracts (
   id                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   contact_id           BIGINT UNSIGNED NOT NULL,
   proposal_id          BIGINT UNSIGNED NULL,       -- NULL = standalone (e.g. Care Plan)
+  project_id           BIGINT UNSIGNED NULL,       -- soft link: the originating project (no FK, see migrate.js)
   type                 ENUM('project', 'care_plan') NOT NULL,
   title                VARCHAR(255)    NOT NULL,
   status               ENUM('draft', 'sent', 'viewed', 'signed',
@@ -318,6 +321,7 @@ CREATE TABLE IF NOT EXISTS contracts (
   UNIQUE KEY uq_contracts_pandadoc_doc (pandadoc_document_id),
   KEY idx_contracts_contact  (contact_id),
   KEY idx_contracts_proposal (proposal_id),
+  KEY idx_contracts_project  (project_id),
   KEY idx_contracts_type     (type),
   KEY idx_contracts_status   (status),
   CONSTRAINT fk_contracts_contact
@@ -371,4 +375,255 @@ CREATE TABLE IF NOT EXISTS document_templates (
                                 ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY idx_templates_purpose (purpose, is_active)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- notifications — the top-bar alert feed (bell popover + slide-over).
+--   category = semantic source; tone + icon = presentation the producer
+--   chooses (e.g. a paid invoice is success/check, an overdue one is
+--   error/alert). read_at NULL = unread (mirrors calls.reviewed_at).
+--   user_id NULL = broadcast to all admins; set = targeted to one user.
+--   Ready for the deferred client portal without changing the shape.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS notifications (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id     BIGINT UNSIGNED NULL,
+
+  category    ENUM('lead', 'call', 'proposal', 'contract',
+                   'invoice', 'payment', 'task', 'system') NOT NULL,
+  tone        ENUM('brand', 'success', 'warning', 'info', 'error')
+                NOT NULL DEFAULT 'brand',
+  icon        VARCHAR(64)  NOT NULL,   -- lucide id, e.g. 'i-lucide-user-plus'
+
+  title       VARCHAR(200) NOT NULL,
+  body        VARCHAR(500) NULL,
+  link        VARCHAR(512) NULL,       -- in-app route to open on click
+
+  read_at     DATETIME NULL,           -- NULL = unread
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+
+  -- Feed query: a user's notifications, newest first, unread filterable.
+  KEY idx_notifications_user_created (user_id, created_at),
+  KEY idx_notifications_user_unread (user_id, read_at),
+
+  CONSTRAINT fk_notifications_user FOREIGN KEY (user_id)
+    REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- =====================================================================
+-- PROJECTS & TASKS
+--   Inverts the old "signed contract creates the project" flow: the
+--   PROJECT is the hub. It's created on a contact, holds the Statement
+--   of Work (Exhibit A of the Website Design & Development Agreement),
+--   and ORIGINATES its contract (proposals/contracts carry a soft
+--   project_id back-link above). project_types is an extensible lookup
+--   so new kinds of project are a row insert, each mapped to its own
+--   contract template. Tasks hang off a project (nullable = standalone).
+-- =====================================================================
+
+-- ---------------------------------------------------------------------
+-- project_types — extensible catalog of project kinds. Each type sets a
+--   code prefix and (optionally) which document template its contract
+--   generates from. Seed at least the 'website' type.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS project_types (
+  id                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `key`                VARCHAR(50)     NOT NULL,          -- slug, e.g. 'website'
+  name                 VARCHAR(120)    NOT NULL,          -- 'Website Design & Development'
+  description          VARCHAR(255)    NULL,
+  code_prefix          VARCHAR(10)     NOT NULL DEFAULT 'PRJ',  -- 'WEB' -> WEB-0007
+  contract_template_id BIGINT UNSIGNED NULL,              -- which agreement template to generate
+  is_active            BOOLEAN         NOT NULL DEFAULT TRUE,
+  sort_order           INT             NOT NULL DEFAULT 0,
+  created_at           TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at           TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                       ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_project_types_key (`key`),
+  KEY idx_project_types_active (is_active),
+  CONSTRAINT fk_project_types_template
+    FOREIGN KEY (contract_template_id) REFERENCES document_templates (id)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- projects — a client engagement + its Statement of Work (Exhibit A).
+--   Child of a contact; typed via project_types. The SOW fields below
+--   feed the contract's PandaDoc tokens on generation.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS projects (
+  id                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  contact_id           BIGINT UNSIGNED NOT NULL,
+  project_type_id      BIGINT UNSIGNED NOT NULL,
+  code                 VARCHAR(50)     NULL,              -- 'WEB-0007', assigned on create
+  name                 VARCHAR(255)    NOT NULL,
+  status               ENUM('planning', 'in_progress', 'in_review', 'on_hold', 'completed')
+                                       NOT NULL DEFAULT 'planning',
+
+  -- Statement of Work (Exhibit A)
+  goals                TEXT            NULL,              -- project goals / description
+  pages_included       TEXT            NULL,
+  key_features         TEXT            NULL,
+  design_deliverables  TEXT            NULL,
+  content_provided_by  ENUM('client', 'developer', 'mix') NULL,
+  revision_rounds      INT             NOT NULL DEFAULT 2,
+  third_party_costs    TEXT            NULL,              -- who pays hosting/domain/plugins
+  project_fee          DECIMAL(10,2)   NULL,              -- total
+  deposit_pct          DECIMAL(5,2)    NOT NULL DEFAULT 50.00,  -- deposit share; final = 100 - this
+  hourly_rate          DECIMAL(10,2)   NULL,              -- extra work / out-of-scope
+  content_deadline     DATE            NULL,
+  start_date           DATE            NULL,
+  target_launch_date   DATE            NULL,
+  special_terms        TEXT            NULL,
+
+  -- Policy constants (editable, fill the agreement body brackets)
+  inactivity_days      INT             NOT NULL DEFAULT 30,
+  feedback_days        INT             NOT NULL DEFAULT 5,
+  late_fee_days        INT             NOT NULL DEFAULT 7,
+  bugfix_days          INT             NOT NULL DEFAULT 30,
+
+  created_at           TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at           TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                       ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_projects_code (code),
+  KEY idx_projects_contact (contact_id),
+  KEY idx_projects_type    (project_type_id),
+  KEY idx_projects_status  (status),
+  KEY idx_projects_due     (target_launch_date),
+  CONSTRAINT fk_projects_contact
+    FOREIGN KEY (contact_id) REFERENCES contacts (id)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_projects_type
+    FOREIGN KEY (project_type_id) REFERENCES project_types (id)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- tasks — units of work. project_id NULL = a standalone ad-hoc task.
+--   completed_at is stamped when status crosses into 'done'.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS tasks (
+  id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  project_id   BIGINT UNSIGNED NULL,
+  title        VARCHAR(255)    NOT NULL,
+  description  TEXT            NULL,
+  status       ENUM('todo', 'in_progress', 'blocked', 'done') NOT NULL DEFAULT 'todo',
+  priority     ENUM('low', 'medium', 'high') NOT NULL DEFAULT 'medium',
+  due_date     DATE            NULL,
+  position     INT             NOT NULL DEFAULT 0,
+  completed_at TIMESTAMP       NULL,
+  created_at   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                               ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_tasks_project (project_id),
+  KEY idx_tasks_status  (status),
+  KEY idx_tasks_due     (due_date),
+  CONSTRAINT fk_tasks_project
+    FOREIGN KEY (project_id) REFERENCES projects (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- =====================================================================
+-- BILLING — invoices & payments.
+--   Local source of truth for the Invoices/Payments pages, kept in sync
+--   with Stripe via webhooks (status is Stripe's; past-due is derived =
+--   open + due_date < today). project_id is a soft link (no FK) like
+--   proposals/contracts. A project deposit is an invoice with kind='deposit'.
+-- =====================================================================
+
+-- ---------------------------------------------------------------------
+-- invoices — a bill sent to a contact, mirrored from a Stripe invoice.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS invoices (
+  id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  contact_id         BIGINT UNSIGNED NOT NULL,
+  project_id         BIGINT UNSIGNED NULL,             -- soft link (no FK, see migrate.js)
+  stripe_invoice_id  VARCHAR(100)    NULL,
+  number             VARCHAR(50)     NULL,             -- Stripe number, set on finalize
+  status             ENUM('draft', 'open', 'paid', 'uncollectible', 'void')
+                                     NOT NULL DEFAULT 'draft',
+  kind               ENUM('deposit', 'balance', 'custom') NOT NULL DEFAULT 'custom',
+  currency           CHAR(3)         NOT NULL DEFAULT 'USD',
+  amount_due         DECIMAL(10,2)   NOT NULL DEFAULT 0.00,
+  amount_paid        DECIMAL(10,2)   NOT NULL DEFAULT 0.00,
+  description        VARCHAR(500)    NULL,
+  hosted_invoice_url TEXT            NULL,
+  invoice_pdf        TEXT            NULL,
+  due_date           DATE            NULL,
+  finalized_at       TIMESTAMP       NULL,
+  paid_at            TIMESTAMP       NULL,
+  voided_at          TIMESTAMP       NULL,
+  created_at         TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                     ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_invoices_stripe (stripe_invoice_id),
+  KEY idx_invoices_contact (contact_id),
+  KEY idx_invoices_project (project_id),
+  KEY idx_invoices_status  (status),
+  KEY idx_invoices_due     (due_date),
+  CONSTRAINT fk_invoices_contact
+    FOREIGN KEY (contact_id) REFERENCES contacts (id)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- invoice_line_items — frozen snapshot of what was billed (mirrors
+--   contract_line_items).
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS invoice_line_items (
+  id                        BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  invoice_id                BIGINT UNSIGNED NOT NULL,
+  service_id                BIGINT UNSIGNED NULL,   -- NULL = one-off custom line
+  name_snapshot             VARCHAR(255)    NOT NULL,
+  description_snapshot      TEXT            NULL,
+  unit_price_snapshot       DECIMAL(10,2)   NOT NULL,
+  qty                       DECIMAL(10,2)   NOT NULL DEFAULT 1.00,
+  billing_interval_snapshot ENUM('one_time', 'monthly') NOT NULL DEFAULT 'one_time',
+  line_total                DECIMAL(12,2)
+                            GENERATED ALWAYS AS (unit_price_snapshot * qty) STORED,
+  sort_order                INT             NOT NULL DEFAULT 0,
+  created_at                TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_ili_invoice (invoice_id),
+  KEY idx_ili_service (service_id),
+  CONSTRAINT fk_ili_invoice
+    FOREIGN KEY (invoice_id) REFERENCES invoices (id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_ili_service
+    FOREIGN KEY (service_id) REFERENCES services (id)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- payments — a received payment against an invoice (Stripe charge or a
+--   manually-recorded offline payment). Powers the Payments page.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS payments (
+  id                       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  contact_id               BIGINT UNSIGNED NOT NULL,
+  invoice_id               BIGINT UNSIGNED NULL,
+  stripe_payment_intent_id VARCHAR(100)    NULL,
+  amount                   DECIMAL(10,2)   NOT NULL,
+  currency                 CHAR(3)         NOT NULL DEFAULT 'USD',
+  method                   ENUM('card', 'bank', 'manual', 'other') NOT NULL DEFAULT 'card',
+  status                   ENUM('succeeded', 'refunded', 'failed') NOT NULL DEFAULT 'succeeded',
+  note                     VARCHAR(255)    NULL,
+  paid_at                  TIMESTAMP       NULL,
+  created_at               TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_payments_stripe_pi (stripe_payment_intent_id),
+  KEY idx_payments_contact (contact_id),
+  KEY idx_payments_invoice (invoice_id),
+  KEY idx_payments_paid    (paid_at),
+  CONSTRAINT fk_payments_contact
+    FOREIGN KEY (contact_id) REFERENCES contacts (id)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_payments_invoice
+    FOREIGN KEY (invoice_id) REFERENCES invoices (id)
+    ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

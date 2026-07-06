@@ -1,26 +1,59 @@
 <script setup lang="ts">
 useHead({ title: 'Projects · Francis Web Agency' })
 
-// Projects — every project across the agency. Each belongs to an active client
-// and rolls up its tasks. UI-only for now: the projects backend lands in a later
-// phase (a signed project contract is the create trigger — see the proposals/
-// contracts build plan), so this page runs on representative sample data and the
-// create/edit/archive actions are stubs until those routes exist.
+// Projects — every project across the agency. Each belongs to a client and holds
+// its Statement of Work (the project is the hub that originates its contract).
+// Backed by the /projects API; each row rolls up its tasks for progress.
 type Status = 'planning' | 'in_progress' | 'in_review' | 'on_hold' | 'completed'
 
+// The list endpoint returns full project rows (SELECT p.*); this declares the
+// display fields plus the SOW fields the edit form needs.
+interface ApiProject {
+  id: number
+  code: string | null
+  name: string
+  status: Status
+  project_type_id: number
+  project_fee: number | null
+  hourly_rate: number | null
+  target_launch_date: string | null
+  content_deadline: string | null
+  start_date: string | null
+  goals: string | null
+  pages_included: string | null
+  key_features: string | null
+  design_deliverables: string | null
+  content_provided_by: string | null
+  revision_rounds: number
+  third_party_costs: string | null
+  special_terms: string | null
+  inactivity_days: number
+  feedback_days: number
+  late_fee_days: number
+  bugfix_days: number
+  updated_at: string
+  task_total: number
+  task_done: number
+  contact_id: number
+  contact_company: string | null
+  contact_name: string | null
+}
+
 interface Project {
-  id: string
+  id: number
   name: string
   code: string
   client: string
+  contactId: number
   ci: number
   status: Status
   done: number
   total: number
-  due: string // ISO date
+  due: string // ISO date ('' when none)
   value: number
   updated: string // human "2d ago"
   up: number // recency weight for sorting (smaller = more recent)
+  raw: ApiProject
 }
 
 const STATUS_ORDER: Status[] = ['planning', 'in_progress', 'in_review', 'on_hold', 'completed']
@@ -34,27 +67,79 @@ const STATUS: Record<Status, { label: string, chip: string, dot: string, bar: st
 // Avatar tints, mirroring the design system palette.
 const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-teal-700', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 
-const SAMPLE: Project[] = [
-  { id: 'p1', name: 'Marketing site rebuild', code: 'WEB-104', client: 'Northwind Co.', ci: 0, status: 'in_progress', done: 8, total: 13, due: '2026-07-20', value: 18000, updated: '2d ago', up: 2 },
-  { id: 'p2', name: 'E-commerce storefront', code: 'WEB-098', client: 'Bloom Floral', ci: 1, status: 'in_progress', done: 9, total: 20, due: '2026-06-28', value: 24500, updated: '5h ago', up: 0.2 },
-  { id: 'p3', name: 'Consultation funnel', code: 'WEB-101', client: 'Brooks Law', ci: 2, status: 'in_review', done: 15, total: 17, due: '2026-07-05', value: 9800, updated: '3h ago', up: 0.12 },
-  { id: 'p4', name: 'Booking site', code: 'WEB-110', client: 'Delta Kitchens', ci: 3, status: 'planning', done: 1, total: 9, due: '2026-08-15', value: 12000, updated: '1d ago', up: 1 },
-  { id: 'p5', name: 'Patient portal', code: 'WEB-092', client: 'Anand Dental', ci: 4, status: 'in_progress', done: 11, total: 20, due: '2026-06-25', value: 32000, updated: '1d ago', up: 1 },
-  { id: 'p6', name: 'Lead-gen site', code: 'WEB-107', client: 'Fielder Roofing', ci: 0, status: 'on_hold', done: 3, total: 10, due: '2026-07-30', value: 14200, updated: '6d ago', up: 6 },
-  { id: 'p7', name: 'IDX listings site', code: 'WEB-112', client: 'Okafor Realty', ci: 1, status: 'planning', done: 0, total: 11, due: '2026-09-01', value: 21000, updated: '4d ago', up: 4 },
-  { id: 'p8', name: 'Portfolio redesign', code: 'WEB-095', client: 'Chen Studio', ci: 2, status: 'in_review', done: 12, total: 13, due: '2026-07-08', value: 7600, updated: '8h ago', up: 0.33 },
-  { id: 'p9', name: 'Program landing page', code: 'WEB-088', client: 'Webb Fitness', ci: 3, status: 'completed', done: 6, total: 6, due: '2026-06-10', value: 4500, updated: '2w ago', up: 14 },
-  { id: 'p10', name: 'Inventory site', code: 'WEB-081', client: 'Reyes Auto Group', ci: 4, status: 'completed', done: 14, total: 14, due: '2026-05-20', value: 16800, updated: '3w ago', up: 21 }
-]
+const api = useApi()
+const socket = useSocket()
+const toast = useToast()
 
-// Local status overrides so board drag-and-drop feels live without a backend.
-const overrides = reactive<Record<string, Status>>({})
-const projects = ref<Project[]>(SAMPLE)
+function mapProject(p: ApiProject): Project {
+  return {
+    id: p.id,
+    name: p.name,
+    code: p.code || '—',
+    client: p.contact_company || p.contact_name || 'Unknown',
+    contactId: p.contact_id,
+    ci: p.contact_id % AVATAR.length,
+    status: p.status,
+    done: p.task_done,
+    total: p.task_total,
+    due: p.target_launch_date ? String(p.target_launch_date).slice(0, 10) : '',
+    value: p.project_fee ?? 0,
+    updated: timeAgo(p.updated_at),
+    up: Date.now() - new Date(String(p.updated_at).replace(' ', 'T')).getTime(),
+    raw: p
+  }
+}
+
+// Local status overrides so board drag-and-drop feels instant before the PATCH
+// round-trips (and the socket echo) land.
+const overrides = reactive<Record<number, Status>>({})
+const projects = ref<Project[]>([])
+const pending = ref(true)
 const eff = (p: Project): Status => overrides[p.id] ?? p.status
-const pct = (p: Project) => Math.round((p.done / p.total) * 100)
+const pct = (p: Project) => (p.total ? Math.round((p.done / p.total) * 100) : 0)
 const dueDate = (d: string) => new Date(d + 'T12:00:00')
-const isOverdue = (p: Project) => dueDate(p.due).getTime() < Date.now() && eff(p) !== 'completed'
-const clientHref = '/clients' // project detail is deferred; link the client through for now
+const isOverdue = (p: Project) => !!p.due && dueDate(p.due).getTime() < Date.now() && eff(p) !== 'completed'
+
+async function load() {
+  try {
+    const { data } = await api<{ data: ApiProject[] }>('/projects')
+    projects.value = data.map(mapProject)
+  } catch {
+    toast.add({ title: 'Could not load projects', color: 'error' })
+  } finally {
+    pending.value = false
+  }
+}
+
+onMounted(() => {
+  load()
+  socket.on('project:created', load)
+  socket.on('project:updated', load)
+  socket.on('project:deleted', load)
+})
+onBeforeUnmount(() => {
+  socket.off('project:created', load)
+  socket.off('project:updated', load)
+  socket.off('project:deleted', load)
+})
+
+// ---- create / edit form ----
+const formOpen = ref(false)
+const formMode = ref<'create' | 'edit'>('create')
+const editing = ref<ApiProject | null>(null)
+function openNew() {
+  formMode.value = 'create'
+  editing.value = null
+  formOpen.value = true
+}
+function openEdit(p: Project) {
+  formMode.value = 'edit'
+  editing.value = p.raw
+  formOpen.value = true
+}
+function onSaved() {
+  load()
+}
 
 // ---- state ----
 const view = ref<'table' | 'board'>('table')
@@ -135,14 +220,11 @@ const sortItems = computed(() => [
     { label: 'Descending', icon: sortDir.value === 'desc' ? 'i-lucide-check' : undefined, onSelect: () => { sortDir.value = 'desc' } }
   ]
 ])
-function rowMenuItems() {
+function rowMenuItems(p: Project) {
   return [[
-    { label: 'View project', icon: 'i-lucide-eye', onSelect: () => navigateTo(clientHref) },
-    { label: 'Edit', icon: 'i-lucide-pencil' },
-    { label: 'New task', icon: 'i-lucide-list-checks' },
-    { label: 'New invoice', icon: 'i-lucide-receipt-text' }
-  ], [
-    { label: 'Archive', icon: 'i-lucide-archive', color: 'error' as const }
+    { label: 'View project', icon: 'i-lucide-eye', onSelect: () => navigateTo(`/projects/${p.id}`) },
+    { label: 'Edit scope / SOW', icon: 'i-lucide-pencil', onSelect: () => openEdit(p) },
+    { label: 'Open client', icon: 'i-lucide-building-2', onSelect: () => navigateTo(`/clients/${p.contactId}`) }
   ]]
 }
 
@@ -154,12 +236,22 @@ function clearFilters() {
 }
 
 // ---- board drag & drop ----
-const dragId = ref<string | null>(null)
+const dragId = ref<number | null>(null)
 const dragOverCol = ref<Status | null>(null)
-function onDrop(status: Status) {
-  if (dragId.value) overrides[dragId.value] = status
+async function onDrop(status: Status) {
+  const id = dragId.value
   dragId.value = null
   dragOverCol.value = null
+  if (id == null) return
+  const project = projects.value.find(p => p.id === id)
+  if (!project || project.status === status) return
+  overrides[id] = status // optimistic
+  try {
+    await api(`/projects/${id}`, { method: 'PATCH', body: { status } })
+  } catch {
+    overrides[id] = project.status // revert to the original status on failure
+    toast.add({ title: 'Could not move project', color: 'error' })
+  }
 }
 </script>
 
@@ -182,6 +274,7 @@ function onDrop(status: Status) {
         icon="i-lucide-plus"
         color="primary"
         class="flex-none"
+        @click="openNew"
       >
         New project
       </UButton>
@@ -299,7 +392,8 @@ function onDrop(status: Status) {
               <tr
                 v-for="p in filtered"
                 :key="p.id"
-                class="border-b border-default transition-colors last:border-b-0 hover:bg-muted"
+                class="cursor-pointer border-b border-default transition-colors last:border-b-0 hover:bg-muted"
+                @click="navigateTo(`/projects/${p.id}`)"
               >
                 <td class="px-4 py-3.5">
                   <div class="whitespace-nowrap text-sm font-semibold text-highlighted">
@@ -309,9 +403,12 @@ function onDrop(status: Status) {
                     {{ p.code }}
                   </div>
                 </td>
-                <td class="px-4 py-3.5">
+                <td
+                  class="px-4 py-3.5"
+                  @click.stop
+                >
                   <NuxtLink
-                    :to="clientHref"
+                    :to="`/clients/${p.contactId}`"
                     class="inline-flex items-center gap-2.5 transition-opacity hover:opacity-80"
                   >
                     <span
@@ -365,8 +462,11 @@ function onDrop(status: Status) {
                 <td class="hidden whitespace-nowrap px-4 py-3.5 text-[13.5px] text-muted tabular-nums lg:table-cell">
                   {{ p.updated }}
                 </td>
-                <td class="w-12 px-3 py-3.5 text-right">
-                  <UDropdownMenu :items="rowMenuItems()">
+                <td
+                  class="w-12 px-3 py-3.5 text-right"
+                  @click.stop
+                >
+                  <UDropdownMenu :items="rowMenuItems(p)">
                     <UButton
                       icon="i-lucide-ellipsis-vertical"
                       color="neutral"
@@ -451,6 +551,7 @@ function onDrop(status: Status) {
               :class="dragId === c.id ? 'border-teal-500 opacity-50' : 'border-default hover:shadow-sm'"
               @dragstart="dragId = c.id"
               @dragend="dragId = null; dragOverCol = null"
+              @click="navigateTo(`/projects/${c.id}`)"
             >
               <div class="mb-2 text-sm font-semibold leading-snug text-highlighted">
                 {{ c.name }}
@@ -501,5 +602,12 @@ function onDrop(status: Status) {
         </div>
       </div>
     </div>
+
+    <ProjectForm
+      v-model:open="formOpen"
+      :mode="formMode"
+      :project="editing"
+      @saved="onSaved"
+    />
   </div>
 </template>

@@ -1,12 +1,16 @@
 import { Router } from 'express'
-import { constructWebhookEvent, createStripeCustomer } from '../services/stripe.js'
+import { constructWebhookEvent, createStripeCustomer, mapStripeInvoice } from '../services/stripe.js'
 import { verifyWebhookSignature, pandadocEnabled, createDocumentFromTemplate, sendDocument } from '../services/pandadoc.js'
 import { getContact, getContactByStripeCustomerId, updateContact } from '../repositories/contacts.repo.js'
+import { getInvoice, getInvoiceByStripeId, updateInvoice, upsertFromStripe } from '../repositories/invoices.repo.js'
+import { createPayment, getPaymentByIntentId } from '../repositories/payments.repo.js'
+import { emitInvoiceChanged, emitPaymentCreated } from '../realtime/io.js'
 import { getProposalByDocumentId, updateProposal } from '../repositories/proposals.repo.js'
 import {
   getContractByDocumentId, getContractByProposalId, generateContractFromProposal, updateContract
 } from '../repositories/contracts.repo.js'
 import { getActiveTemplate } from '../repositories/documentTemplates.repo.js'
+import { notify } from '../services/notifications.service.js'
 
 export const webhooksRouter = Router()
 
@@ -31,6 +35,88 @@ webhooksRouter.post('/stripe', async (req, res) => {
         if (contact) {
           await updateContact(contact.id, { stripe_customer_id: null })
           console.log(`Stripe customer ${customerId} deleted — unlinked from contact ${contact.id}`)
+        }
+        break
+      }
+      case 'invoice.finalized': {
+        // Invoice opened for payment — sync number/urls/status/due_date locally.
+        const inv = event.data.object
+        const m = mapStripeInvoice(inv)
+        const contact = inv.customer ? await getContactByStripeCustomerId(inv.customer) : null
+        const hint = inv.metadata?.fwa_invoice_id ? Number(inv.metadata.fwa_invoice_id) : null
+        const local = await upsertFromStripe(inv.id, contact?.id, {
+          number: m.number, hosted_invoice_url: m.hosted_invoice_url, invoice_pdf: m.invoice_pdf,
+          status: 'open', finalized_at: new Date(), due_date: m.due_date, amount_due: m.amount_due
+        }, hint)
+        if (local) emitInvoiceChanged(local.id)
+        break
+      }
+      case 'invoice.paid': {
+        // Mark the local invoice paid, record a payment row, raise a live alert.
+        const inv = event.data.object
+        const m = mapStripeInvoice(inv)
+        const contact = inv.customer ? await getContactByStripeCustomerId(inv.customer) : null
+        const hint = inv.metadata?.fwa_invoice_id ? Number(inv.metadata.fwa_invoice_id) : null
+        const local = await getInvoiceByStripeId(inv.id) ?? (hint ? await getInvoice(hint) : null)
+        if (local) {
+          await updateInvoice(local.id, { status: 'paid', amount_paid: m.amount_paid, paid_at: new Date() })
+          emitInvoiceChanged(local.id)
+        }
+        // Record the payment (dedup on the PaymentIntent).
+        const pi = typeof inv.payment_intent === 'string' ? inv.payment_intent : inv.payment_intent?.id
+        if (contact && !(pi && await getPaymentByIntentId(pi))) {
+          const payment = await createPayment({
+            contact_id: contact.id, invoice_id: local?.id ?? null, stripe_payment_intent_id: pi ?? null,
+            amount: m.amount_paid, method: 'card', paid_at: new Date()
+          })
+          emitPaymentCreated(payment.id)
+        }
+        const who = contact?.company || contact?.name || 'A client'
+        try {
+          await notify({
+            category: 'payment', tone: 'success', icon: 'i-lucide-check-circle-2',
+            title: 'Invoice paid',
+            body: `${who} paid a $${m.amount_paid.toLocaleString('en-US')} invoice.`,
+            link: '/payments'
+          })
+        } catch (err) {
+          console.error('invoice.paid notification failed:', err.message)
+        }
+        break
+      }
+      case 'invoice.payment_failed': {
+        const inv = event.data.object
+        const contact = inv.customer ? await getContactByStripeCustomerId(inv.customer) : null
+        const who = contact?.company || contact?.name || 'A client'
+        try {
+          await notify({
+            category: 'invoice', tone: 'warning', icon: 'i-lucide-triangle-alert',
+            title: 'Invoice payment failed',
+            body: `A payment from ${who} failed.`,
+            link: '/invoices'
+          })
+        } catch (err) {
+          console.error('invoice.payment_failed notification failed:', err.message)
+        }
+        break
+      }
+      case 'invoice.voided': {
+        const inv = event.data.object
+        const hint = inv.metadata?.fwa_invoice_id ? Number(inv.metadata.fwa_invoice_id) : null
+        const local = await getInvoiceByStripeId(inv.id) ?? (hint ? await getInvoice(hint) : null)
+        if (local) {
+          await updateInvoice(local.id, { status: 'void', voided_at: new Date() })
+          emitInvoiceChanged(local.id)
+        }
+        break
+      }
+      case 'invoice.marked_uncollectible': {
+        const inv = event.data.object
+        const hint = inv.metadata?.fwa_invoice_id ? Number(inv.metadata.fwa_invoice_id) : null
+        const local = await getInvoiceByStripeId(inv.id) ?? (hint ? await getInvoice(hint) : null)
+        if (local) {
+          await updateInvoice(local.id, { status: 'uncollectible' })
+          emitInvoiceChanged(local.id)
         }
         break
       }
