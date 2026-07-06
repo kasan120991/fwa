@@ -202,15 +202,18 @@ try {
     process.exit(0)
   }
   if (force) {
-    // Children first: billing + tasks -> projects before contacts (FKs to contacts).
+    // Children first — everything that FK-references contacts (RESTRICT) must go
+    // before contacts. Line-item tables cascade with their parent.
     await pool.query('DELETE FROM payments')
     await pool.query('DELETE FROM invoices') // cascades invoice_line_items
+    await pool.query('DELETE FROM contracts') // cascades contract_line_items
+    await pool.query('DELETE FROM proposals') // cascades proposal_line_items
     await pool.query('DELETE FROM tasks')
     await pool.query('DELETE FROM projects')
     await pool.query('DELETE FROM notifications')
     await pool.query('DELETE FROM calls')
     await pool.query('DELETE FROM contacts')
-    console.log('Cleared payments + invoices + tasks + projects + notifications + calls + contacts.')
+    console.log('Cleared billing + sales + tasks + projects + notifications + calls + contacts.')
   }
 
   const slugToId = {}

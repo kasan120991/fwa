@@ -43,6 +43,12 @@ export async function getCall(id) {
   return mapRow(rows[0] ?? null)
 }
 
+/** Count of new (unreviewed) calls — powers the AI Receptionist nav badge. */
+export async function unreviewedCount() {
+  const [{ n }] = await query('SELECT COUNT(*) AS n FROM calls WHERE reviewed_at IS NULL')
+  return Number(n)
+}
+
 export async function createCall(data) {
   const payload = {
     contact_id: data.contact_id ?? null,

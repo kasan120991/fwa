@@ -108,3 +108,10 @@ export function emitInvoiceChanged(id) {
 export function emitPaymentCreated(id) {
   io?.to('role:admin').emit('payment:created', { id })
 }
+
+// --- calls -----------------------------------------------------------------
+// Fired when a call's reviewed state or classification changes, so the AI
+// Receptionist nav badge (new-call count) refreshes live.
+export function emitCallChanged() {
+  io?.to('role:admin').emit('call:changed')
+}

@@ -1,6 +1,7 @@
 import { Router } from 'express'
-import { listCalls, getCall, updateCall, CLASSIFICATIONS } from '../repositories/calls.repo.js'
+import { listCalls, getCall, updateCall, unreviewedCount, CLASSIFICATIONS } from '../repositories/calls.repo.js'
 import { createContact } from '../repositories/contacts.repo.js'
+import { emitCallChanged } from '../realtime/io.js'
 
 export const callsRouter = Router()
 
@@ -38,6 +39,11 @@ callsRouter.get('/', async (req, res) => {
   res.json({ data: result.rows, total: result.total, limit: result.limit, offset: result.offset })
 })
 
+// GET /api/calls/unreviewed-count — count of new (unreviewed) calls for the nav badge.
+callsRouter.get('/unreviewed-count', async (req, res) => {
+  res.json({ data: { count: await unreviewedCount() } })
+})
+
 // GET /api/calls/:id
 callsRouter.get('/:id', async (req, res) => {
   const call = await getCall(parseId(req))
@@ -60,6 +66,7 @@ callsRouter.patch('/:id', async (req, res) => {
     data.reviewed = req.body.reviewed
   }
   const call = await updateCall(id, data)
+  emitCallChanged()
   res.json({ data: call })
 })
 
@@ -84,5 +91,6 @@ callsRouter.post('/:id/convert', async (req, res) => {
     message: call.summary
   })
   const updated = await updateCall(id, { contact_id: contact.id })
+  emitCallChanged()
   res.status(201).json({ data: { contact, call: updated } })
 })

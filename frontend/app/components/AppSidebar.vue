@@ -17,6 +17,26 @@ const roleLabel = computed(() => {
   return r ? r.charAt(0).toUpperCase() + r.slice(1) : ''
 })
 
+// New (unreviewed) call count shown against AI Receptionist. Live via the
+// call:changed socket event (emitted when calls are reviewed / converted).
+const api = useApi()
+const socket = useSocket()
+const newCalls = ref(0)
+async function loadNewCalls() {
+  try {
+    const { data } = await api<{ data: { count: number } }>('/calls/unreviewed-count')
+    newCalls.value = data.count
+  } catch { /* leave the badge hidden on failure */ }
+}
+function itemBadge(to: string) {
+  return to === '/receptionist' ? newCalls.value : 0
+}
+onMounted(() => {
+  loadNewCalls()
+  socket.on('call:changed', loadNewCalls)
+})
+onBeforeUnmount(() => socket.off('call:changed', loadNewCalls))
+
 // Nav follows CLAUDE.md (source of truth), which includes Leads and AI Receptionist
 // that the original dashboard prototype omitted. ✓ items are in scope this phase;
 // the rest are deferred stub routes.
@@ -133,6 +153,14 @@ function itemClass(to: string) {
                 v-if="!collapsed"
                 class="overflow-hidden"
               >{{ item.label }}</span>
+              <span
+                v-if="!collapsed && itemBadge(item.to) > 0"
+                class="ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-teal-500 px-1 text-[11px] font-semibold text-white tabular-nums"
+              >{{ itemBadge(item.to) }}</span>
+              <span
+                v-if="collapsed && itemBadge(item.to) > 0"
+                class="absolute right-1.5 top-1.5 size-2 rounded-full bg-teal-400 ring-2 ring-inverted"
+              />
             </NuxtLink>
           </div>
         </div>
