@@ -39,6 +39,7 @@ export async function listTasks(opts = {}) {
   if (opts.noProject) { where.push('t.project_id IS NULL') }
   if (opts.status) { where.push('t.status = :status'); params.status = opts.status }
   if (opts.overdue) { where.push("t.due_date IS NOT NULL AND t.due_date < CURDATE() AND t.status <> 'done'") }
+  if (opts.dueToday) { where.push("t.due_date = CURDATE() AND t.status <> 'done'") }
   const whereSql = where.length ? ` WHERE ${where.join(' AND ')}` : ''
 
   // Open tasks first (done last), then by position, then soonest due.

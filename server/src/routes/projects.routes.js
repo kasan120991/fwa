@@ -98,6 +98,7 @@ projectsRouter.get('/', async (req, res) => {
     status,
     search: typeof req.query.search === 'string' && req.query.search.trim() ? req.query.search.trim() : undefined,
     overdue: req.query.overdue === '1' || req.query.overdue === 'true',
+    active: req.query.active === '1' || req.query.active === 'true',
     limit: req.query.limit,
     offset: req.query.offset
   })

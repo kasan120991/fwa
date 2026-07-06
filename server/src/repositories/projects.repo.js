@@ -81,6 +81,7 @@ export async function listProjects(opts = {}) {
   if (opts.contact_id) { where.push('p.contact_id = :contact_id'); params.contact_id = opts.contact_id }
   if (opts.project_type_id) { where.push('p.project_type_id = :project_type_id'); params.project_type_id = opts.project_type_id }
   if (opts.status) { where.push('p.status = :status'); params.status = opts.status }
+  if (opts.active) { where.push("p.status <> 'completed'") }
   if (opts.overdue) { where.push("p.target_launch_date IS NOT NULL AND p.target_launch_date < CURDATE() AND p.status <> 'completed'") }
   if (opts.search) {
     where.push('(p.name LIKE :q OR p.code LIKE :q OR c.name LIKE :q OR c.company LIKE :q)')

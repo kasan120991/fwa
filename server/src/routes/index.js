@@ -12,6 +12,7 @@ import { tasksRouter } from './tasks.routes.js'
 import { projectTypesRouter } from './projectTypes.routes.js'
 import { invoicesRouter } from './invoices.routes.js'
 import { paymentsRouter } from './payments.routes.js'
+import { dashboardRouter } from './dashboard.routes.js'
 import { notificationsRouter } from './notifications.routes.js'
 import { uploadsRouter } from './uploads.routes.js'
 import { webhooksRouter } from './webhooks.routes.js'
@@ -36,5 +37,6 @@ apiRouter.use('/tasks', requireAuth, tasksRouter) // Tasks
 apiRouter.use('/project-types', requireAuth, projectTypesRouter) // Project type catalog
 apiRouter.use('/invoices', requireAuth, invoicesRouter) // Billing — invoices
 apiRouter.use('/payments', requireAuth, paymentsRouter) // Billing — payments
+apiRouter.use('/dashboard', requireAuth, dashboardRouter) // Dashboard KPIs
 apiRouter.use('/notifications', requireAuth, notificationsRouter) // top-bar alert feed
 apiRouter.use('/uploads', requireAuth, uploadsRouter) // file storage (logos, files)
