@@ -15,7 +15,7 @@ const KINDS = new Set(['proposal', 'contract'])
 const STATUSES = new Set(['draft', 'sent', 'viewed', 'accepted', 'signed', 'declined', 'expired', 'voided'])
 
 // GET /api/agreements — merged proposals + contracts for the Agreements page.
-//   ?kind=proposal|contract  ?status=a,b  ?q=  ?contact_id=  ?limit=  ?offset=
+//   ?kind=proposal|contract  ?status=a,b  ?q=  ?client_id=  ?limit=  ?offset=
 agreementsRouter.get('/', async (req, res) => {
   const kind = typeof req.query.kind === 'string' ? req.query.kind : undefined
   if (kind && !KINDS.has(kind)) throw badRequest(`Unknown kind: ${kind}`)
@@ -27,7 +27,7 @@ agreementsRouter.get('/', async (req, res) => {
     kind,
     statuses,
     q: typeof req.query.q === 'string' ? req.query.q.trim() : undefined,
-    contact_id: req.query.contact_id ? Number(req.query.contact_id) : undefined,
+    client_id: req.query.client_id ? Number(req.query.client_id) : undefined,
     limit: req.query.limit,
     offset: req.query.offset
   })

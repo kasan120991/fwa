@@ -10,20 +10,20 @@ import { query } from '../db/pool.js'
 // derived from a contract's billing_interval.
 const UNION = `
   SELECT 'proposal' AS kind, p.id AS id, CONCAT('proposal-', p.id) AS uid,
-         p.contact_id, p.title, p.status, p.total,
+         p.client_id, p.title, p.status, p.total,
          NULL AS ctype, 'one_time' AS billing_interval, NULL AS proposal_id,
          p.expires_at, p.sent_at, p.viewed_at, p.accepted_at AS closed_at,
          p.pandadoc_document_id, p.created_at, p.updated_at,
          c.company AS client_company, c.name AS client_name
-  FROM proposals p JOIN contacts c ON c.id = p.contact_id
+  FROM proposals p JOIN clients c ON c.id = p.client_id
   UNION ALL
   SELECT 'contract' AS kind, ct.id AS id, CONCAT('contract-', ct.id) AS uid,
-         ct.contact_id, ct.title, ct.status, ct.total,
+         ct.client_id, ct.title, ct.status, ct.total,
          ct.type AS ctype, ct.billing_interval, ct.proposal_id,
          ct.expires_at, ct.sent_at, ct.viewed_at, ct.signed_at AS closed_at,
          ct.pandadoc_document_id, ct.created_at, ct.updated_at,
          c.company AS client_company, c.name AS client_name
-  FROM contracts ct JOIN contacts c ON c.id = ct.contact_id
+  FROM contracts ct JOIN clients c ON c.id = ct.client_id
 `
 
 function mapRow(row) {
@@ -36,13 +36,13 @@ function mapRow(row) {
 }
 
 /** Merged proposals + contracts list for the Agreements page (and, filtered by
- *  contact_id, a client's Agreements tab). */
+ *  client_id, a client's Agreements tab). */
 export async function listAgreements(opts = {}) {
   const limit = Math.min(Math.max(Number(opts.limit) || 100, 1), 300)
   const offset = Math.max(Number(opts.offset) || 0, 0)
   const where = []
   const params = {}
-  if (opts.contact_id) { where.push('a.contact_id = :contact_id'); params.contact_id = opts.contact_id }
+  if (opts.client_id) { where.push('a.client_id = :client_id'); params.client_id = opts.client_id }
   if (opts.kind) { where.push('a.kind = :kind'); params.kind = opts.kind }
   if (opts.statuses?.length) {
     where.push(`a.status IN (${opts.statuses.map((_, i) => `:st${i}`).join(', ')})`)

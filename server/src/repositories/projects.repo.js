@@ -3,7 +3,7 @@ import { query, withTransaction } from '../db/pool.js'
 export const PROJECT_STATUSES = new Set(['planning', 'in_progress', 'in_review', 'on_hold', 'completed'])
 export const CONTENT_BY = new Set(['client', 'developer', 'mix'])
 
-// Business columns a create/update may set. contact_id + project_type_id are set
+// Business columns a create/update may set. client_id + project_type_id are set
 // only at creation; code is generated. Everything else is the Statement of Work.
 const UPDATABLE = [
   'name', 'status', 'goals', 'pages_included', 'key_features', 'design_deliverables',
@@ -34,12 +34,12 @@ const TASK_ROLLUP = `LEFT JOIN (
   ) tr ON tr.project_id = p.id`
 
 const BASE_SELECT = `SELECT p.*,
-    c.name AS contact_name, c.company AS contact_company, c.logo_url AS contact_logo_url,
+    c.name AS client_name, c.company AS client_company, c.logo_url AS client_logo_url,
     pt.name AS type_name, pt.\`key\` AS type_key, pt.code_prefix AS type_code_prefix,
     pt.contract_template_id AS type_contract_template_id,
     COALESCE(tr.task_total, 0) AS task_total, COALESCE(tr.task_done, 0) AS task_done
   FROM projects p
-  JOIN contacts c ON c.id = p.contact_id
+  JOIN clients c ON c.id = p.client_id
   JOIN project_types pt ON pt.id = p.project_type_id
   ${TASK_ROLLUP}`
 
@@ -48,7 +48,7 @@ const BASE_SELECT = `SELECT p.*,
  * (e.g. WEB-0007). Runs in one transaction so the code is set before we return.
  */
 export async function createProject(data) {
-  const cols = ['contact_id', 'project_type_id', 'name', ...UPDATABLE.filter(c => c !== 'name' && data[c] !== undefined)]
+  const cols = ['client_id', 'project_type_id', 'name', ...UPDATABLE.filter(c => c !== 'name' && data[c] !== undefined)]
   const params = {}
   for (const c of cols) params[c] = data[c] ?? null
 
@@ -78,7 +78,7 @@ export async function listProjects(opts = {}) {
   const offset = Math.max(Number(opts.offset) || 0, 0)
   const where = []
   const params = {}
-  if (opts.contact_id) { where.push('p.contact_id = :contact_id'); params.contact_id = opts.contact_id }
+  if (opts.client_id) { where.push('p.client_id = :client_id'); params.client_id = opts.client_id }
   if (opts.project_type_id) { where.push('p.project_type_id = :project_type_id'); params.project_type_id = opts.project_type_id }
   if (opts.status) { where.push('p.status = :status'); params.status = opts.status }
   if (opts.active) { where.push("p.status <> 'completed'") }
@@ -91,7 +91,7 @@ export async function listProjects(opts = {}) {
 
   const rows = await query(`${BASE_SELECT}${whereSql} ORDER BY p.updated_at DESC LIMIT ${limit} OFFSET ${offset}`, params)
   const [{ total }] = await query(
-    `SELECT COUNT(*) AS total FROM projects p JOIN contacts c ON c.id = p.contact_id${whereSql}`,
+    `SELECT COUNT(*) AS total FROM projects p JOIN clients c ON c.id = p.client_id${whereSql}`,
     params
   )
   return { rows: rows.map(mapProject), total, limit, offset }
@@ -112,6 +112,7 @@ export async function deleteProject(id) {
   // tasks cascade via their FK.
   await query('UPDATE proposals SET project_id = NULL WHERE project_id = :id', { id })
   await query('UPDATE contracts SET project_id = NULL WHERE project_id = :id', { id })
+  await query('UPDATE invoices SET project_id = NULL WHERE project_id = :id', { id })
   const result = await query('DELETE FROM projects WHERE id = :id', { id })
   return result.affectedRows > 0
 }

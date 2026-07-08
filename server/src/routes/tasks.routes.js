@@ -1,6 +1,6 @@
 import { Router } from 'express'
-import { getTask, listTasks, TASK_STATUSES, TASK_PRIORITIES } from '../repositories/tasks.repo.js'
-import { createTask, updateTask, deleteTask } from '../services/tasks.service.js'
+import { getTask, listTasks, listChecklist, TASK_STATUSES, TASK_PRIORITIES } from '../repositories/tasks.repo.js'
+import { createTask, updateTask, deleteTask, addChecklistItem, updateChecklistItem, deleteChecklistItem } from '../services/tasks.service.js'
 import { getProject } from '../repositories/projects.repo.js'
 
 export const tasksRouter = Router()
@@ -113,5 +113,50 @@ tasksRouter.patch('/:id', async (req, res) => {
 tasksRouter.delete('/:id', async (req, res) => {
   const ok = await deleteTask(parseId(req))
   if (!ok) return res.status(404).json({ error: { message: 'Task not found' } })
+  res.json({ ok: true })
+})
+
+// ---- checklist items (a flat checklist under a task) ----
+function parseItemId(req) {
+  const id = Number(req.params.itemId)
+  if (!Number.isInteger(id) || id <= 0) throw badRequest('Invalid item id')
+  return id
+}
+
+// GET /api/tasks/:id/checklist
+tasksRouter.get('/:id/checklist', async (req, res) => {
+  const task = await getTask(parseId(req))
+  if (!task) return res.status(404).json({ error: { message: 'Task not found' } })
+  res.json({ data: await listChecklist(task.id) })
+})
+
+// POST /api/tasks/:id/checklist  { title }
+tasksRouter.post('/:id/checklist', async (req, res) => {
+  const id = parseId(req)
+  const task = await getTask(id)
+  if (!task) return res.status(404).json({ error: { message: 'Task not found' } })
+  const title = String(req.body?.title ?? '').trim()
+  if (!title) throw badRequest('Validation failed', { title: 'title is required' })
+  res.status(201).json({ data: await addChecklistItem(id, title) })
+})
+
+// PATCH /api/tasks/:id/checklist/:itemId  { done?, title? }
+tasksRouter.patch('/:id/checklist/:itemId', async (req, res) => {
+  const data = {}
+  if (req.body?.done !== undefined) data.done = !!req.body.done
+  if (req.body?.title !== undefined) {
+    const title = String(req.body.title).trim()
+    if (!title) throw badRequest('Validation failed', { title: 'title is required' })
+    data.title = title
+  }
+  const item = await updateChecklistItem(parseItemId(req), data)
+  if (!item) return res.status(404).json({ error: { message: 'Checklist item not found' } })
+  res.json({ data: item })
+})
+
+// DELETE /api/tasks/:id/checklist/:itemId
+tasksRouter.delete('/:id/checklist/:itemId', async (req, res) => {
+  const ok = await deleteChecklistItem(parseItemId(req))
+  if (!ok) return res.status(404).json({ error: { message: 'Checklist item not found' } })
   res.json({ ok: true })
 })

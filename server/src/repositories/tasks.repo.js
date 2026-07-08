@@ -5,10 +5,16 @@ export const TASK_PRIORITIES = new Set(['low', 'medium', 'high'])
 
 const UPDATABLE = ['project_id', 'title', 'description', 'status', 'priority', 'due_date', 'position']
 
-// Join the parent project for display on the cross-project /tasks page.
-const BASE_SELECT = `SELECT t.*, p.name AS project_name, p.code AS project_code
+// Join the parent project for display on the cross-project /tasks page, plus a
+// checklist rollup so every task row carries its checklist progress.
+const BASE_SELECT = `SELECT t.*, p.name AS project_name, p.code AS project_code,
+    (SELECT COUNT(*) FROM task_checklist_items c WHERE c.task_id = t.id) AS checklist_total,
+    (SELECT COUNT(*) FROM task_checklist_items c WHERE c.task_id = t.id AND c.done = 1) AS checklist_done
   FROM tasks t
   LEFT JOIN projects p ON p.id = t.project_id`
+
+const mapItem = r => (r ? { ...r, done: !!r.done } : r)
+const ITEM_COLS = 'id, task_id, title, done, position'
 
 export async function createTask(data) {
   const cols = UPDATABLE.filter(c => data[c] !== undefined)
@@ -70,4 +76,40 @@ export async function updateTask(id, data) {
 export async function deleteTask(id) {
   const result = await query('DELETE FROM tasks WHERE id = :id', { id })
   return result.affectedRows > 0
+}
+
+// ---- checklist items (a flat checklist under a task) ----
+
+export async function listChecklist(task_id) {
+  const rows = await query(`SELECT ${ITEM_COLS} FROM task_checklist_items WHERE task_id = :task_id ORDER BY position ASC, id ASC`, { task_id })
+  return rows.map(mapItem)
+}
+
+export async function getChecklistItem(id) {
+  const rows = await query(`SELECT ${ITEM_COLS} FROM task_checklist_items WHERE id = :id LIMIT 1`, { id })
+  return mapItem(rows[0] ?? null)
+}
+
+export async function addChecklistItem(task_id, title) {
+  const [{ maxPos }] = await query('SELECT COALESCE(MAX(position), -1) AS maxPos FROM task_checklist_items WHERE task_id = :task_id', { task_id })
+  const res = await query(
+    'INSERT INTO task_checklist_items (task_id, title, position) VALUES (:task_id, :title, :position)',
+    { task_id, title, position: Number(maxPos) + 1 }
+  )
+  return getChecklistItem(res.insertId)
+}
+
+export async function updateChecklistItem(id, data) {
+  const set = []
+  const params = { id }
+  if (data.title !== undefined) { set.push('title = :title'); params.title = data.title }
+  if (data.done !== undefined) { set.push('done = :done'); params.done = data.done ? 1 : 0 }
+  if (!set.length) return getChecklistItem(id)
+  await query(`UPDATE task_checklist_items SET ${set.join(', ')} WHERE id = :id`, params)
+  return getChecklistItem(id)
+}
+
+export async function deleteChecklistItem(id) {
+  const res = await query('DELETE FROM task_checklist_items WHERE id = :id', { id })
+  return res.affectedRows > 0
 }

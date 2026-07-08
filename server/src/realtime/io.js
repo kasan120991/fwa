@@ -115,3 +115,10 @@ export function emitPaymentCreated(id) {
 export function emitCallChanged() {
   io?.to('role:admin').emit('call:changed')
 }
+
+// --- websites --------------------------------------------------------------
+// Fired when a site, its analytics sync, or an uptime check changes, so the
+// Websites dashboard / detail / client tab refresh live.
+export function emitWebsiteChanged(id = null) {
+  io?.to('role:admin').emit('website:changed', { id })
+}

@@ -8,20 +8,20 @@ function mapPayment(row) {
   return { ...row, amount: num(row.amount) }
 }
 
-export async function createPayment({ contact_id, invoice_id = null, stripe_payment_intent_id = null, amount, currency = 'USD', method = 'card', status = 'succeeded', note = null, paid_at = null }) {
+export async function createPayment({ client_id, invoice_id = null, stripe_payment_intent_id = null, amount, currency = 'USD', method = 'card', status = 'succeeded', note = null, paid_at = null }) {
   const result = await query(
-    `INSERT INTO payments (contact_id, invoice_id, stripe_payment_intent_id, amount, currency, method, status, note, paid_at)
-     VALUES (:contact_id, :invoice_id, :stripe_payment_intent_id, :amount, :currency, :method, :status, :note, :paid_at)`,
-    { contact_id, invoice_id, stripe_payment_intent_id, amount, currency, method, status, note, paid_at: paid_at ?? new Date() }
+    `INSERT INTO payments (client_id, invoice_id, stripe_payment_intent_id, amount, currency, method, status, note, paid_at)
+     VALUES (:client_id, :invoice_id, :stripe_payment_intent_id, :amount, :currency, :method, :status, :note, :paid_at)`,
+    { client_id, invoice_id, stripe_payment_intent_id, amount, currency, method, status, note, paid_at: paid_at ?? new Date() }
   )
   return getPayment(result.insertId)
 }
 
 export async function getPayment(id) {
   const rows = await query(
-    `SELECT p.*, c.name AS contact_name, c.company AS contact_company, i.number AS invoice_number
+    `SELECT p.*, c.name AS client_name, c.company AS client_company, i.number AS invoice_number
      FROM payments p
-     JOIN contacts c ON c.id = p.contact_id
+     JOIN clients c ON c.id = p.client_id
      LEFT JOIN invoices i ON i.id = p.invoice_id
      WHERE p.id = :id LIMIT 1`,
     { id }
@@ -40,14 +40,14 @@ export async function listPayments(opts = {}) {
   const offset = Math.max(Number(opts.offset) || 0, 0)
   const where = []
   const params = {}
-  if (opts.contact_id) { where.push('p.contact_id = :contact_id'); params.contact_id = opts.contact_id }
+  if (opts.client_id) { where.push('p.client_id = :client_id'); params.client_id = opts.client_id }
   if (opts.invoice_id) { where.push('p.invoice_id = :invoice_id'); params.invoice_id = opts.invoice_id }
   if (opts.method) { where.push('p.method = :method'); params.method = opts.method }
   const whereSql = where.length ? ` WHERE ${where.join(' AND ')}` : ''
   const rows = await query(
-    `SELECT p.*, c.name AS contact_name, c.company AS contact_company, i.number AS invoice_number
+    `SELECT p.*, c.name AS client_name, c.company AS client_company, i.number AS invoice_number
      FROM payments p
-     JOIN contacts c ON c.id = p.contact_id
+     JOIN clients c ON c.id = p.client_id
      LEFT JOIN invoices i ON i.id = p.invoice_id${whereSql}
      ORDER BY p.paid_at DESC, p.id DESC LIMIT ${limit} OFFSET ${offset}`,
     params

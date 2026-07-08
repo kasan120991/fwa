@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { listCalls, getCall, updateCall, unreviewedCount, CLASSIFICATIONS } from '../repositories/calls.repo.js'
-import { createContact } from '../repositories/contacts.repo.js'
+import { createLead } from '../repositories/leads.repo.js'
 import { emitCallChanged } from '../realtime/io.js'
 
 export const callsRouter = Router()
@@ -70,27 +70,27 @@ callsRouter.patch('/:id', async (req, res) => {
   res.json({ data: call })
 })
 
-// POST /api/calls/:id/convert — create a lead contact from an inquiry call and link it.
-// Per CLAUDE.md: source=call, stage=new; appears in Leads → Inbound.
+// POST /api/calls/:id/convert — create a lead from an inquiry call and link it.
+// Calls are no longer a lead source; the created lead is source=manual, stage=new.
 callsRouter.post('/:id/convert', async (req, res) => {
   const id = parseId(req)
   const call = await getCall(id)
   if (!call) return res.status(404).json({ error: { message: 'Call not found' } })
-  if (call.contact_id) return res.status(409).json({ error: { message: 'Call is already linked to a contact' } })
+  if (call.lead_id || call.client_id) return res.status(409).json({ error: { message: 'Call is already linked' } })
   if (call.classification !== 'inquiry') {
     return res.status(400).json({ error: { message: 'Only inquiry calls can be converted to a lead' } })
   }
 
   const business = call.extracted?.business ?? null
-  const contact = await createContact({
-    source: 'call',
+  const lead = await createLead({
+    source: 'manual',
     stage: 'new',
     name: call.caller_name || call.caller_number,
     phone: call.caller_number,
     company: business,
     message: call.summary
   })
-  const updated = await updateCall(id, { contact_id: contact.id })
+  const updated = await updateCall(id, { lead_id: lead.id })
   emitCallChanged()
-  res.status(201).json({ data: { contact, call: updated } })
+  res.status(201).json({ data: { lead, call: updated } })
 })

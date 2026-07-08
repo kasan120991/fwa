@@ -51,7 +51,8 @@ export async function unreviewedCount() {
 
 export async function createCall(data) {
   const payload = {
-    contact_id: data.contact_id ?? null,
+    lead_id: data.lead_id ?? null,
+    client_id: data.client_id ?? null,
     classification: data.classification,
     caller_number: data.caller_number,
     caller_name: data.caller_name ?? null,
@@ -74,7 +75,8 @@ export async function updateCall(id, data) {
   const set = []
   const params = { id }
   if (data.classification !== undefined) { set.push('classification = :classification'); params.classification = data.classification }
-  if (data.contact_id !== undefined) { set.push('contact_id = :contact_id'); params.contact_id = data.contact_id }
+  if (data.lead_id !== undefined) { set.push('lead_id = :lead_id'); params.lead_id = data.lead_id }
+  if (data.client_id !== undefined) { set.push('client_id = :client_id'); params.client_id = data.client_id }
   if (data.reviewed !== undefined) { set.push('reviewed_at = :reviewed_at'); params.reviewed_at = data.reviewed ? new Date() : null }
   if (set.length === 0) return getCall(id)
   await query(`UPDATE calls SET ${set.join(', ')} WHERE id = :id`, params)

@@ -3,7 +3,7 @@ import {
   createInvoice, getInvoice, listInvoices, updateInvoice, invoiceStats, INVOICE_STATUSES
 } from '../repositories/invoices.repo.js'
 import { createPayment } from '../repositories/payments.repo.js'
-import { getContact, updateContact } from '../repositories/contacts.repo.js'
+import { getClient, updateClient } from '../repositories/clients.repo.js'
 import { resolveLineItems } from '../services/lineItems.js'
 import {
   stripeEnabled, createStripeCustomer, createAndSendInvoice, voidStripeInvoice, payStripeInvoiceOutOfBand
@@ -31,12 +31,12 @@ invoicesRouter.get('/stats', async (req, res) => {
   res.json({ data: await invoiceStats() })
 })
 
-// GET /api/invoices  ?contact_id= ?project_id= ?status= ?overdue=1 ?search=
+// GET /api/invoices  ?client_id= ?project_id= ?status= ?overdue=1 ?search=
 invoicesRouter.get('/', async (req, res) => {
   const status = typeof req.query.status === 'string' ? req.query.status : undefined
   if (status && !INVOICE_STATUSES.has(status)) throw badRequest(`Unknown status: ${status}`)
   const result = await listInvoices({
-    contact_id: req.query.contact_id ? Number(req.query.contact_id) : undefined,
+    client_id: req.query.client_id ? Number(req.query.client_id) : undefined,
     project_id: req.query.project_id ? Number(req.query.project_id) : undefined,
     status,
     overdue: req.query.overdue === '1' || req.query.overdue === 'true',
@@ -57,10 +57,10 @@ invoicesRouter.get('/:id', async (req, res) => {
 // POST /api/invoices — create + send a Stripe invoice. Requires Stripe.
 invoicesRouter.post('/', async (req, res) => {
   const body = req.body ?? {}
-  const contactId = Number(body.contact_id)
-  if (!Number.isInteger(contactId) || contactId <= 0) throw badRequest('Validation failed', { contact_id: 'a valid contact_id is required' })
-  let contact = await getContact(contactId)
-  if (!contact) throw badRequest('Validation failed', { contact_id: 'contact not found' })
+  const clientId = Number(body.client_id)
+  if (!Number.isInteger(clientId) || clientId <= 0) throw badRequest('Validation failed', { client_id: 'a valid client_id is required' })
+  let client = await getClient(clientId)
+  if (!client) throw badRequest('Validation failed', { client_id: 'client not found' })
 
   const projectId = body.project_id != null ? Number(body.project_id) : null
   const description = typeof body.description === 'string' && body.description.trim() ? body.description.trim() : null
@@ -74,21 +74,21 @@ invoicesRouter.post('/', async (req, res) => {
   const { rows, total } = await resolveLineItems(body.items)
 
   if (!stripeEnabled()) return res.status(409).json({ error: { message: 'Stripe is not configured' } })
-  if (!contact.stripe_customer_id) {
-    const customerId = await createStripeCustomer(contact)
-    if (customerId) contact = await updateContact(contact.id, { stripe_customer_id: customerId })
+  if (!client.stripe_customer_id) {
+    const customerId = await createStripeCustomer(client)
+    if (customerId) client = await updateClient(client.id, { stripe_customer_id: customerId })
   }
-  if (!contact.stripe_customer_id) return res.status(409).json({ error: { message: 'Could not create a Stripe customer for this client' } })
+  if (!client.stripe_customer_id) return res.status(409).json({ error: { message: 'Could not create a Stripe customer for this client' } })
 
   // Local draft first, then push to Stripe and record the returned ids.
-  let invoice = await createInvoice({ contact_id: contactId, project_id: projectId, kind: 'custom', description, amount_due: total, due_date: dueDate, items: rows, status: 'draft' })
+  let invoice = await createInvoice({ client_id: clientId, project_id: projectId, kind: 'custom', description, amount_due: total, due_date: dueDate, items: rows, status: 'draft' })
 
   const daysUntilDue = dueDate ? Math.max(1, Math.ceil((new Date(dueDate).getTime() - Date.now()) / 86400e3)) : 7
-  const stripeInvoice = await createAndSendInvoice(contact, {
+  const stripeInvoice = await createAndSendInvoice(client, {
     items: rows.map(li => ({ amountCents: Math.round(li.unit_price_snapshot * li.qty * 100), description: li.name_snapshot })),
-    description: description || `Invoice — ${contact.company || contact.name}`,
+    description: description || `Invoice — ${client.company || client.name}`,
     daysUntilDue,
-    metadata: { fwa_contact_id: String(contactId), fwa_invoice_id: String(invoice.id), ...(projectId ? { fwa_project_id: String(projectId) } : {}) }
+    metadata: { fwa_client_id: String(clientId), fwa_invoice_id: String(invoice.id), ...(projectId ? { fwa_project_id: String(projectId) } : {}) }
   })
   if (stripeInvoice) {
     invoice = await updateInvoice(invoice.id, {
@@ -152,9 +152,9 @@ invoicesRouter.post('/:id/pay', async (req, res) => {
     }
   }
   const updated = await updateInvoice(id, { status: 'paid', amount_paid: invoice.amount_due, paid_at: new Date() })
-  const payment = await createPayment({ contact_id: invoice.contact_id, invoice_id: id, amount, method, note, paid_at: new Date() })
+  const payment = await createPayment({ client_id: invoice.client_id, invoice_id: id, amount, method, note, paid_at: new Date() })
 
-  const who = invoice.contact_company || invoice.contact_name
+  const who = invoice.client_company || invoice.client_name
   try {
     await notify({
       category: 'payment', tone: 'success', icon: 'i-lucide-check-circle-2',

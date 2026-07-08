@@ -19,12 +19,12 @@ paymentsRouter.get('/stats', async (req, res) => {
   res.json({ data: await paymentStats() })
 })
 
-// GET /api/payments  ?contact_id= ?invoice_id= ?method=
+// GET /api/payments  ?client_id= ?invoice_id= ?method=
 paymentsRouter.get('/', async (req, res) => {
   const method = typeof req.query.method === 'string' ? req.query.method : undefined
   if (method && !PAYMENT_METHODS.has(method)) throw badRequest(`Unknown method: ${method}`)
   const result = await listPayments({
-    contact_id: req.query.contact_id ? Number(req.query.contact_id) : undefined,
+    client_id: req.query.client_id ? Number(req.query.client_id) : undefined,
     invoice_id: req.query.invoice_id ? Number(req.query.invoice_id) : undefined,
     method,
     limit: req.query.limit,

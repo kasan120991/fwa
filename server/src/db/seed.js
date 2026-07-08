@@ -1,7 +1,8 @@
-// Seeds sample contacts + calls so the app has data to render.
-// Usage: npm run seed          (skips if contacts already exist)
-//        npm run seed -- --force  (wipes calls + contacts first)
+// Seeds sample leads + clients + calls so the app has data to render.
+// Usage: npm run seed          (skips if clients already exist)
+//        npm run seed -- --force  (wipes everything first)
 import { getPool, closePool } from './pool.js'
+import { seedWebsites } from './seedWebsites.js'
 
 const force = process.argv.includes('--force')
 const pool = getPool()
@@ -22,25 +23,23 @@ const daysAhead = d => fmt(now + d * 86400e3)
 const dateAgo = d => daysAgo(d).slice(0, 10)
 const dateAhead = d => daysAhead(d).slice(0, 10)
 
-// ---- clients (stage active/past) ----
+// ---- clients (status active/past) ----
 const CLIENTS = [
-  { company: 'Northwind Co.', name: 'Dana Cole', title: 'Marketing Director', email: 'dana@northwind.com', phone: '(415) 555-0132', website: 'northwind.com', stage: 'active', tags: ['Retainer', 'E-commerce', 'Priority'], client_since: '2023-03-12', address_line1: '400 Market Street, Suite 210', city: 'San Francisco', region: 'CA', postal_code: '94111', country: 'United States', notes: 'Prefers async updates. Storefront rebuild is the priority; renews retainer in March.' },
-  { company: 'Lumen Labs', name: 'Priya Shah', title: 'Founder', email: 'priya@lumenlabs.io', phone: '(628) 555-0148', website: 'lumenlabs.io', stage: 'active', tags: ['Retainer', 'SaaS'], client_since: '2024-01-08', address_line1: '55 Innovation Way', city: 'Oakland', region: 'CA', postal_code: '94607', country: 'United States' },
-  { company: 'Harborview', name: 'Ellen Ross', title: 'Operations Lead', email: 'ellen@harborview.co', phone: '(206) 555-0199', website: 'harborview.co', stage: 'active', tags: ['Project'], client_since: '2023-09-21', address_line1: '1200 Harbor Ave SW', city: 'Seattle', region: 'WA', postal_code: '98116', country: 'United States' },
-  { company: 'Mintleaf', name: 'Sam Tran', title: 'Owner', email: 'sam@mintleaf.com', phone: '(512) 555-0170', website: 'mintleaf.com', stage: 'active', tags: ['E-commerce', 'Priority'], client_since: '2023-11-02', address_line1: '88 Congress Ave', city: 'Austin', region: 'TX', postal_code: '78701', country: 'United States' },
-  { company: 'Bright & Salt', name: 'Nina Patel', title: 'Creative Director', email: 'nina@brightsalt.co', phone: '(303) 555-0121', website: 'brightsalt.co', stage: 'active', tags: ['Retainer'], client_since: '2024-02-14', address_line1: '2100 Larimer St', city: 'Denver', region: 'CO', postal_code: '80205', country: 'United States' },
-  { company: 'Ridgeline', name: 'Grace Lin', title: 'CTO', email: 'grace@ridgeline.dev', phone: '(646) 555-0188', website: 'ridgeline.dev', stage: 'active', tags: ['Retainer', 'Priority'], client_since: '2023-05-30', address_line1: '12 W 21st Street', city: 'New York', region: 'NY', postal_code: '10010', country: 'United States' },
-  { company: 'Foundry & Co.', name: 'Iris Bell', title: 'Principal', email: 'iris@foundry.studio', phone: '(312) 555-0166', website: 'foundry.studio', stage: 'past', tags: ['Project'], client_since: '2022-06-05', address_line1: '400 N Wells St', city: 'Chicago', region: 'IL', postal_code: '60654', country: 'United States' },
-  { company: 'Vantage Group', name: 'Leo Kim', title: 'VP Marketing', email: 'leo@vantage.io', phone: '(213) 555-0110', website: 'vantage.io', stage: 'past', tags: ['Archived'], client_since: '2021-08-19', address_line1: '900 Wilshire Blvd', city: 'Los Angeles', region: 'CA', postal_code: '90017', country: 'United States' }
+  { company: 'Northwind Co.', name: 'Dana Cole', title: 'Marketing Director', email: 'dana@northwind.com', phone: '(415) 555-0132', website: 'northwind.com', status: 'active', source: 'direct', tags: ['Retainer', 'E-commerce', 'Priority'], client_since: '2023-03-12', address_line1: '400 Market Street, Suite 210', city: 'San Francisco', region: 'CA', postal_code: '94111', country: 'United States', notes: 'Prefers async updates. Storefront rebuild is the priority; renews retainer in March.' },
+  { company: 'Lumen Labs', name: 'Priya Shah', title: 'Founder', email: 'priya@lumenlabs.io', phone: '(628) 555-0148', website: 'lumenlabs.io', status: 'active', source: 'direct', tags: ['Retainer', 'SaaS'], client_since: '2024-01-08', address_line1: '55 Innovation Way', city: 'Oakland', region: 'CA', postal_code: '94607', country: 'United States' },
+  { company: 'Harborview', name: 'Ellen Ross', title: 'Operations Lead', email: 'ellen@harborview.co', phone: '(206) 555-0199', website: 'harborview.co', status: 'active', source: 'website', tags: ['Project'], client_since: '2023-09-21', address_line1: '1200 Harbor Ave SW', city: 'Seattle', region: 'WA', postal_code: '98116', country: 'United States' },
+  { company: 'Mintleaf', name: 'Sam Tran', title: 'Owner', email: 'sam@mintleaf.com', phone: '(512) 555-0170', website: 'mintleaf.com', status: 'active', source: 'direct', tags: ['E-commerce', 'Priority'], client_since: '2023-11-02', address_line1: '88 Congress Ave', city: 'Austin', region: 'TX', postal_code: '78701', country: 'United States' },
+  { company: 'Bright & Salt', name: 'Nina Patel', title: 'Creative Director', email: 'nina@brightsalt.co', phone: '(303) 555-0121', website: 'brightsalt.co', status: 'active', source: 'manual', tags: ['Retainer'], client_since: '2024-02-14', address_line1: '2100 Larimer St', city: 'Denver', region: 'CO', postal_code: '80205', country: 'United States' },
+  { company: 'Ridgeline', name: 'Grace Lin', title: 'CTO', email: 'grace@ridgeline.dev', phone: '(646) 555-0188', website: 'ridgeline.dev', status: 'active', source: 'direct', tags: ['Retainer', 'Priority'], client_since: '2023-05-30', address_line1: '12 W 21st Street', city: 'New York', region: 'NY', postal_code: '10010', country: 'United States' },
+  { company: 'Foundry & Co.', name: 'Iris Bell', title: 'Principal', email: 'iris@foundry.studio', phone: '(312) 555-0166', website: 'foundry.studio', status: 'past', source: 'website', tags: ['Project'], client_since: '2022-06-05', address_line1: '400 N Wells St', city: 'Chicago', region: 'IL', postal_code: '60654', country: 'United States' },
+  { company: 'Vantage Group', name: 'Leo Kim', title: 'VP Marketing', email: 'leo@vantage.io', phone: '(213) 555-0110', website: 'vantage.io', status: 'past', source: 'manual', tags: ['Archived'], client_since: '2021-08-19', address_line1: '900 Wilshire Blvd', city: 'Los Angeles', region: 'CA', postal_code: '90017', country: 'United States' }
 ]
 
-// ---- inbound leads (source website/call) ----
+// ---- inbound leads (source website — the contact form) ----
 const INBOUND = [
   { slug: 'brooks', company: 'Brooks Law', name: 'Aiden Brooks', email: 'aiden@brookslaw.com', source: 'website', stage: 'new', message: 'Looking for a redesign focused on getting more consultation requests from the site.', createdAt: hoursAgo(1) },
-  { slug: 'bloom', company: 'Bloom Floral', name: 'Sofia Nguyen', phone: '(212) 555-0173', source: 'call', stage: 'qualifying', message: 'Called about e-commerce for her flower shop — wants same-day delivery scheduling.', createdAt: hoursAgo(5) },
   { slug: 'webb', company: 'Webb Fitness', name: 'Marcus Webb', email: 'marcus@webbfit.com', source: 'website', stage: 'qualifying', message: 'Needs a landing page for a personal-training program launching next month.', createdAt: daysAgo(1) },
   { slug: 'anand', company: 'Anand Dental', name: 'Priya Anand', email: 'priya@ananddental.com', source: 'website', stage: 'qualified', message: 'Wants a full site plus patient portal. Budget approved by the partners.', createdAt: daysAgo(2) },
-  { slug: 'fielder', company: 'Fielder Roofing', name: 'Tom Fielder', phone: '(503) 555-0192', source: 'call', stage: 'proposal', message: 'Wants a lead-gen site with quote forms; ready to move fast, comparing two agencies.', createdAt: daysAgo(3) },
   { slug: 'okafor', company: 'Okafor Realty', name: 'Grace Okafor', email: 'grace@okaforrealty.com', source: 'website', stage: 'qualifying', message: 'Real-estate listings site with IDX integration; asked about ongoing maintenance.', createdAt: daysAgo(4) }
 ]
 
@@ -55,13 +54,25 @@ const OUTREACH = [
   { company: 'Patel Realty', name: 'Noah Patel', email: 'noah@patelrealty.com', stage: 'engaged', next_action_at: daysAhead(5), last_contacted_at: daysAgo(4) }
 ]
 
-// ---- calls ---- (linkSlug references an INBOUND/CLIENT slug to set contact_id)
+// ---- lead touches ---- (outreach cadence log; company references an OUTREACH lead)
+const LEAD_TOUCHES = [
+  { company: 'Lawson Interiors', channel: 'email', body: 'Sent intro email with a few portfolio links.', occurredAt: daysAgo(9) },
+  { company: 'Lawson Interiors', channel: 'call', body: 'Called to follow up — left a voicemail.', occurredAt: daysAgo(3) },
+  { company: 'Reyes Auto Group', channel: 'call', body: 'Great call — they want a quote for a new inventory site. Sending pricing.', occurredAt: daysAgo(2) },
+  { company: 'Reyes Auto Group', channel: 'email', body: 'Emailed the pricing sheet and a couple of case studies.', occurredAt: daysAgo(2) },
+  { company: 'Schmidt Bakery', channel: 'email', body: 'Cold intro email about their online-ordering setup.', occurredAt: daysAgo(6) },
+  { company: 'Barnes Consulting', channel: 'meeting', body: 'Discovery call — budget confirmed, ready for a proposal.', occurredAt: daysAgo(1) },
+  { company: 'Patel Realty', channel: 'sms', body: 'Texted to confirm they received the deck.', occurredAt: daysAgo(4) }
+]
+
+// ---- calls ---- (linkSlug -> a lead's lead_id; linkClient -> a client's client_id.
+// Unresolved links stay null — e.g. inquiry calls not yet converted to a lead.)
 const CALLS = [
   { classification: 'inquiry', caller_name: 'Rachel Munoz', caller_number: '(415) 555-0148', business: 'Delta Kitchens', occurred_at: hoursAgo(0.2), reviewed: false, duration_seconds: 252,
     summary: 'Rachel runs a kitchen-remodeling business and wants a new website with online consultation booking. Her current site is six years old and not mobile-friendly.',
     captured: [['Name', 'Rachel Munoz'], ['Business', 'Delta Kitchens'], ['Reason for call', 'New website + online booking'], ['Timeline', 'Before spring']],
     transcript: [{ r: true, t: 'Thanks for calling Francis Web Agency — how can I help?' }, { r: false, t: 'I run a kitchen remodeling business and need a whole new website.' }, { r: true, t: "Happy to help. I'll pass this to the team to follow up." }] },
-  { classification: 'inquiry', linkSlug: 'bloom', caller_name: 'Sofia Nguyen', caller_number: '(212) 555-0173', business: 'Bloom Floral', occurred_at: hoursAgo(5), reviewed: true, duration_seconds: 208,
+  { classification: 'inquiry', caller_name: 'Sofia Nguyen', caller_number: '(212) 555-0173', business: 'Bloom Floral', occurred_at: hoursAgo(5), reviewed: false, duration_seconds: 208,
     summary: 'Sofia owns a flower shop and wants e-commerce with same-day delivery scheduling. Currently takes orders by phone.',
     captured: [['Name', 'Sofia Nguyen'], ['Business', 'Bloom Floral'], ['Reason for call', 'E-commerce + delivery scheduling']],
     transcript: [{ r: true, t: 'Francis Web Agency, how can I help?' }, { r: false, t: 'I want to start selling flowers online with delivery times.' }] },
@@ -81,7 +92,7 @@ const CALLS = [
     summary: 'City permitting office following up on a business license renewal. Left a reference number.',
     captured: [['Caller', 'City of Portland'], ['Reference', 'BL-2026-4471']],
     transcript: [{ r: true, t: 'Francis Web Agency, front desk.' }, { r: false, t: 'Portland permitting office re: license renewal BL-2026-4471.' }] },
-  { classification: 'inquiry', linkSlug: 'fielder', caller_name: 'Tom Fielder', caller_number: '(503) 555-0192', business: 'Fielder Roofing', occurred_at: daysAgo(3), reviewed: true, duration_seconds: 347,
+  { classification: 'inquiry', caller_name: 'Tom Fielder', caller_number: '(503) 555-0192', business: 'Fielder Roofing', occurred_at: daysAgo(3), reviewed: false, duration_seconds: 347,
     summary: 'Tom wants a lead-generation site with quote-request forms; comparing two agencies, so a fast proposal matters.',
     captured: [['Name', 'Tom Fielder'], ['Business', 'Fielder Roofing'], ['Note', 'Comparing 2 agencies']],
     transcript: [{ r: true, t: 'Francis Web Agency, how can I help?' }, { r: false, t: 'I need a site that brings in roofing leads.' }] }
@@ -91,13 +102,13 @@ const CALLS = [
 const NOTIFICATIONS = [
   { category: 'lead', tone: 'brand', icon: 'i-lucide-user-plus', title: 'New inbound lead', body: 'Aiden Brooks submitted the contact form on your site.', link: '/leads', read: false, created_at: hoursAgo(1) },
   { category: 'call', tone: 'error', icon: 'i-lucide-phone-missed', title: 'Missed call logged', body: 'The receptionist captured a call from (415) 555-0148.', link: '/receptionist', read: false, created_at: hoursAgo(0.3) },
-  { category: 'proposal', tone: 'info', icon: 'i-lucide-file-text', title: 'Proposal viewed', body: 'Fielder Roofing opened the proposal you sent.', link: '/agreements', read: false, created_at: hoursAgo(3) },
+  { category: 'proposal', tone: 'info', icon: 'i-lucide-file-text', title: 'Proposal viewed', body: 'Ridgeline opened the proposal you sent.', link: '/agreements', read: false, created_at: hoursAgo(3) },
   { category: 'invoice', tone: 'success', icon: 'i-lucide-check-circle-2', title: 'Invoice paid', body: 'Northwind Co. paid invoice #1042 in full — $3,200.', link: '/invoices', read: true, created_at: daysAgo(1) },
   { category: 'call', tone: 'info', icon: 'i-lucide-phone-call', title: 'Client call logged', body: 'Dana Cole (Northwind) called about an invoice question.', link: '/receptionist', read: true, created_at: daysAgo(1) },
   { category: 'task', tone: 'warning', icon: 'i-lucide-clock', title: 'Follow-up due', body: 'Your outreach touch for Lawson Interiors is overdue.', link: '/leads', read: true, created_at: daysAgo(2) }
 ]
 
-// ---- projects ---- (SOW hub; each belongs to an active client by company)
+// ---- projects ---- (SOW hub; each belongs to a client by company)
 const PROJECTS = [
   { key: 'northwind-rebuild', company: 'Northwind Co.', code: 'WEB-0001', name: 'Marketing site rebuild', status: 'in_progress',
     goals: 'Modernize the marketing site and lift consultation requests. Faster, mobile-first, clearer conversion path.',
@@ -179,11 +190,10 @@ function cols(obj) {
   return { sql: `(${keys.join(', ')}) VALUES (${keys.map(k => `:${k}`).join(', ')})`, params: obj }
 }
 
-async function insertContact(row) {
-  const { slug, ...rest } = row
-  if (rest.tags) rest.tags = JSON.stringify(rest.tags)
-  const { sql, params } = cols(rest)
-  const [res] = await pool.query(`INSERT INTO contacts ${sql}`, params)
+async function insertRow(table, row) {
+  if (row.tags) row.tags = JSON.stringify(row.tags)
+  const { sql, params } = cols(row)
+  const [res] = await pool.query(`INSERT INTO ${table} ${sql}`, params)
   return res.insertId
 }
 
@@ -195,16 +205,18 @@ try {
   )
   const [[websiteType]] = await pool.query("SELECT id FROM project_types WHERE `key` = 'website' LIMIT 1")
 
-  const [[{ n }]] = await pool.query('SELECT COUNT(*) AS n FROM contacts')
+  const [[{ n }]] = await pool.query('SELECT COUNT(*) AS n FROM clients')
   if (n > 0 && !force) {
-    console.log(`Contacts already present (${n}). Use "npm run seed -- --force" to reseed.`)
+    console.log(`Clients already present (${n}). Use "npm run seed -- --force" to reseed.`)
     await closePool()
     process.exit(0)
   }
   if (force) {
-    // Children first — everything that FK-references contacts (RESTRICT) must go
-    // before contacts. Line-item tables cascade with their parent.
+    // Children first — everything that FK-references clients (RESTRICT) must go
+    // before clients. Line-item tables cascade with their parent. calls SET NULL,
+    // deleted explicitly. leads has no children.
     await pool.query('DELETE FROM payments')
+    await pool.query('DELETE FROM websites') // cascades website_metrics
     await pool.query('DELETE FROM invoices') // cascades invoice_line_items
     await pool.query('DELETE FROM contracts') // cascades contract_line_items
     await pool.query('DELETE FROM proposals') // cascades proposal_line_items
@@ -212,32 +224,42 @@ try {
     await pool.query('DELETE FROM projects')
     await pool.query('DELETE FROM notifications')
     await pool.query('DELETE FROM calls')
-    await pool.query('DELETE FROM contacts')
-    console.log('Cleared billing + sales + tasks + projects + notifications + calls + contacts.')
+    await pool.query('DELETE FROM lead_touches')
+    await pool.query('DELETE FROM leads')
+    await pool.query('DELETE FROM clients')
+    console.log('Cleared billing + sales + tasks + projects + notifications + calls + leads + clients.')
   }
 
-  const slugToId = {}
-  const companyToId = {}
+  const companyToClientId = {}
+  const slugToLeadId = {}
+  const companyToLeadId = {}
 
   for (const c of CLIENTS) {
-    const id = await insertContact(c)
-    companyToId[c.company] = id
+    companyToClientId[c.company] = await insertRow('clients', { ...c })
   }
   for (const l of INBOUND) {
     const { slug, createdAt, ...rest } = l
-    const id = await insertContact({ ...rest, source: rest.source, created_at: createdAt })
-    slugToId[slug] = id
+    slugToLeadId[slug] = await insertRow('leads', { ...rest, created_at: createdAt })
   }
   for (const o of OUTREACH) {
-    await insertContact({ ...o, source: 'manual' })
+    companyToLeadId[o.company] = await insertRow('leads', { ...o, source: 'manual' })
+  }
+
+  for (const t of LEAD_TOUCHES) {
+    const leadId = companyToLeadId[t.company]
+    if (!leadId) continue
+    await pool.query(
+      'INSERT INTO lead_touches (lead_id, channel, body, occurred_at) VALUES (?, ?, ?, ?)',
+      [leadId, t.channel, t.body, t.occurredAt]
+    )
   }
 
   for (const call of CALLS) {
     const { linkSlug, linkClient, business, captured, transcript, reviewed, ...rest } = call
-    const contactId = linkSlug ? slugToId[linkSlug] : (linkClient ? companyToId[linkClient] : null)
     const row = {
       ...rest,
-      contact_id: contactId ?? null,
+      lead_id: linkSlug ? (slugToLeadId[linkSlug] ?? null) : null,
+      client_id: linkClient ? (companyToClientId[linkClient] ?? null) : null,
       transcript: JSON.stringify(transcript),
       extracted: JSON.stringify({ business: business ?? null, captured }),
       reviewed_at: reviewed ? daysAgo(0) : null
@@ -256,7 +278,7 @@ try {
   const projectKeyToId = {}
   for (const p of PROJECTS) {
     const { key, company, ...rest } = p
-    const row = { ...rest, contact_id: companyToId[company], project_type_id: websiteType.id }
+    const row = { ...rest, client_id: companyToClientId[company], project_type_id: websiteType.id }
     const { sql, params } = cols(row)
     const [res] = await pool.query(`INSERT INTO projects ${sql}`, params)
     projectKeyToId[key] = res.insertId
@@ -274,10 +296,26 @@ try {
     await pool.query(`INSERT INTO tasks ${sql}`, params)
   }
 
+  // A few demo checklists so the task progress bar shows on a fresh seed.
+  // (--force clears tasks, cascading task_checklist_items, so this stays clean.)
+  const [checklistTasks] = await pool.query('SELECT id FROM tasks WHERE project_id IS NOT NULL ORDER BY id LIMIT 3')
+  const CHECKLISTS = [
+    [['Audit current site', 1], ['Gather brand assets', 1], ['Confirm sitemap', 0], ['Kickoff notes to client', 0]],
+    [['Wireframe home', 1], ['Wireframe interior pages', 0], ['Client review round', 0]],
+    [['Set up components', 0], ['Build home page', 0], ['Responsive pass', 0], ['QA + launch checklist', 0]]
+  ]
+  for (let i = 0; i < checklistTasks.length; i++) {
+    const items = CHECKLISTS[i]
+    if (!items) break
+    for (let p = 0; p < items.length; p++) {
+      await pool.query('INSERT INTO task_checklist_items (task_id, title, done, position) VALUES (?, ?, ?, ?)', [checklistTasks[i].id, items[p][0], items[p][1], p])
+    }
+  }
+
   const invoiceKeyToId = {}
   for (const inv of INVOICES) {
     const { key, company, projectKey, line, ...rest } = inv
-    const row = { ...rest, contact_id: companyToId[company], project_id: projectKey ? projectKeyToId[projectKey] : null }
+    const row = { ...rest, client_id: companyToClientId[company], project_id: projectKey ? projectKeyToId[projectKey] : null }
     const { sql, params } = cols(row)
     const [res] = await pool.query(`INSERT INTO invoices ${sql}`, params)
     invoiceKeyToId[key] = res.insertId
@@ -290,19 +328,24 @@ try {
 
   for (const p of PAYMENTS) {
     const { invoiceKey, company, ...rest } = p
-    const row = { ...rest, contact_id: companyToId[company], invoice_id: invoiceKeyToId[invoiceKey] ?? null }
+    const row = { ...rest, client_id: companyToClientId[company], invoice_id: invoiceKeyToId[invoiceKey] ?? null }
     const { sql, params } = cols(row)
     await pool.query(`INSERT INTO payments ${sql}`, params)
   }
 
-  const [[cc]] = await pool.query('SELECT COUNT(*) AS n FROM contacts')
+  // websites + 90d of daily metrics (idempotent; links to the clients/projects above).
+  const web = await seedWebsites()
+
+  const [[lc]] = await pool.query('SELECT COUNT(*) AS n FROM leads')
+  const [[lt]] = await pool.query('SELECT COUNT(*) AS n FROM lead_touches')
+  const [[cc]] = await pool.query('SELECT COUNT(*) AS n FROM clients')
   const [[kc]] = await pool.query('SELECT COUNT(*) AS n FROM calls')
   const [[nc]] = await pool.query('SELECT COUNT(*) AS n FROM notifications')
   const [[pc]] = await pool.query('SELECT COUNT(*) AS n FROM projects')
   const [[tc]] = await pool.query('SELECT COUNT(*) AS n FROM tasks')
   const [[ic]] = await pool.query('SELECT COUNT(*) AS n FROM invoices')
   const [[yc]] = await pool.query('SELECT COUNT(*) AS n FROM payments')
-  console.log(`✔ Seeded ${cc.n} contacts, ${kc.n} calls, ${nc.n} notifications, ${pc.n} projects, ${tc.n} tasks, ${ic.n} invoices, and ${yc.n} payments.`)
+  console.log(`✔ Seeded ${lc.n} leads (${lt.n} touches), ${cc.n} clients, ${kc.n} calls, ${nc.n} notifications, ${pc.n} projects, ${tc.n} tasks, ${ic.n} invoices, ${yc.n} payments, and ${web.created} websites (${web.metricsInserted} metric rows).`)
 } finally {
   await closePool()
 }

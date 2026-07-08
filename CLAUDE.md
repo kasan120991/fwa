@@ -1,115 +1,206 @@
-# FWA Ops App — Project Brief
+# FWA — Monorepo Brief
 
-## What this is
+## What's in this repo
 
-This is the business-management app for Francis Web Agency (FWA), a solo web design agency. It runs the whole business in one place — leads, clients, projects, sales, billing, and delivery. It's a fully custom build with no CMS layer.
+This root (`fwa/`) holds Francis Web Agency's web presence and internal tooling. FWA is a
+**solo web design agency**. Three projects live side by side:
 
-The app is **two-sided**:
+- **`app/`** — the **FWA Ops admin app** (Nuxt 4 SPA, Nuxt UI 4). The internal
+  business-management tool: leads, clients, projects, sales, billing, delivery, websites.
+- **`server/`** — the **Ops backend** (Node + Express 5 + MySQL) that `app/` talks to. Hand-rolled
+  REST API, cookie-session auth, Socket.IO realtime, Stripe/PandaDoc integrations.
+- **`website/`** — the **public FWA marketing website** (Nuxt 4 + Directus). Its **own git repo**
+  with its **own `CLAUDE.md`** — read that before touching it.
 
-- **Admin app** — the internal side, used only by me. This is the entire current build target (see Scope). Everything described in this doc — the shell, dashboard, leads, clients, receptionist, and all the deferred internal pages — is the admin side.
-- **Client portal** — an external-facing side for FWA's clients, **deferred to a later phase**. It introduces non-admin users, so it isn't a single-user tool overall even though the admin side is.
+**How they relate:** `app/` + `server/` are the two halves of the **FWA Ops app** (one product).
+`website/` is the separate marketing site that *feeds* it — a contact-form submission on the
+website POSTs to the server's webhook and becomes an **inbound `website` lead** in the Ops app.
+`app/` and `website/` share the same FWA brand tokens but are built differently (the app uses
+Nuxt UI; the website deliberately does not — see below).
 
-Because a second user type is coming, keep the auth model and routing ready for an **admin vs. client account-type distinction** and a **separate portal route area** — but don't build any portal functionality until that phase. The login screen built so far is the **admin** login.
+> Working in `website/`? Follow **`website/CLAUDE.md`** (its build rules differ from the app's).
+> This root file is the shared context; the sections below are mostly the **Ops app (`app/` + `server/`)**.
 
-Note: this is **not** the FWA marketing website (that's a separate Nuxt 4 + Directus project). This repo is the internal ops tool only.
+---
 
-## Scope — build this now
+## The Ops app (`app/` + `server/`)
 
-Only a subset of the app has been designed so far, and that subset is the entire build target for this phase. Those pages were prototyped in Claude Design; Claude Design is **not** used going forward (it's too token-heavy), so everything from here is built directly in Claude Code.
+### Two-sided by design
 
-**In scope now (designed, ready to build):**
+- **Admin app** — the internal side, used only by the owner. This is the entire current build
+  target. Everything below — shell, dashboard, leads, clients, receptionist, sales, billing,
+  delivery, websites — is the admin side.
+- **Client portal** — an external-facing side for FWA's clients, **deferred to a later phase**.
 
-- App shell — sidebar nav + top bar
-- Dashboard
-- Clients list + Client detail
-- Leads (Inbound / Outreach)
+Because a second user type is coming, the auth model already carries an **admin vs. client
+account-type distinction** (`users.role` enum, `admin` only in use this phase) and routing is kept
+ready for a **separate portal route area** — but don't build portal functionality until that phase.
+The login screen built so far is the **admin** login.
+
+### Scope — where the build is now
+
+**Built (schema + API + pages, wired to live data):**
+
+- App shell — sidebar nav + top bar, with a live notification feed
+- Dashboard (live KPIs, collected-revenue chart, cross-source "Needs Attention" feed)
+- Leads (Inbound / Outreach) + new/edit
+- Clients list + Client detail + new/edit
 - AI Receptionist (call inbox)
+- **Sales — Agreements**: proposals + contracts merged into one page, PandaDoc-driven
+- **Billing**: Invoices + Payments, Stripe-driven
+- **Delivery**: Projects (+ detail) and Tasks, with a project-type catalog
+- **Websites**: cross-client analytics dashboard + per-site detail (traffic, conversions, top
+  pages/sources, uptime/perf history), optional Plausible sync + uptime checks
+- File storage (local disk today; logos/uploads)
 
-**Deferred (built later, directly in Claude Code):** Projects, Tasks, Proposals, Contracts, Invoices, Payments, Files, Calendar, Websites, Support Tickets, Settings.
+**Still deferred (stub routes, build when asked):** Files (page), Calendar, Support Tickets, Settings.
 
-**Deferred to a later phase entirely:** the **client portal** (the external-facing side — see What this is). Not part of this admin-app build.
+**Deferred to a later phase entirely:** the **client portal**.
 
-The nav shell is designed with the full structure, so keep all groups and items in place — the deferred destinations are placeholder/stub routes for now and get fleshed out later, following the same design system. Don't build the deferred pages this phase unless I ask.
+Keep all nav groups and items in place — deferred destinations are stub routes, fleshed out later
+reusing the same components and design system. Don't build deferred pages unless asked.
 
-## Stack
+### Stack
 
-- **Frontend:** Nuxt + Vue + Nuxt UI, styled with Tailwind v4.
-- **Backend:** Node + Express, hand-rolled REST API.
-- **Database:** MySQL.
-- No CMS, no ORM assumptions — the schema and API are custom.
+- **`app/` (frontend):** Nuxt 4 + Vue + Nuxt UI 4, Tailwind v4. Socket.IO client for realtime.
+  Nuxt srcDir is **`app/app/`** (`pages/`, `components/`, `composables/`, `layouts/`, `utils/`).
+- **`server/` (backend):** Node + Express 5, hand-rolled REST API. Cookie-session auth (bcrypt).
+  Socket.IO for realtime push (notifications, new calls, invoice/task/website changes).
+- **Database:** MySQL (via `mysql2`, no ORM — hand-written SQL).
+- **Integrations:** Stripe (customers, invoices, payments, webhooks), PandaDoc
+  (proposals/contracts docs), Plausible (website analytics sync — optional, key-gated).
+- No CMS, no ORM — the schema and API are custom.
 
-## Repo layout
+### Layout
 
-This file lives at the repo root. Two top-level folders sit beside it:
+- `server/` — layered: `routes/` (thin, `requireAuth`-gated) → `services/` (business logic +
+  integrations) → `repositories/` (all SQL) → `db/pool.js`. Schema + migrations in `server/src/db/`.
+  Background jobs (analytics sync, uptime checks) in `server/src/jobs/`. Uploads land in
+  `server/uploads/`.
+- `app/` — the Nuxt app under `app/app/`.
+- `deploy/`, `docker-compose.yml`, `Dockerfile`s, `.env.production.example` — Ops-app production
+  deployment (see Deployment).
 
-- `server/` — the backend: Node + Express API, MySQL access, and schema/migrations.
-- `frontend/` — the frontend: the Nuxt + Vue + Nuxt UI app.
+Keep backend work in `server/` and admin-frontend work in `app/`. Respect the server's layering —
+**SQL belongs in repositories**, not routes or services.
 
-Keep backend work in `server/` and frontend work in `frontend/`. This root file is the shared context for both halves.
+## Core data model (read before touching anything data-related)
 
-## Core data model (read this before touching anything data-related)
+Three tables — `leads`, `clients`, `calls` — are the spine. Leads and clients are **separate
+tables**; a lead is copied into a client on conversion, then deleted. (This supersedes an earlier
+design that unified them in a `contacts` table — that table no longer exists.)
 
-Two facts drive the whole app. Get these right and the rest follows.
+**1. `leads` — top of funnel only.** Website contact-form submissions and manual outreach. A lead
+owns **no** sales artifacts (no proposals/projects/invoices).
 
-**1. One `contacts` table backs both Leads and Clients.** A lead and a client are the *same record* at different points in a lifecycle — not separate tables. Conversion is a **stage change on one row**, never a copy or migration between tables. All the related records (calls, notes, proposals, projects, invoices) hang off that one contact and must never be re-pointed just because a lead became a client.
+- `source` — `website` (contact form → **Inbound**) or `manual` (outreach → **Outreach**). Calls
+  are no longer a lead source.
+- `stage` — `new`, `qualifying`, `to_contact`, `contacted`, `engaged`, `qualified`, `lost`.
+  - Inbound: `new` → `qualifying` → `qualified`; Outreach: `to_contact` → `contacted` → `engaged`
+    → `qualified`; `lost` = dead. No `proposal`/`active`/`past` stage on a lead.
+- Minimal fields: identity, `message` (inbound inquiry), `notes`, `tags`, outreach cadence
+  (`last_contacted_at`, `next_action_at`). No billing/address/stripe — those are client concerns.
 
-- `source` — how the contact entered: `website`, `call`, `manual` (optionally `referral`). This drives the two sections of the Leads page: `website` + `call` = **Inbound**, `manual` = **Outreach**.
-- `stage` — the lifecycle. Unified enum across both motions:
-  - Inbound early stages: `new` → `qualifying`
-  - Outreach early stages: `to_contact` → `contacted` → `engaged`
-  - Both converge: `qualified` → `proposal`
-  - Client stages: `active` (proposal won) → `past`; plus `lost` for dead/declined
-- **Leads page** = the view where `stage` is pre-client. **Clients page** = the view where `stage` is `active` or `past`. Same table, two filters.
-- **Proposal sent ≠ client.** `stage = proposal` means a proposal is out. The contact only becomes a client (`stage = active`) when the proposal is **won**. Those are two distinct transitions; keep them separate so "outstanding proposals" and "won" are both answerable.
-- **Proposals** are their own records, children of a contact (a contact can have more than one over time).
+**2. `clients` — converted parties.** Everything sales/billing/delivery FKs a **client**
+(`client_id`). Leads never own those; starting a proposal or project presupposes a client.
 
-**2. Calls are events, not entities — they live in a separate `calls` table.** Every call the AI receptionist handles is logged here regardless of outcome. A call links to a contact via a **nullable `contact_id`**, set only when a call becomes (or belongs to) a contact.
+- `status` — `active`, `past`, `lost` (relationship state, not a pipeline stage).
+- `source` — origin (`website`/`manual`/`call`/`direct`), carried from the lead for reporting.
+- Full fields: identity + `logo_url`, billing address, `billing_email`, `client_since`,
+  `stripe_customer_id`, `notes`, `tags`.
 
-- The receptionist (Vapi) classifies each call: `inquiry`, `client`, `spam`, `wrong_number`, `other`.
-- Only `inquiry` (and existing-`client`) calls get a `contact_id`. Everything else stays an unlinked call record.
-- A call record holds: caller number, caller name (if captured), classification, summary, transcript, recording URL, duration, timestamp, and any structured fields the receptionist extracted.
-- **Convert to lead** (from the receptionist page) creates a `contacts` row with `source = call`, `stage = new`, and sets the call's `contact_id`. It appears in Leads → Inbound.
+**Conversion (lead → client)** is `POST /api/leads/:id/convert` (body optionally `{ project }`):
+**copies** the lead into a new `clients` row (`status = active`, `client_since = today`), provisions
+the Stripe customer, moves any linked calls to the client, optionally creates a project, then
+**deletes the lead**. A signed project contract also confirms the client won (`markClientWon` →
+`status = active`) via the PandaDoc webhook.
 
-The reason for the asymmetry: conflating leads and clients into two tables causes duplication and broken history, so they're unified. Conflating a call (a raw event) with a contact (an entity) causes noise and duplicate contacts, so those are split. Same principle — model the thing at the right grain — applied in opposite directions.
+**3. `calls` — events, not entities.** Every AI-receptionist (Vapi) call is logged in its own
+append-only table. Links via **nullable `lead_id`** *or* **`client_id`** (`ON DELETE SET NULL`).
+
+- Classification: `inquiry`, `client`, `spam`, `wrong_number`, `other`.
+- **Convert to lead** (`POST /api/calls/:id/convert`) creates a `manual` lead (`stage = new`) and
+  sets the call's `lead_id`. On a later lead→client conversion the link moves `lead_id` → `client_id`.
+
+### Sales, billing, delivery & websites (children of a client)
+
+- **Proposals** and **contracts** — children of a client, line items snapshotted from the
+  `services` price book. Proposals are PandaDoc-backed; contracts carry a `type`
+  (`project` / `care_plan`).
+- **Agreements** is a *view*, not a table — the page merges proposals + contracts into one union
+  query (each row carries a `kind` + `uid`). Keep the merge in the query layer; the tables stay separate.
+- **Projects** are the **SOW hub**: a project originates its contract (inverting a naive
+  "contract creates project" flow). Projects carry a `project_type`, hang off a client, own **tasks**.
+- **Invoices** + **payments** — Stripe-driven, children of a client (invoices carry line items).
+- **`websites`** + **`website_metrics`** (daily traffic) + **`website_checks`** (uptime history) —
+  sites FWA builds/maintains, FK a client (+ optional originating project). Metrics are stored rows
+  (seeded now, Plausible-synced when a key is set); the Websites pages compute rollups/charts from them.
+- **`services`** — the price book (website packages, care plans, add-ons).
+- **`notifications`** — back the top-bar alert feed, pushed over Socket.IO.
 
 ## Pages & navigation
 
-Persistent left sidebar (collapsible to an icon rail) + top bar + main content area. Nav groups (✓ = in scope this phase, per Scope above; unmarked = deferred stub route):
+Persistent left sidebar (collapsible) + top bar + main content. Nav groups (✓ = built; unmarked = stub):
 
-- **(top)** Dashboard ✓
-- **Clients & Work** — Leads ✓ · Clients ✓ · Projects · Tasks
-- **Sales** — Proposals · Contracts
-- **Billing** — Invoices · Payments
-- **Workspace** — Files · Calendar · Websites · AI Receptionist ✓
-- **(pinned bottom)** Support Tickets · Settings
+- **(top)** Dashboard ✓ · AI Receptionist ✓
+- **Clients & Work** — Leads ✓ · Clients ✓ · Projects ✓ · Tasks ✓
+- **Sales** — Agreements ✓
+- **Billing** — Invoices ✓ · Payments ✓
+- **Workspace** — Files · Calendar · Websites ✓
+- **(pinned bottom)** Support tickets · Settings
 
-Page-specific notes (in-scope pages):
+## Design workflow (Ops app)
 
-- **Leads** — two sections (Inbound / Outreach) over the `contacts` table, split by `source`. Inbound rows surface the inquiry (form message or call summary, with the call peek-able); Outreach rows surface a follow-up cadence with overdue touches highlighted.
-- **Clients** — the `contacts` view where stage is `active`/`past`. Row click → client detail (Overview, Projects, Websites, Invoices, Contracts, Files, Support, Activity tabs).
-- **AI Receptionist** — an inbox (master-detail) over the `calls` table: call list + detail pane with recording player, summary, captured details, and transcript. Inquiry calls can convert to leads.
+The app's design system is the invocable **`fwa-design` skill** (a symlink →
+`app/design-system`) — use it for any admin-app UI work. It's the single source of truth for color,
+type, spacing, radii, icons, and components. Build as Nuxt UI + Tailwind v4 components that defer to
+it. Reuse the established shared components (tables, `StatusChip`, forms, `StatCard`, `TrendChart`,
+phone/tag inputs, the call-detail component) and match existing patterns.
 
-## Design workflow
+> The **marketing `website/` does NOT use Nuxt UI** and has its own tokens/primitives — do not apply
+> app patterns there; follow `website/CLAUDE.md`.
 
-The in-scope pages were prototyped in **Claude Design**, which defers entirely to an established design system (the single source of truth for color, type, spacing, radii, icons, and components). Convert those prototypes into real Nuxt UI + Tailwind v4 components faithfully — don't invent new visual styles.
+## Deployment
 
-Claude Design is not part of the loop going forward (too token-heavy). Once the in-scope pages are converted, **their components and tokens become the design system in this repo** — the reference every later page follows. The deferred pages, when their time comes, are built directly here in Claude Code, reusing those components and matching the established patterns so the app stays visually consistent without another design pass. Build shared components (tables, badges/chips, segmented controls, drawers, the call-detail component used by both Leads and the Receptionist page) once and reuse them.
+Both projects co-deploy on one box.
 
-## Current phase & build order
+- **Ops app** — Docker stack (`docker-compose.yml`): `mysql` + `api` (Express, :4000) + `app`
+  (Nuxt, :3000). Config from `.env.production` (template `.env.production.example`).
+- **Marketing website** — deploys from `website/` (its own `docker-compose.yml`, project
+  `name: website`), and its **Caddy is the shared front door**. The ops stack attaches to the
+  website's Docker network (`website_default`). Caddy proxies the ops domain — `/api`, `/socket.io`,
+  `/uploads` → `api:4000`, everything else → `app:3000` (snippet in `deploy/ops.Caddyfile`, appended
+  to the website's Caddyfile at `/opt/website/` on the server).
 
-Schema-first approach: MySQL schema → Express API → Nuxt UI. Design work for the in-scope pages is done, so the order for this phase is:
+---
 
-1. **MySQL schema for `contacts` and `calls`** — stage/source/classification enums, the nullable `contact_id` FK, and indexes tuned for the Leads and Clients views. This underpins Leads, Clients, and the Receptionist page, so it comes first.
-2. **Express routes** backing those views.
-3. **Convert and wire the in-scope pages** — shell/dashboard, clients list + detail, leads, receptionist — into Nuxt UI + Tailwind v4.
+## The marketing website (`website/`)
 
-Steps 1–2 live in `server/`; step 3 lives in `frontend/`.
+Public site at franciswebagency.com. **Nuxt 4 + Tailwind v4 (CSS-first, no config), NO Nuxt UI.**
+Content comes from **Directus** (`@directus/sdk`); analytics via **Plausible** (`@nuxtjs/plausible`);
+self-hosted fonts (`@nuxt/fonts`) + `@nuxt/image`.
 
-Deferred pages come in a later phase, built directly in Claude Code. **Before writing code, check the actual state of the repo** — it may not be scaffolded yet.
+- Layout: `website/app/` (Nuxt srcDir), `website/server/` (Nitro `api`/`routes` — incl. the
+  **contact-form endpoint** that POSTs to the Ops server webhook), `website/directus-seed/`,
+  `website/docs/` (`fwa-site-structure.md` = routes, `fwa-website-copy.md` = copy, used **verbatim**).
+- Shares FWA brand tokens (`website/app/assets/css/tokens.css`) but builds local primitives
+  (`AppButton`, `Eyebrow`, `Card`) instead of Nuxt UI.
+- **It's a separate git repo** — commits/branches there are independent of the ops repo.
+
+Full build rules (design conversion, motion, content voice) live in **`website/CLAUDE.md`**.
+
+---
 
 ## Guardrails
 
-- Never split leads and clients into separate tables, and never copy a record to "convert" it — conversion is a `stage` update.
-- Never auto-create a contact from a raw call; only `inquiry`/`client` calls link, and lead creation is an explicit action.
-- Keep `calls` as an append-only event log; the receptionist logs every call, linked or not.
-- Defer all visual styling to the existing design system.
+- **Leads and clients are separate tables.** Conversion copies a lead into a new `clients` row and
+  deletes the lead (`POST /api/leads/:id/convert`) — not a stage flip. All sales/billing/delivery FK
+  `client_id`; leads never own them.
+- Leads are `website` (contact form) or `manual` (outreach) only — calls are not a lead source.
+  Never auto-create a lead from a raw call; conversion is explicit (`POST /api/calls/:id/convert`).
+- Keep `calls` an append-only event log (nullable `lead_id`/`client_id`, SET NULL).
+- Keep Agreements a query-layer merge — proposals and contracts stay separate tables.
+- Keep the project → contract direction: projects are the SOW hub that originate contracts.
+- Respect the server layering: all SQL lives in repositories.
+- Defer app visual styling to the `fwa-design` skill; keep app work in `app/`, backend in `server/`.
+- For the marketing site, work in `website/` and follow `website/CLAUDE.md` — no Nuxt UI there.

@@ -13,30 +13,19 @@ const schema = await readFile(path.join(dir, 'schema.sql'), 'utf8')
 // won't alter an existing table, and MySQL has no ADD COLUMN IF NOT EXISTS, so
 // we check information_schema and add only what's missing. Keep in sync with
 // schema.sql (schema.sql is the source of truth for fresh installs).
+// NB: only lists tables that may already exist and need a missing column added
+// (checked against information_schema first). Fresh installs get everything from
+// schema.sql's CREATE TABLEs, so entries here are no-ops on a clean DB — but an
+// entry for a table that does NOT exist would try to ALTER a missing table, so
+// never list a table that isn't in schema.sql.
 const ADDITIVE_COLUMNS = {
-  contacts: [
-    ['title', 'VARCHAR(120) NULL AFTER company'],
-    ['website', 'VARCHAR(255) NULL AFTER title'],
-    ['logo_url', 'MEDIUMTEXT NULL AFTER website'],
-    ['notes', 'TEXT NULL AFTER message'],
-    ['tags', 'JSON NULL AFTER notes'],
-    ['address_line1', 'VARCHAR(255) NULL'],
-    ['address_line2', 'VARCHAR(255) NULL'],
-    ['city', 'VARCHAR(120) NULL'],
-    ['region', 'VARCHAR(120) NULL'],
-    ['postal_code', 'VARCHAR(20) NULL'],
-    ['country', 'VARCHAR(120) NULL'],
-    ['billing_email', 'VARCHAR(254) NULL AFTER country'],
-    ['client_since', 'DATE NULL'],
-    ['stripe_customer_id', 'VARCHAR(255) NULL AFTER client_since']
-  ],
   calls: [
     ['reviewed_at', 'DATETIME NULL AFTER extracted']
   ],
   // Soft project back-links (no FK — projects is created after these tables in
   // schema.sql, and a trailing ADD CONSTRAINT wouldn't be idempotent).
   proposals: [
-    ['project_id', 'BIGINT UNSIGNED NULL AFTER contact_id']
+    ['project_id', 'BIGINT UNSIGNED NULL AFTER client_id']
   ],
   contracts: [
     ['project_id', 'BIGINT UNSIGNED NULL AFTER proposal_id']

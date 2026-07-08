@@ -3,16 +3,12 @@ import {
   createProposal, getProposal, listProposals, updateProposal, deleteProposal,
   PROPOSAL_STATUSES
 } from '../repositories/proposals.repo.js'
-import { getContact, updateContact } from '../repositories/contacts.repo.js'
+import { getClient } from '../repositories/clients.repo.js'
 import { getActiveTemplate } from '../repositories/documentTemplates.repo.js'
 import { resolveLineItems } from '../services/lineItems.js'
 import { pandadocEnabled, createDocumentFromTemplate, sendDocument } from '../services/pandadoc.js'
 
 export const proposalsRouter = Router()
-
-// Lead stages a contact can be bumped up from when a proposal is created. We
-// never downgrade a client (active/past) or move someone already at proposal.
-const PRE_PROPOSAL_STAGES = new Set(['new', 'qualifying', 'to_contact', 'contacted', 'engaged', 'qualified'])
 
 function badRequest(message, fields) {
   const err = new Error(message)
@@ -30,22 +26,22 @@ const csv = v => (typeof v === 'string' && v ? v.split(',').map(s => s.trim()).f
 // Best-effort: create the PandaDoc document for a proposal and persist its ids.
 // Never throws — a PandaDoc hiccup must not fail the local write (mirrors the
 // Stripe sync pattern). No-ops when PandaDoc is disabled or no template exists.
-async function createProposalDocument(proposal, contact) {
+async function createProposalDocument(proposal, client) {
   if (!pandadocEnabled()) return proposal
   const template = await getActiveTemplate('proposal')
   if (!template) return proposal
   try {
     const doc = await createDocumentFromTemplate({
       templateUuid: template.template_uuid,
-      name: `${proposal.title} — ${contact.company || contact.name}`,
-      contact,
+      name: `${proposal.title} — ${client.company || client.name}`,
+      client,
       tokens: [
-        { name: 'Client.Company', value: contact.company || '' },
-        { name: 'Client.Name', value: contact.name || '' },
+        { name: 'Client.Company', value: client.company || '' },
+        { name: 'Client.Name', value: client.name || '' },
         { name: 'Proposal.Total', value: String(proposal.total) }
       ],
       items: proposal.items,
-      metadata: { fwa_contact_id: String(contact.id), fwa_proposal_id: String(proposal.id), type: 'proposal' }
+      metadata: { fwa_client_id: String(client.id), fwa_proposal_id: String(proposal.id), type: 'proposal' }
     })
     if (doc) return await updateProposal(proposal.id, { pandadoc_document_id: doc.id, pandadoc_template_id: template.template_uuid, pandadoc_status: doc.status })
   } catch (err) {
@@ -54,13 +50,13 @@ async function createProposalDocument(proposal, contact) {
   return proposal
 }
 
-// GET /api/proposals  ?contact_id=  ?status=a,b  ?limit=  ?offset=
+// GET /api/proposals  ?client_id=  ?status=a,b  ?limit=  ?offset=
 proposalsRouter.get('/', async (req, res) => {
   const statuses = csv(req.query.status)
   const bad = statuses?.find(s => !PROPOSAL_STATUSES.has(s))
   if (bad) throw badRequest(`Unknown status: ${bad}`)
   const result = await listProposals({
-    contact_id: req.query.contact_id ? Number(req.query.contact_id) : undefined,
+    client_id: req.query.client_id ? Number(req.query.client_id) : undefined,
     statuses,
     limit: req.query.limit,
     offset: req.query.offset
@@ -76,23 +72,21 @@ proposalsRouter.get('/:id', async (req, res) => {
 })
 
 // POST /api/proposals — snapshot line items, compute total, create the proposal,
-// bump the contact into the proposal stage, and (best-effort) build the PandaDoc doc.
+// and (best-effort) build the PandaDoc doc. Proposals are client-only, so a
+// valid client must already exist (convert the lead first).
 proposalsRouter.post('/', async (req, res) => {
   const body = req.body ?? {}
-  const contactId = Number(body.contact_id)
-  if (!Number.isInteger(contactId) || contactId <= 0) throw badRequest('Validation failed', { contact_id: 'a valid contact_id is required' })
-  const contact = await getContact(contactId)
-  if (!contact) throw badRequest('Validation failed', { contact_id: 'contact not found' })
+  const clientId = Number(body.client_id)
+  if (!Number.isInteger(clientId) || clientId <= 0) throw badRequest('Validation failed', { client_id: 'a valid client_id is required' })
+  const client = await getClient(clientId)
+  if (!client) throw badRequest('Validation failed', { client_id: 'client not found' })
   const title = typeof body.title === 'string' ? body.title.trim() : ''
   if (!title) throw badRequest('Validation failed', { title: 'a title is required' })
 
   const { rows, total } = await resolveLineItems(body.items)
-  let proposal = await createProposal({ contact_id: contactId, title, currency: body.currency, total, items: rows })
+  let proposal = await createProposal({ client_id: clientId, title, currency: body.currency, total, items: rows })
 
-  // A proposal existing means the contact is in the proposal stage.
-  if (PRE_PROPOSAL_STAGES.has(contact.stage)) await updateContact(contactId, { stage: 'proposal' })
-
-  proposal = await createProposalDocument(proposal, contact)
+  proposal = await createProposalDocument(proposal, client)
   res.status(201).json({ data: proposal })
 })
 

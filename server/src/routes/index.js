@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import { healthRouter } from './health.routes.js'
 import { authRouter } from './auth.routes.js'
-import { contactsRouter } from './contacts.routes.js'
+import { leadsRouter } from './leads.routes.js'
+import { clientsRouter } from './clients.routes.js'
 import { callsRouter } from './calls.routes.js'
 import { servicesRouter } from './services.routes.js'
 import { proposalsRouter } from './proposals.routes.js'
@@ -13,6 +14,7 @@ import { projectTypesRouter } from './projectTypes.routes.js'
 import { invoicesRouter } from './invoices.routes.js'
 import { paymentsRouter } from './payments.routes.js'
 import { dashboardRouter } from './dashboard.routes.js'
+import { websitesRouter } from './websites.routes.js'
 import { notificationsRouter } from './notifications.routes.js'
 import { uploadsRouter } from './uploads.routes.js'
 import { webhooksRouter } from './webhooks.routes.js'
@@ -26,7 +28,8 @@ apiRouter.use('/auth', authRouter)
 apiRouter.use('/webhooks', webhooksRouter)
 
 // Admin-only resource routers.
-apiRouter.use('/contacts', requireAuth, contactsRouter) // Leads + Clients
+apiRouter.use('/leads', requireAuth, leadsRouter) // Leads (top of funnel)
+apiRouter.use('/clients', requireAuth, clientsRouter) // Clients (converted parties)
 apiRouter.use('/calls', requireAuth, callsRouter) // AI Receptionist
 apiRouter.use('/services', requireAuth, servicesRouter) // price book / catalog
 apiRouter.use('/proposals', requireAuth, proposalsRouter) // Sales — proposals
@@ -38,5 +41,6 @@ apiRouter.use('/project-types', requireAuth, projectTypesRouter) // Project type
 apiRouter.use('/invoices', requireAuth, invoicesRouter) // Billing — invoices
 apiRouter.use('/payments', requireAuth, paymentsRouter) // Billing — payments
 apiRouter.use('/dashboard', requireAuth, dashboardRouter) // Dashboard KPIs
+apiRouter.use('/websites', requireAuth, websitesRouter) // Websites (cross-client analytics)
 apiRouter.use('/notifications', requireAuth, notificationsRouter) // top-bar alert feed
 apiRouter.use('/uploads', requireAuth, uploadsRouter) // file storage (logos, files)

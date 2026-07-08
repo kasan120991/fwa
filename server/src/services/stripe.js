@@ -1,4 +1,4 @@
-// Stripe integration. A Stripe customer is created the first time a contact
+// Stripe integration. A Stripe customer is created the first time a client
 // becomes an active client. If STRIPE_SECRET_KEY is unset the client is null
 // and every call no-ops, so the app runs fine without Stripe configured.
 import Stripe from 'stripe'
@@ -30,35 +30,35 @@ function toAddress(c) {
 }
 
 /**
- * Create a Stripe customer for a contact. Returns the customer id, or null when
+ * Create a Stripe customer for a client. Returns the customer id, or null when
  * Stripe is disabled. Throws on Stripe API errors (the caller decides whether
  * to swallow them). The idempotency key keeps a retry from creating a duplicate
  * customer if a prior attempt reached Stripe but failed to persist locally.
  */
-export async function createStripeCustomer(contact) {
+export async function createStripeCustomer(client) {
   if (!stripe) return null
   const customer = await stripe.customers.create({
-    name: contact.company || contact.name || undefined,
-    email: contact.billing_email || contact.email || undefined,
-    phone: contact.phone || undefined,
-    address: toAddress(contact),
-    metadata: { fwa_contact_id: String(contact.id) }
-  }, { idempotencyKey: `fwa-contact-${contact.id}` })
+    name: client.company || client.name || undefined,
+    email: client.billing_email || client.email || undefined,
+    phone: client.phone || undefined,
+    address: toAddress(client),
+    metadata: { fwa_client_id: String(client.id) }
+  }, { idempotencyKey: `fwa-client-${client.id}` })
   return customer.id
 }
 
 /**
- * Push a contact's current details to its existing Stripe customer. No-ops when
- * Stripe is disabled or the contact has no customer. metadata is left untouched
- * so the fwa_contact_id link is preserved.
+ * Push a client's current details to its existing Stripe customer. No-ops when
+ * Stripe is disabled or the client has no customer. metadata is left untouched
+ * so the fwa_client_id link is preserved.
  */
-export async function updateStripeCustomer(contact) {
-  if (!stripe || !contact.stripe_customer_id) return
-  await stripe.customers.update(contact.stripe_customer_id, {
-    name: contact.company || contact.name || undefined,
-    email: contact.billing_email || contact.email || undefined,
-    phone: contact.phone || undefined,
-    address: toAddress(contact)
+export async function updateStripeCustomer(client) {
+  if (!stripe || !client.stripe_customer_id) return
+  await stripe.customers.update(client.stripe_customer_id, {
+    name: client.company || client.name || undefined,
+    email: client.billing_email || client.email || undefined,
+    phone: client.phone || undefined,
+    address: toAddress(client)
   })
 }
 
@@ -77,15 +77,15 @@ export function mapStripeInvoice(inv) {
 }
 
 /**
- * Create and send an invoice to a contact's Stripe customer. Adds one invoice
+ * Create and send an invoice to a client's Stripe customer. Adds one invoice
  * item per line, opens an invoice with collection_method 'send_invoice', then
  * finalizes + emails the hosted link. Returns the mapped invoice (id, number,
  * urls, status, amounts, due_date) or null when Stripe is disabled. The caller
- * must ensure `contact.stripe_customer_id` is set.
+ * must ensure `client.stripe_customer_id` is set.
  */
-export async function createAndSendInvoice(contact, { items, description, metadata = {}, daysUntilDue = 7 }) {
+export async function createAndSendInvoice(client, { items, description, metadata = {}, daysUntilDue = 7 }) {
   if (!stripe) return null
-  const customer = contact.stripe_customer_id
+  const customer = client.stripe_customer_id
   for (const li of items) {
     await stripe.invoiceItems.create({ customer, amount: li.amountCents, currency: 'usd', description: li.description })
   }
@@ -102,8 +102,8 @@ export async function createAndSendInvoice(contact, { items, description, metada
 }
 
 /** Convenience wrapper for a single-line invoice (e.g. a project deposit). */
-export async function sendDepositInvoice(contact, { amountCents, description, metadata = {}, daysUntilDue = 7 }) {
-  return createAndSendInvoice(contact, { items: [{ amountCents, description }], description, metadata, daysUntilDue })
+export async function sendDepositInvoice(client, { amountCents, description, metadata = {}, daysUntilDue = 7 }) {
+  return createAndSendInvoice(client, { items: [{ amountCents, description }], description, metadata, daysUntilDue })
 }
 
 /** Void an open/draft invoice in Stripe. No-ops when disabled. */

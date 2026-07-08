@@ -11,24 +11,24 @@ import { pandadocEnabled, createDocumentFromTemplate } from './pandadoc.js'
 const str = v => (v == null ? '' : String(v))
 const money = v => (v == null ? '' : `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
 
-function contactAddress(c) {
+function clientAddress(c) {
   return [c.address_line1, c.address_line2, [c.city, c.region, c.postal_code].filter(Boolean).join(', '), c.country]
     .filter(Boolean).join(', ')
 }
 
 // The token contract the project_contract template must expose. Keep names in
 // sync with the plan (§5) and whatever fields the PandaDoc template declares.
-function buildTokens(project, contact) {
+function buildTokens(project, client) {
   const fee = project.project_fee
   const pct = project.deposit_pct ?? 50
   const deposit = fee == null ? null : Math.round((fee * pct / 100) * 100) / 100
   const balance = fee == null ? null : Math.round((fee - deposit) * 100) / 100
   const pairs = {
-    'Client.Company': contact.company || contact.name || '',
-    'Client.Name': contact.name || '',
-    'Client.Address': contactAddress(contact),
-    'Client.Email': contact.billing_email || contact.email || '',
-    'Client.Title': contact.title || '',
+    'Client.Company': client.company || client.name || '',
+    'Client.Name': client.name || '',
+    'Client.Address': clientAddress(client),
+    'Client.Email': client.billing_email || client.email || '',
+    'Client.Title': client.title || '',
     'Project.Name': project.name,
     'Project.Goals': project.goals,
     'Project.Pages': project.pages_included,
@@ -67,11 +67,11 @@ async function resolveTemplate(project) {
 
 /**
  * Create the project's contract row (+ PandaDoc document when configured).
- * `project` is a getProject() row (flat SOW fields + type_*); `contact` is a
+ * `project` is a getProject() row (flat SOW fields + type_*); `client` is a
  * getContact() row. Returns the created contract.
  */
-export async function generateProjectContract(project, contact) {
-  const title = `Website Design & Development Agreement — ${contact.company || contact.name}`
+export async function generateProjectContract(project, client) {
+  const title = `Website Design & Development Agreement — ${client.company || client.name}`
   const items = [{
     service_id: null,
     name_snapshot: `Website Design & Development — ${project.name}`,
@@ -83,7 +83,7 @@ export async function generateProjectContract(project, contact) {
   }]
 
   let contract = await createContract({
-    contact_id: contact.id,
+    client_id: client.id,
     project_id: project.id,
     type: 'project',
     title,
@@ -99,10 +99,10 @@ export async function generateProjectContract(project, contact) {
     const doc = await createDocumentFromTemplate({
       templateUuid: template.template_uuid,
       name: title,
-      contact,
-      tokens: buildTokens(project, contact),
+      client,
+      tokens: buildTokens(project, client),
       items: contract.items,
-      metadata: { fwa_contact_id: String(contact.id), fwa_project_id: String(project.id), fwa_contract_id: String(contract.id), type: 'contract' }
+      metadata: { fwa_client_id: String(client.id), fwa_project_id: String(project.id), fwa_contract_id: String(contract.id), type: 'contract' }
     })
     if (doc) contract = await updateContract(contract.id, { pandadoc_document_id: doc.id, pandadoc_template_id: template.template_uuid, pandadoc_status: doc.status })
   } catch (err) {

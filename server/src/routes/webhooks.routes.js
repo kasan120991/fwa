@@ -3,7 +3,8 @@ import { Router } from 'express'
 import { config } from '../config/env.js'
 import { constructWebhookEvent, createStripeCustomer, mapStripeInvoice } from '../services/stripe.js'
 import { verifyWebhookSignature, pandadocEnabled, createDocumentFromTemplate, sendDocument } from '../services/pandadoc.js'
-import { getContact, getContactByStripeCustomerId, updateContact, createContact, getRecentWebsiteContactByEmail } from '../repositories/contacts.repo.js'
+import { getClient, getClientByStripeCustomerId, updateClient } from '../repositories/clients.repo.js'
+import { createLead, getRecentWebsiteLeadByEmail } from '../repositories/leads.repo.js'
 import { getInvoice, getInvoiceByStripeId, updateInvoice, upsertFromStripe } from '../repositories/invoices.repo.js'
 import { createPayment, getPaymentByIntentId } from '../repositories/payments.repo.js'
 import { emitInvoiceChanged, emitPaymentCreated } from '../realtime/io.js'
@@ -49,7 +50,7 @@ webhooksRouter.post('/contact-form', async (req, res) => {
 
   const name = str(body.name)
   const email = str(body.email)
-  const phone = str(body.phone).replace(/\D/g, '') // contacts store raw digits
+  const phone = str(body.phone).replace(/\D/g, '') // leads store raw digits
   const interested = str(body.interested_in)
   const details = str(body.details)
   const budget = str(body.budget)
@@ -61,7 +62,7 @@ webhooksRouter.post('/contact-form', async (req, res) => {
 
   // Dedupe double-submits of the same email within a short window.
   if (email) {
-    const existing = await getRecentWebsiteContactByEmail(email)
+    const existing = await getRecentWebsiteLeadByEmail(email)
     if (existing) return res.json({ ok: true, id: existing.id, deduped: true })
   }
 
@@ -73,7 +74,7 @@ webhooksRouter.post('/contact-form', async (req, res) => {
   ].filter(Boolean).join('\n')
   const message = [details, extras].filter(Boolean).join('\n\n') || null
 
-  const contact = await createContact({
+  const lead = await createLead({
     source: 'website',
     stage: 'new',
     name: name || email,
@@ -89,14 +90,14 @@ webhooksRouter.post('/contact-form', async (req, res) => {
     await notify({
       category: 'lead', tone: 'brand', icon: 'i-lucide-user-plus',
       title: 'New inbound lead',
-      body: `${contact.name} submitted the contact form${interested ? ` — ${interested}` : ''}.`,
+      body: `${lead.name} submitted the contact form${interested ? ` — ${interested}` : ''}.`,
       link: '/leads'
     })
   } catch (err) {
     console.error('Contact-form lead notification failed:', err.message)
   }
 
-  res.status(201).json({ ok: true, id: contact.id })
+  res.status(201).json({ ok: true, id: lead.id })
 })
 
 // POST /api/webhooks/stripe — receives Stripe events. Authenticated by signature
@@ -116,10 +117,10 @@ webhooksRouter.post('/stripe', async (req, res) => {
         // A customer removed in Stripe should no longer be referenced here; clear
         // the link so a future active-transition creates a fresh one.
         const customerId = event.data.object.id
-        const contact = await getContactByStripeCustomerId(customerId)
-        if (contact) {
-          await updateContact(contact.id, { stripe_customer_id: null })
-          console.log(`Stripe customer ${customerId} deleted — unlinked from contact ${contact.id}`)
+        const client = await getClientByStripeCustomerId(customerId)
+        if (client) {
+          await updateClient(client.id, { stripe_customer_id: null })
+          console.log(`Stripe customer ${customerId} deleted — unlinked from client ${client.id}`)
         }
         break
       }
@@ -127,9 +128,9 @@ webhooksRouter.post('/stripe', async (req, res) => {
         // Invoice opened for payment — sync number/urls/status/due_date locally.
         const inv = event.data.object
         const m = mapStripeInvoice(inv)
-        const contact = inv.customer ? await getContactByStripeCustomerId(inv.customer) : null
+        const client = inv.customer ? await getClientByStripeCustomerId(inv.customer) : null
         const hint = inv.metadata?.fwa_invoice_id ? Number(inv.metadata.fwa_invoice_id) : null
-        const local = await upsertFromStripe(inv.id, contact?.id, {
+        const local = await upsertFromStripe(inv.id, client?.id, {
           number: m.number, hosted_invoice_url: m.hosted_invoice_url, invoice_pdf: m.invoice_pdf,
           status: 'open', finalized_at: new Date(), due_date: m.due_date, amount_due: m.amount_due
         }, hint)
@@ -140,7 +141,7 @@ webhooksRouter.post('/stripe', async (req, res) => {
         // Mark the local invoice paid, record a payment row, raise a live alert.
         const inv = event.data.object
         const m = mapStripeInvoice(inv)
-        const contact = inv.customer ? await getContactByStripeCustomerId(inv.customer) : null
+        const client = inv.customer ? await getClientByStripeCustomerId(inv.customer) : null
         const hint = inv.metadata?.fwa_invoice_id ? Number(inv.metadata.fwa_invoice_id) : null
         const local = await getInvoiceByStripeId(inv.id) ?? (hint ? await getInvoice(hint) : null)
         if (local) {
@@ -149,14 +150,14 @@ webhooksRouter.post('/stripe', async (req, res) => {
         }
         // Record the payment (dedup on the PaymentIntent).
         const pi = typeof inv.payment_intent === 'string' ? inv.payment_intent : inv.payment_intent?.id
-        if (contact && !(pi && await getPaymentByIntentId(pi))) {
+        if (client && !(pi && await getPaymentByIntentId(pi))) {
           const payment = await createPayment({
-            contact_id: contact.id, invoice_id: local?.id ?? null, stripe_payment_intent_id: pi ?? null,
+            client_id: client.id, invoice_id: local?.id ?? null, stripe_payment_intent_id: pi ?? null,
             amount: m.amount_paid, method: 'card', paid_at: new Date()
           })
           emitPaymentCreated(payment.id)
         }
-        const who = contact?.company || contact?.name || 'A client'
+        const who = client?.company || client?.name || 'A client'
         try {
           await notify({
             category: 'payment', tone: 'success', icon: 'i-lucide-check-circle-2',
@@ -171,8 +172,8 @@ webhooksRouter.post('/stripe', async (req, res) => {
       }
       case 'invoice.payment_failed': {
         const inv = event.data.object
-        const contact = inv.customer ? await getContactByStripeCustomerId(inv.customer) : null
-        const who = contact?.company || contact?.name || 'A client'
+        const client = inv.customer ? await getClientByStripeCustomerId(inv.customer) : null
+        const who = client?.company || client?.name || 'A client'
         try {
           await notify({
             category: 'invoice', tone: 'warning', icon: 'i-lucide-triangle-alert',
@@ -221,7 +222,7 @@ webhooksRouter.post('/stripe', async (req, res) => {
 // ---------------------------------------------------------------------------
 // PandaDoc — document lifecycle. Drives the sales-paperwork state machine:
 // proposal accepted -> generate the project contract; project contract signed
-// -> the contact is "won" (stage active) and a project is created.
+// -> the client is "won" (status active).
 // ---------------------------------------------------------------------------
 
 // Raw PandaDoc status -> internal status, by record kind.
@@ -249,15 +250,15 @@ async function generateProjectContract(proposal) {
 
   if (pandadocEnabled()) {
     try {
-      const contact = await getContact(proposal.contact_id)
+      const client = await getClient(proposal.client_id)
       const template = await getActiveTemplate('project_contract')
-      if (contact && template) {
+      if (client && template) {
         const doc = await createDocumentFromTemplate({
           templateUuid: template.template_uuid,
-          name: `${contract.title} — ${contact.company || contact.name}`,
-          contact,
+          name: `${contract.title} — ${client.company || client.name}`,
+          client,
           items: contract.items,
-          metadata: { fwa_contact_id: String(contact.id), fwa_contract_id: String(contract.id), type: 'contract' }
+          metadata: { fwa_client_id: String(client.id), fwa_contract_id: String(contract.id), type: 'contract' }
         })
         if (doc) {
           contract = await updateContract(contract.id, { pandadoc_document_id: doc.id, pandadoc_template_id: template.template_uuid, pandadoc_status: doc.status })
@@ -272,29 +273,27 @@ async function generateProjectContract(proposal) {
   return contract
 }
 
-// A signed project contract is the "won" event: flip the contact to active and
-// create the project. Idempotent — a contact already active is left as-is.
-async function markContactWon(contract) {
-  const contact = await getContact(contract.contact_id)
-  if (!contact || contact.stage === 'active') return
-  const patch = { stage: 'active' }
-  if (!contact.client_since) patch.client_since = new Date().toISOString().slice(0, 10)
-  let updated = await updateContact(contact.id, patch)
-  console.log(`Contract ${contract.id} signed -> contact ${contact.id} won (stage=active)`)
+// A signed project contract is the "won" event: confirm the client active and
+// stamp client_since. Idempotent — an already-active client is left as-is.
+// (The project already exists — it's the SOW hub that originated this contract.)
+async function markClientWon(contract) {
+  const client = await getClient(contract.client_id)
+  if (!client || client.status === 'active') return
+  const patch = { status: 'active' }
+  if (!client.client_since) patch.client_since = new Date().toISOString().slice(0, 10)
+  let updated = await updateClient(client.id, patch)
+  console.log(`Contract ${contract.id} signed -> client ${client.id} won (status=active)`)
 
-  // Becoming an active client provisions a Stripe customer (best-effort, mirrors
-  // the contacts route). Skipped if one already exists or Stripe is disabled.
+  // An active client provisions a Stripe customer (best-effort). Skipped if one
+  // already exists or Stripe is disabled.
   if (!updated.stripe_customer_id) {
     try {
       const customerId = await createStripeCustomer(updated)
-      if (customerId) updated = await updateContact(updated.id, { stripe_customer_id: customerId })
+      if (customerId) updated = await updateClient(updated.id, { stripe_customer_id: customerId })
     } catch (err) {
-      console.error(`Stripe customer creation failed for contact ${updated.id}:`, err.message)
+      console.error(`Stripe customer creation failed for client ${updated.id}:`, err.message)
     }
   }
-
-  // Project-creation trigger — the projects layer keys off this. Built later.
-  console.log(`TODO: create project for contact ${updated.id} from contract ${contract.id}`)
 }
 
 // Apply a single document event to its proposal or contract.
@@ -324,7 +323,7 @@ async function handleDocumentEvent(doc) {
       if (STATUS_STAMP[internal]) patch[STATUS_STAMP[internal]] = new Date()
     }
     await updateContract(contract.id, patch)
-    if (internal === 'signed' && contract.type === 'project') await markContactWon(contract)
+    if (internal === 'signed' && contract.type === 'project') await markClientWon(contract)
     return
   }
 

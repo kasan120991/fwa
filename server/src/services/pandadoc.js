@@ -28,7 +28,7 @@ async function pandadocFetch(path, { method = 'GET', body } = {}) {
   return data
 }
 
-// Split a contact's `name` ("Dana Cole") into first/last for the recipient.
+// Split a client's `name` ("Dana Cole") into first/last for the recipient.
 function splitName(name) {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean)
   return { first_name: parts[0] || undefined, last_name: parts.slice(1).join(' ') || undefined }
@@ -64,16 +64,16 @@ function pricingTable(items, tableName = 'Pricing') {
  * typically `document.uploaded`; the doc must reach `document.draft` before it
  * can be sent (see sendDocument).
  */
-export async function createDocumentFromTemplate({ templateUuid, name, contact, tokens = [], items = [], metadata = {} }) {
+export async function createDocumentFromTemplate({ templateUuid, name, client, tokens = [], items = [], metadata = {} }) {
   if (!pandadocEnabled()) return null
-  const recipientEmail = contact.billing_email || contact.email
+  const recipientEmail = client.billing_email || client.email
   const doc = await pandadocFetch('/documents', {
     method: 'POST',
     body: {
       template_uuid: templateUuid,
       name,
       recipients: recipientEmail
-        ? [{ role: 'client', email: recipientEmail, ...splitName(contact.name) }]
+        ? [{ role: 'client', email: recipientEmail, ...splitName(client.name) }]
         : [],
       tokens,
       pricing_tables: items.length ? [pricingTable(items)] : undefined,

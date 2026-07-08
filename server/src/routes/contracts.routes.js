@@ -3,7 +3,7 @@ import {
   createContract, getContract, listContracts, updateContract, deleteContract,
   CONTRACT_STATUSES, CONTRACT_TYPES
 } from '../repositories/contracts.repo.js'
-import { getContact } from '../repositories/contacts.repo.js'
+import { getClient } from '../repositories/clients.repo.js'
 import { getActiveTemplate } from '../repositories/documentTemplates.repo.js'
 import { resolveLineItems } from '../services/lineItems.js'
 import { pandadocEnabled, createDocumentFromTemplate, sendDocument } from '../services/pandadoc.js'
@@ -24,21 +24,21 @@ function parseId(req) {
 const csv = v => (typeof v === 'string' && v ? v.split(',').map(s => s.trim()).filter(Boolean) : undefined)
 
 // Best-effort PandaDoc document creation for a standalone contract. Never throws.
-async function createContractDocument(contract, contact, purpose) {
+async function createContractDocument(contract, client, purpose) {
   if (!pandadocEnabled()) return contract
   const template = await getActiveTemplate(purpose)
   if (!template) return contract
   try {
     const doc = await createDocumentFromTemplate({
       templateUuid: template.template_uuid,
-      name: `${contract.title} — ${contact.company || contact.name}`,
-      contact,
+      name: `${contract.title} — ${client.company || client.name}`,
+      client,
       tokens: [
-        { name: 'Client.Company', value: contact.company || '' },
-        { name: 'Client.Name', value: contact.name || '' }
+        { name: 'Client.Company', value: client.company || '' },
+        { name: 'Client.Name', value: client.name || '' }
       ],
       items: contract.items,
-      metadata: { fwa_contact_id: String(contact.id), fwa_contract_id: String(contract.id), type: 'contract' }
+      metadata: { fwa_client_id: String(client.id), fwa_contract_id: String(contract.id), type: 'contract' }
     })
     if (doc) return await updateContract(contract.id, { pandadoc_document_id: doc.id, pandadoc_template_id: template.template_uuid, pandadoc_status: doc.status })
   } catch (err) {
@@ -47,7 +47,7 @@ async function createContractDocument(contract, contact, purpose) {
   return contract
 }
 
-// GET /api/contracts  ?contact_id=  ?type=  ?status=a,b
+// GET /api/contracts  ?client_id=  ?type=  ?status=a,b
 contractsRouter.get('/', async (req, res) => {
   const statuses = csv(req.query.status)
   const bad = statuses?.find(s => !CONTRACT_STATUSES.has(s))
@@ -55,7 +55,7 @@ contractsRouter.get('/', async (req, res) => {
   const type = typeof req.query.type === 'string' ? req.query.type : undefined
   if (type && !CONTRACT_TYPES.has(type)) throw badRequest(`Unknown type: ${type}`)
   const result = await listContracts({
-    contact_id: req.query.contact_id ? Number(req.query.contact_id) : undefined,
+    client_id: req.query.client_id ? Number(req.query.client_id) : undefined,
     type,
     statuses,
     limit: req.query.limit,
@@ -76,10 +76,10 @@ contractsRouter.get('/:id', async (req, res) => {
 // proposal by the PandaDoc webhook (Model B).
 contractsRouter.post('/', async (req, res) => {
   const body = req.body ?? {}
-  const contactId = Number(body.contact_id)
-  if (!Number.isInteger(contactId) || contactId <= 0) throw badRequest('Validation failed', { contact_id: 'a valid contact_id is required' })
-  const contact = await getContact(contactId)
-  if (!contact) throw badRequest('Validation failed', { contact_id: 'contact not found' })
+  const clientId = Number(body.client_id)
+  if (!Number.isInteger(clientId) || clientId <= 0) throw badRequest('Validation failed', { client_id: 'a valid client_id is required' })
+  const client = await getClient(clientId)
+  if (!client) throw badRequest('Validation failed', { client_id: 'client not found' })
 
   const type = body.type ?? 'care_plan'
   if (type !== 'care_plan') throw badRequest('Validation failed', { type: 'only care_plan contracts can be created directly; project contracts come from an accepted proposal' })
@@ -94,8 +94,8 @@ contractsRouter.post('/', async (req, res) => {
   }
 
   const { rows, total } = await resolveLineItems(body.items)
-  let contract = await createContract({ contact_id: contactId, type, title, currency: body.currency, total, billing_interval, start_date, items: rows })
-  contract = await createContractDocument(contract, contact, 'care_plan')
+  let contract = await createContract({ client_id: clientId, type, title, currency: body.currency, total, billing_interval, start_date, items: rows })
+  contract = await createContractDocument(contract, client, 'care_plan')
   res.status(201).json({ data: contract })
 })
 

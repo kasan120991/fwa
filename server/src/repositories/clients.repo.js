@@ -1,0 +1,82 @@
+import { query } from '../db/pool.js'
+
+// Writable columns (id/created_at/updated_at are managed by the DB).
+export const WRITABLE = [
+  'status', 'source', 'name', 'email', 'phone', 'company', 'title', 'website', 'logo_url',
+  'notes', 'tags',
+  'address_line1', 'address_line2', 'city', 'region', 'postal_code', 'country', 'billing_email',
+  'client_since',
+  // Set internally by the Stripe integration, never from request bodies.
+  'stripe_customer_id'
+]
+
+const SORTABLE = new Set(['created_at', 'updated_at', 'name', 'company', 'status', 'client_since'])
+
+// tags is a JSON column — mysql2 parses it on read, but needs a JSON string on write.
+function toParams(data) {
+  const out = {}
+  for (const col of WRITABLE) {
+    if (data[col] === undefined) continue
+    out[col] = col === 'tags' && data[col] != null ? JSON.stringify(data[col]) : data[col]
+  }
+  return out
+}
+
+export async function listClients(opts = {}) {
+  const { statuses, q } = opts
+  const limit = Math.min(Math.max(Number(opts.limit) || 50, 1), 200)
+  const offset = Math.max(Number(opts.offset) || 0, 0)
+  const sort = SORTABLE.has(opts.sort) ? opts.sort : 'created_at'
+  const dir = String(opts.dir).toLowerCase() === 'asc' ? 'ASC' : 'DESC'
+
+  const where = []
+  const params = {}
+  if (statuses?.length) {
+    where.push(`status IN (${statuses.map((_, i) => `:status${i}`).join(', ')})`)
+    statuses.forEach((s, i) => { params[`status${i}`] = s })
+  }
+  if (q) {
+    where.push('(name LIKE :q OR company LIKE :q OR email LIKE :q OR phone LIKE :q)')
+    params.q = `%${q}%`
+  }
+  const whereSql = where.length ? ` WHERE ${where.join(' AND ')}` : ''
+
+  const rows = await query(
+    `SELECT * FROM clients${whereSql} ORDER BY ${sort} ${dir} LIMIT ${limit} OFFSET ${offset}`,
+    params
+  )
+  const [{ total }] = await query(`SELECT COUNT(*) AS total FROM clients${whereSql}`, params)
+  return { rows, total, limit, offset }
+}
+
+export async function getClient(id) {
+  const rows = await query('SELECT * FROM clients WHERE id = :id LIMIT 1', { id })
+  return rows[0] ?? null
+}
+
+export async function getClientByStripeCustomerId(customerId) {
+  const rows = await query('SELECT * FROM clients WHERE stripe_customer_id = :cid LIMIT 1', { cid: customerId })
+  return rows[0] ?? null
+}
+
+export async function createClient(data) {
+  const params = toParams(data)
+  const cols = Object.keys(params)
+  const sql = `INSERT INTO clients (${cols.join(', ')}) VALUES (${cols.map(c => `:${c}`).join(', ')})`
+  const result = await query(sql, params)
+  return getClient(result.insertId)
+}
+
+export async function updateClient(id, data) {
+  const params = toParams(data)
+  const cols = Object.keys(params)
+  if (cols.length === 0) return getClient(id)
+  const set = cols.map(c => `${c} = :${c}`).join(', ')
+  await query(`UPDATE clients SET ${set} WHERE id = :id`, { ...params, id })
+  return getClient(id)
+}
+
+export async function deleteClient(id) {
+  const result = await query('DELETE FROM clients WHERE id = :id', { id })
+  return result.affectedRows > 0
+}

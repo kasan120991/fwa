@@ -1,5 +1,11 @@
 -- ============================================================================
--- FWA Ops App — Proposals & Contracts schema
+-- ⚠️ DEPRECATED / HISTORICAL — DO NOT USE.
+-- This annotated reference predates the leads/clients split. Sales artifacts
+-- now FK `client_id` -> clients (not `contact_id` -> contacts, which no longer
+-- exists). The single source of truth is server/src/db/schema.sql.
+-- Kept only for the original design rationale below.
+-- ============================================================================
+-- FWA Ops App — Proposals & Contracts schema (historical)
 -- ----------------------------------------------------------------------------
 -- Build order: this is step 1 (schema) for the server/ folder. Routes next.
 --

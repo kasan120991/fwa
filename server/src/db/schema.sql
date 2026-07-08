@@ -1,32 +1,36 @@
 -- =====================================================================
 -- FWA Ops — core schema
--- Two tables drive the app (see CLAUDE.md "Core data model"):
---   contacts  — one row backs a lead AND a client; conversion is a stage
---               change on this row, never a copy between tables.
---   calls     — append-only event log of receptionist calls; links to a
---               contact via a NULLABLE contact_id (set only when relevant).
+-- Three tables drive the app (see CLAUDE.md "Core data model"):
+--   leads    — top-of-funnel only: website contact-form + manual outreach.
+--              A lead holds no sales artifacts. Converting a lead COPIES it
+--              into a new `clients` row and DELETES the lead.
+--   clients  — converted parties. Everything sales/billing/delivery
+--              (proposals, contracts, projects, invoices, payments) FKs a
+--              client. Leads never own those.
+--   calls    — append-only receptionist call log; links to a lead OR a
+--              client via NULLABLE lead_id / client_id (set when relevant).
 -- Run with `npm run migrate` (creates the database if absent).
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
--- contacts — leads and clients, unified. Filtered into views by `stage`.
+-- leads — top-of-funnel pipeline. source website = Inbound (contact form),
+--   source manual = Outreach. No billing/address/stripe — those are client
+--   concerns. A lead is converted (copied to `clients`, then deleted) once
+--   real work starts; it is never itself the parent of a proposal/project.
 -- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS contacts (
+CREATE TABLE IF NOT EXISTS leads (
   id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 
-  -- How the contact entered. Drives the Leads page split:
-  --   website + call = Inbound,  manual = Outreach.
-  source             ENUM('website', 'call', 'manual', 'referral') NOT NULL,
+  -- How the lead entered: website (contact form) = Inbound, manual = Outreach.
+  source             ENUM('website', 'manual') NOT NULL,
 
-  -- Unified lifecycle across both motions:
-  --   Inbound early:  new -> qualifying
-  --   Outreach early: to_contact -> contacted -> engaged
-  --   Converge:       qualified -> proposal
-  --   Client:         active (proposal won) -> past ;  lost = dead/declined
-  -- Leads page = pre-client stages; Clients page = active/past.
+  -- Lead lifecycle (pre-client only):
+  --   Inbound:  new -> qualifying -> qualified
+  --   Outreach: to_contact -> contacted -> engaged -> qualified
+  --   lost = dead/declined. There is no 'proposal'/'active'/'past' here —
+  --   converting to a client leaves this table.
   stage              ENUM('new', 'qualifying', 'to_contact', 'contacted',
-                          'engaged', 'qualified', 'proposal', 'active',
-                          'past', 'lost') NOT NULL DEFAULT 'new',
+                          'engaged', 'qualified', 'lost') NOT NULL DEFAULT 'new',
 
   -- `name` = primary contact person; `company` = the business.
   name               VARCHAR(160) NOT NULL,
@@ -36,11 +40,77 @@ CREATE TABLE IF NOT EXISTS contacts (
   title              VARCHAR(120) NULL,   -- contact's role, e.g. "Marketing Director"
   website            VARCHAR(255) NULL,   -- site/domain, e.g. "northwind.com"
 
-  -- Client logo — a data: URL (small uploaded image) or external image URL.
-  logo_url           MEDIUMTEXT NULL,
-
   -- Inbound inquiry text (website form message); call inquiries surface via `calls`.
   message            TEXT NULL,
+
+  -- Freeform internal notes.
+  notes              TEXT NULL,
+
+  -- Tags — JSON array of strings (e.g. ["E-commerce","Priority"]).
+  tags               JSON NULL,
+
+  -- Outreach follow-up cadence. next_action_at in the past = overdue touch.
+  last_contacted_at  DATETIME NULL,
+  next_action_at     DATETIME NULL,
+
+  created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                       ON UPDATE CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+
+  KEY idx_leads_stage (stage),
+  -- Inbound/Outreach are (source) + (stage) filters.
+  KEY idx_leads_source_stage (source, stage),
+  -- Outreach cadence: surface overdue/upcoming touches cheaply.
+  KEY idx_leads_next_action (next_action_at),
+  KEY idx_leads_email (email),
+  KEY idx_leads_phone (phone)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- lead_touches — the outreach touch log for a lead (call/email/etc.). A
+--   lead-phase concern only: CASCADE-deleted when the lead converts (and is
+--   deleted) or is removed. Logging a touch also bumps leads.last_contacted_at.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS lead_touches (
+  id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  lead_id      BIGINT UNSIGNED NOT NULL,
+  channel      ENUM('call', 'email', 'sms', 'meeting', 'note', 'other') NOT NULL DEFAULT 'note',
+  body         TEXT NULL,                 -- what happened
+  occurred_at  DATETIME NOT NULL,         -- when the touch happened
+  created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  KEY idx_lead_touches_lead (lead_id, occurred_at),
+  CONSTRAINT fk_lead_touches_lead FOREIGN KEY (lead_id)
+    REFERENCES leads (id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- clients — converted parties. Created by copying a lead on conversion
+--   (or directly). Owns all sales/billing artifacts via client_id FKs.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS clients (
+  id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+
+  -- Client relationship status. active = current; past = former; lost =
+  -- converted but the deal fell through.
+  status             ENUM('active', 'past', 'lost') NOT NULL DEFAULT 'active',
+
+  -- How the client originally entered (carried from the lead, for reporting).
+  source             ENUM('website', 'manual', 'call', 'direct') NOT NULL DEFAULT 'direct',
+
+  -- `name` = primary contact person; `company` = the business.
+  name               VARCHAR(160) NOT NULL,
+  email              VARCHAR(254) NULL,
+  phone              VARCHAR(32)  NULL,
+  company            VARCHAR(160) NULL,
+  title              VARCHAR(120) NULL,
+  website            VARCHAR(255) NULL,
+
+  -- Client logo — a data: URL (small uploaded image) or external image URL.
+  logo_url           MEDIUMTEXT NULL,
 
   -- Freeform internal notes (client detail notes box).
   notes              TEXT NULL,
@@ -56,18 +126,14 @@ CREATE TABLE IF NOT EXISTS contacts (
   postal_code        VARCHAR(20)  NULL,
   country            VARCHAR(120) NULL,
 
-  -- Billing email (invoices). Falls back to the contact email when blank.
+  -- Billing email (invoices). Falls back to the client email when blank.
   billing_email      VARCHAR(254) NULL,
 
-  -- Date the contact became a client (stage -> active).
+  -- Date the party became a client (conversion date).
   client_since       DATE NULL,
 
-  -- Stripe customer id (cus_…), created when the contact becomes an active client.
+  -- Stripe customer id (cus_…), created when the client is provisioned.
   stripe_customer_id VARCHAR(255) NULL,
-
-  -- Outreach follow-up cadence. next_action_at in the past = overdue touch.
-  last_contacted_at  DATETIME NULL,
-  next_action_at     DATETIME NULL,
 
   created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -75,16 +141,11 @@ CREATE TABLE IF NOT EXISTS contacts (
 
   PRIMARY KEY (id),
 
-  -- Clients view (stage IN active/past) and any stage filter.
-  KEY idx_contacts_stage (stage),
-  -- Leads views: Inbound/Outreach are (source) + (stage) filters.
-  KEY idx_contacts_source_stage (source, stage),
-  -- Outreach cadence: surface overdue/upcoming touches cheaply.
-  KEY idx_contacts_next_action (next_action_at),
-  KEY idx_contacts_email (email),
-  KEY idx_contacts_phone (phone),
-  -- Reverse lookup from a Stripe customer (e.g. webhook handling later).
-  KEY idx_contacts_stripe (stripe_customer_id)
+  KEY idx_clients_status (status),
+  KEY idx_clients_email (email),
+  KEY idx_clients_phone (phone),
+  -- Reverse lookup from a Stripe customer (webhook handling).
+  KEY idx_clients_stripe (stripe_customer_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
@@ -93,9 +154,12 @@ CREATE TABLE IF NOT EXISTS contacts (
 CREATE TABLE IF NOT EXISTS calls (
   id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 
-  -- Set only when a call becomes / belongs to a contact (inquiry or existing
-  -- client). Everything else (spam, wrong_number, other) stays unlinked.
-  contact_id         BIGINT UNSIGNED NULL,
+  -- Set only when a call belongs to a lead or a client. An inquiry call
+  -- converted to a lead sets lead_id; an existing-client call sets client_id;
+  -- on conversion the link is moved lead_id -> client_id. Everything else
+  -- (spam, wrong_number, other) stays unlinked.
+  lead_id            BIGINT UNSIGNED NULL,
+  client_id          BIGINT UNSIGNED NULL,
 
   classification     ENUM('inquiry', 'client', 'spam', 'wrong_number', 'other') NOT NULL,
 
@@ -117,21 +181,24 @@ CREATE TABLE IF NOT EXISTS calls (
 
   PRIMARY KEY (id),
 
-  KEY idx_calls_contact (contact_id),
+  KEY idx_calls_lead (lead_id),
+  KEY idx_calls_client (client_id),
   KEY idx_calls_classification (classification),
   -- Receptionist inbox is ordered by recency.
   KEY idx_calls_occurred_at (occurred_at),
 
-  -- Deleting a contact must NOT delete its call history — keep the event log.
-  CONSTRAINT fk_calls_contact FOREIGN KEY (contact_id)
-    REFERENCES contacts (id) ON DELETE SET NULL ON UPDATE CASCADE
+  -- Deleting a lead/client must NOT delete its call history — keep the event log.
+  CONSTRAINT fk_calls_lead FOREIGN KEY (lead_id)
+    REFERENCES leads (id) ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_calls_client FOREIGN KEY (client_id)
+    REFERENCES clients (id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
 -- users — app login accounts. Two-sided by design (see CLAUDE.md):
 --   role = 'admin'  -> internal ops app (the only role in use this phase)
 --   role = 'client' -> external client portal (built in a later phase)
--- Client-portal users will later link to their contacts row; that column
+-- Client-portal users will later link to their clients row; that column
 -- is added when the portal is built, not speculatively now.
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
@@ -176,12 +243,12 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 -- =====================================================================
 -- Proposals & Contracts — the sales-paperwork layer (PandaDoc-driven).
--- Full rationale + workflow: server/proposals-contracts-build-plan.md;
--- annotated DDL reference: server/proposals_contracts_schema.sql. These
--- six tables are the operational copy (IF NOT EXISTS + the app's
--- utf8mb4_unicode_ci collation) that `npm run migrate` creates.
+-- Full rationale + workflow: server/proposals-contracts-build-plan.md.
+-- These tables are the operational copy that `npm run migrate` creates.
 --
 -- Design decisions baked in:
+--   * All sales artifacts are children of a CLIENT (client_id) — leads never
+--     own proposals/contracts. Starting one presupposes a converted client.
 --   * Separate proposals and contracts tables, merged into one list at the
 --     query layer (the Agreements page), not the schema layer.
 --   * Model B: accepting a proposal generates a *separate* contract document;
@@ -189,8 +256,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 --   * Line items are SNAPSHOTTED — services holds current pricing; the
 --     line-item tables freeze name/price/qty at build time. service_id
 --     nullable: set = catalog line, NULL = one-off custom line.
---   * Contact stage stays coarse; granular state lives on these rows'
---     status. A signed contract of type='project' is the project trigger.
+--   * A signed contract of type='project' marks the client won (status active).
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
@@ -215,11 +281,11 @@ CREATE TABLE IF NOT EXISTS services (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
--- proposals — child of a contact; maps to one PandaDoc document.
+-- proposals — child of a client; maps to one PandaDoc document.
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS proposals (
   id                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  contact_id           BIGINT UNSIGNED NOT NULL,
+  client_id            BIGINT UNSIGNED NOT NULL,
   project_id           BIGINT UNSIGNED NULL,       -- soft link: the originating project (no FK, see migrate.js)
   title                VARCHAR(255)    NOT NULL,
   status               ENUM('draft', 'sent', 'viewed', 'accepted',
@@ -246,11 +312,11 @@ CREATE TABLE IF NOT EXISTS proposals (
                                        ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_proposals_pandadoc_doc (pandadoc_document_id),
-  KEY idx_proposals_contact (contact_id),
+  KEY idx_proposals_client (client_id),
   KEY idx_proposals_project (project_id),
   KEY idx_proposals_status  (status),
-  CONSTRAINT fk_proposals_contact
-    FOREIGN KEY (contact_id) REFERENCES contacts (id)
+  CONSTRAINT fk_proposals_client
+    FOREIGN KEY (client_id) REFERENCES clients (id)
     ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
@@ -282,13 +348,13 @@ CREATE TABLE IF NOT EXISTS proposal_line_items (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
--- contracts — child of a contact; optionally born from a proposal.
---   type branches the "signed" webhook: project -> create project,
+-- contracts — child of a client; optionally born from a proposal.
+--   type branches the "signed" webhook: project -> marks the client won,
 --   care_plan -> its own separate flow.
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS contracts (
   id                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  contact_id           BIGINT UNSIGNED NOT NULL,
+  client_id            BIGINT UNSIGNED NOT NULL,
   proposal_id          BIGINT UNSIGNED NULL,       -- NULL = standalone (e.g. Care Plan)
   project_id           BIGINT UNSIGNED NULL,       -- soft link: the originating project (no FK, see migrate.js)
   type                 ENUM('project', 'care_plan') NOT NULL,
@@ -319,13 +385,13 @@ CREATE TABLE IF NOT EXISTS contracts (
                                        ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_contracts_pandadoc_doc (pandadoc_document_id),
-  KEY idx_contracts_contact  (contact_id),
+  KEY idx_contracts_client   (client_id),
   KEY idx_contracts_proposal (proposal_id),
   KEY idx_contracts_project  (project_id),
   KEY idx_contracts_type     (type),
   KEY idx_contracts_status   (status),
-  CONSTRAINT fk_contracts_contact
-    FOREIGN KEY (contact_id) REFERENCES contacts (id)
+  CONSTRAINT fk_contracts_client
+    FOREIGN KEY (client_id) REFERENCES clients (id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT fk_contracts_proposal
     FOREIGN KEY (proposal_id) REFERENCES proposals (id)
@@ -450,12 +516,12 @@ CREATE TABLE IF NOT EXISTS project_types (
 
 -- ---------------------------------------------------------------------
 -- projects — a client engagement + its Statement of Work (Exhibit A).
---   Child of a contact; typed via project_types. The SOW fields below
+--   Child of a client; typed via project_types. The SOW fields below
 --   feed the contract's PandaDoc tokens on generation.
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS projects (
   id                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  contact_id           BIGINT UNSIGNED NOT NULL,
+  client_id            BIGINT UNSIGNED NOT NULL,
   project_type_id      BIGINT UNSIGNED NOT NULL,
   code                 VARCHAR(50)     NULL,              -- 'WEB-0007', assigned on create
   name                 VARCHAR(255)    NOT NULL,
@@ -489,12 +555,12 @@ CREATE TABLE IF NOT EXISTS projects (
                                        ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_projects_code (code),
-  KEY idx_projects_contact (contact_id),
+  KEY idx_projects_client (client_id),
   KEY idx_projects_type    (project_type_id),
   KEY idx_projects_status  (status),
   KEY idx_projects_due     (target_launch_date),
-  CONSTRAINT fk_projects_contact
-    FOREIGN KEY (contact_id) REFERENCES contacts (id)
+  CONSTRAINT fk_projects_client
+    FOREIGN KEY (client_id) REFERENCES clients (id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT fk_projects_type
     FOREIGN KEY (project_type_id) REFERENCES project_types (id)
@@ -527,6 +593,24 @@ CREATE TABLE IF NOT EXISTS tasks (
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- task_checklist_items — a flat checklist of sub-items under a task. Drives the
+-- per-task progress bar (done/total); independent of the task's own done state.
+CREATE TABLE IF NOT EXISTS task_checklist_items (
+  id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  task_id    BIGINT UNSIGNED NOT NULL,
+  title      VARCHAR(255)    NOT NULL,
+  done       TINYINT(1)      NOT NULL DEFAULT 0,
+  position   INT             NOT NULL DEFAULT 0,
+  created_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                             ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_tci_task (task_id, position),
+  CONSTRAINT fk_tci_task
+    FOREIGN KEY (task_id) REFERENCES tasks (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 -- =====================================================================
 -- BILLING — invoices & payments.
 --   Local source of truth for the Invoices/Payments pages, kept in sync
@@ -536,11 +620,11 @@ CREATE TABLE IF NOT EXISTS tasks (
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
--- invoices — a bill sent to a contact, mirrored from a Stripe invoice.
+-- invoices — a bill sent to a client, mirrored from a Stripe invoice.
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS invoices (
   id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  contact_id         BIGINT UNSIGNED NOT NULL,
+  client_id          BIGINT UNSIGNED NOT NULL,
   project_id         BIGINT UNSIGNED NULL,             -- soft link (no FK, see migrate.js)
   stripe_invoice_id  VARCHAR(100)    NULL,
   number             VARCHAR(50)     NULL,             -- Stripe number, set on finalize
@@ -562,12 +646,12 @@ CREATE TABLE IF NOT EXISTS invoices (
                                      ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_invoices_stripe (stripe_invoice_id),
-  KEY idx_invoices_contact (contact_id),
+  KEY idx_invoices_client (client_id),
   KEY idx_invoices_project (project_id),
   KEY idx_invoices_status  (status),
   KEY idx_invoices_due     (due_date),
-  CONSTRAINT fk_invoices_contact
-    FOREIGN KEY (contact_id) REFERENCES contacts (id)
+  CONSTRAINT fk_invoices_client
+    FOREIGN KEY (client_id) REFERENCES clients (id)
     ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
@@ -605,7 +689,7 @@ CREATE TABLE IF NOT EXISTS invoice_line_items (
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS payments (
   id                       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  contact_id               BIGINT UNSIGNED NOT NULL,
+  client_id                BIGINT UNSIGNED NOT NULL,
   invoice_id               BIGINT UNSIGNED NULL,
   stripe_payment_intent_id VARCHAR(100)    NULL,
   amount                   DECIMAL(10,2)   NOT NULL,
@@ -617,13 +701,84 @@ CREATE TABLE IF NOT EXISTS payments (
   created_at               TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_payments_stripe_pi (stripe_payment_intent_id),
-  KEY idx_payments_contact (contact_id),
+  KEY idx_payments_client (client_id),
   KEY idx_payments_invoice (invoice_id),
   KEY idx_payments_paid    (paid_at),
-  CONSTRAINT fk_payments_contact
-    FOREIGN KEY (contact_id) REFERENCES contacts (id)
+  CONSTRAINT fk_payments_client
+    FOREIGN KEY (client_id) REFERENCES clients (id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT fk_payments_invoice
     FOREIGN KEY (invoice_id) REFERENCES invoices (id)
     ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- websites — one row per site FWA builds/maintains, under a client. Daily traffic
+-- lives in website_metrics; top pages/sources + health are current snapshots on the
+-- row. analytics_provider = 'none' means analytics isn't connected yet. project_id
+-- links back to the SOW that built it (optional).
+CREATE TABLE IF NOT EXISTS websites (
+  id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  client_id          BIGINT UNSIGNED NOT NULL,
+  project_id         BIGINT UNSIGNED NULL,
+  name               VARCHAR(160)    NOT NULL,
+  domain             VARCHAR(255)    NOT NULL,
+  url                VARCHAR(255)    NULL,
+  environment        ENUM('live', 'staging', 'dev')                      NOT NULL DEFAULT 'live',
+  status             ENUM('active', 'archived')                          NOT NULL DEFAULT 'active',
+  analytics_provider ENUM('none', 'plausible', 'ga4', 'fathom', 'umami') NOT NULL DEFAULT 'none',
+  analytics_site_id  VARCHAR(190)    NULL,
+  last_synced_at     DATETIME        NULL,
+  conversion_goal    VARCHAR(120)    NULL,
+  health_state       ENUM('up', 'degraded', 'down', 'unknown')          NOT NULL DEFAULT 'unknown',
+  uptime_pct         DECIMAL(5,2)    NULL,
+  perf_score         TINYINT UNSIGNED NULL,
+  avg_lcp_ms         INT UNSIGNED    NULL,
+  last_checked_at    DATETIME        NULL,
+  top_pages          JSON            NULL,
+  top_sources        JSON            NULL,
+  launched_at        DATE            NULL,
+  notes              TEXT            NULL,
+  created_at         TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_websites_client (client_id),
+  KEY idx_websites_project (project_id),
+  CONSTRAINT fk_websites_client
+    FOREIGN KEY (client_id) REFERENCES clients (id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_websites_project
+    FOREIGN KEY (project_id) REFERENCES projects (id)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- website_metrics — daily traffic snapshot per site; source for trend charts + the
+-- 30-day rollups shown on the dashboard and detail pages.
+CREATE TABLE IF NOT EXISTS website_metrics (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  website_id  BIGINT UNSIGNED NOT NULL,
+  date        DATE            NOT NULL,
+  visitors    INT UNSIGNED    NOT NULL DEFAULT 0,
+  pageviews   INT UNSIGNED    NOT NULL DEFAULT 0,
+  conversions INT UNSIGNED    NOT NULL DEFAULT 0,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_wm_site_date (website_id, date),
+  CONSTRAINT fk_wm_website
+    FOREIGN KEY (website_id) REFERENCES websites (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- website_checks — uptime/response-time history (one row per check), source for
+-- the detail page's health trend and the rolling uptime %.
+CREATE TABLE IF NOT EXISTS website_checks (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  website_id  BIGINT UNSIGNED NOT NULL,
+  checked_at  DATETIME        NOT NULL,
+  up          TINYINT(1)      NOT NULL DEFAULT 1,
+  status_code INT             NULL,
+  response_ms INT UNSIGNED    NULL,
+  PRIMARY KEY (id),
+  KEY idx_wc_site_time (website_id, checked_at),
+  CONSTRAINT fk_wc_website
+    FOREIGN KEY (website_id) REFERENCES websites (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

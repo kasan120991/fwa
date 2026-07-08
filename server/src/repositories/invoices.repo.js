@@ -52,12 +52,12 @@ async function insertItems(q, invoiceId, items) {
   }
 }
 
-export async function createInvoice({ contact_id, project_id = null, kind = 'custom', currency = 'USD', description = null, amount_due = 0, due_date = null, status = 'draft', stripe_invoice_id = null, items = [] }) {
+export async function createInvoice({ client_id, project_id = null, kind = 'custom', currency = 'USD', description = null, amount_due = 0, due_date = null, status = 'draft', stripe_invoice_id = null, items = [] }) {
   const id = await withTransaction(async (q) => {
     const rows = await q(
-      `INSERT INTO invoices (contact_id, project_id, kind, currency, description, amount_due, due_date, status, stripe_invoice_id)
-       VALUES (:contact_id, :project_id, :kind, :currency, :description, :amount_due, :due_date, :status, :stripe_invoice_id)`,
-      { contact_id, project_id, kind, currency, description, amount_due, due_date, status, stripe_invoice_id }
+      `INSERT INTO invoices (client_id, project_id, kind, currency, description, amount_due, due_date, status, stripe_invoice_id)
+       VALUES (:client_id, :project_id, :kind, :currency, :description, :amount_due, :due_date, :status, :stripe_invoice_id)`,
+      { client_id, project_id, kind, currency, description, amount_due, due_date, status, stripe_invoice_id }
     )
     const invoiceId = rows.insertId
     if (items.length) await insertItems(q, invoiceId, items)
@@ -69,8 +69,8 @@ export async function createInvoice({ contact_id, project_id = null, kind = 'cus
 export async function getInvoice(id) {
   const rows = await query(
     `SELECT i.*, ${OVERDUE_EXPR} AS is_overdue,
-       c.name AS contact_name, c.company AS contact_company, c.email AS contact_email
-     FROM invoices i JOIN contacts c ON c.id = i.contact_id
+       c.name AS client_name, c.company AS client_company, c.email AS client_email
+     FROM invoices i JOIN clients c ON c.id = i.client_id
      WHERE i.id = :id LIMIT 1`,
     { id }
   )
@@ -91,7 +91,7 @@ export async function listInvoices(opts = {}) {
   const offset = Math.max(Number(opts.offset) || 0, 0)
   const where = []
   const params = {}
-  if (opts.contact_id) { where.push('i.contact_id = :contact_id'); params.contact_id = opts.contact_id }
+  if (opts.client_id) { where.push('i.client_id = :client_id'); params.client_id = opts.client_id }
   if (opts.project_id) { where.push('i.project_id = :project_id'); params.project_id = opts.project_id }
   if (opts.status) { where.push('i.status = :status'); params.status = opts.status }
   if (opts.overdue) { where.push(OVERDUE_EXPR) }
@@ -101,12 +101,12 @@ export async function listInvoices(opts = {}) {
   }
   const whereSql = where.length ? ` WHERE ${where.join(' AND ')}` : ''
   const rows = await query(
-    `SELECT i.*, ${OVERDUE_EXPR} AS is_overdue, c.name AS contact_name, c.company AS contact_company
-     FROM invoices i JOIN contacts c ON c.id = i.contact_id${whereSql}
+    `SELECT i.*, ${OVERDUE_EXPR} AS is_overdue, c.name AS client_name, c.company AS client_company
+     FROM invoices i JOIN clients c ON c.id = i.client_id${whereSql}
      ORDER BY i.created_at DESC LIMIT ${limit} OFFSET ${offset}`,
     params
   )
-  const [{ total }] = await query(`SELECT COUNT(*) AS total FROM invoices i JOIN contacts c ON c.id = i.contact_id${whereSql}`, params)
+  const [{ total }] = await query(`SELECT COUNT(*) AS total FROM invoices i JOIN clients c ON c.id = i.client_id${whereSql}`, params)
   return { rows: rows.map(mapInvoice), total, limit, offset }
 }
 
@@ -125,13 +125,13 @@ export async function updateInvoice(id, data) {
  *  id in Stripe metadata to dodge the create/webhook race), then — for invoices
  *  born in the Stripe dashboard — creates a bare row against the resolved
  *  contact. Always writes `stripe_invoice_id` so the link is set exactly once. */
-export async function upsertFromStripe(stripeInvoiceId, contactId, fields, localIdHint = null) {
+export async function upsertFromStripe(stripeInvoiceId, clientId, fields, localIdHint = null) {
   let existing = await getInvoiceByStripeId(stripeInvoiceId)
   if (!existing && localIdHint) existing = await getInvoice(localIdHint)
   if (existing) return updateInvoice(existing.id, { stripe_invoice_id: stripeInvoiceId, ...fields })
-  if (!contactId) return null
+  if (!clientId) return null
   const created = await createInvoice({
-    contact_id: contactId,
+    client_id: clientId,
     stripe_invoice_id: stripeInvoiceId,
     kind: 'custom',
     amount_due: fields.amount_due ?? 0,

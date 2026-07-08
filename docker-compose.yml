@@ -1,0 +1,73 @@
+name: fwa-ops
+
+# Production stack for the FWA ops app, deployed alongside the marketing site on
+# the same box. The marketing site's Caddy (network website_default) reverse-
+# proxies OPS_DOMAIN: /api,/socket.io,/uploads -> api:4000, everything else ->
+# app:3000 (see deploy/ops.Caddyfile). Values come from .env.production.
+#   docker compose --env-file .env.production up -d --build
+
+services:
+  mysql:
+    image: mysql:8
+    restart: unless-stopped
+    command: ["--innodb-buffer-pool-size=128M", "--performance-schema=OFF"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: fwa_ops
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      CORS_ORIGIN: https://${OPS_DOMAIN}
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: ${DB_ROOT_PASSWORD}
+      DB_NAME: fwa_ops
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      PANDADOC_API_KEY: ${PANDADOC_API_KEY}
+      PANDADOC_WEBHOOK_KEY: ${PANDADOC_WEBHOOK_KEY}
+      CONTACT_FORM_WEBHOOK_SECRET: ${CONTACT_FORM_WEBHOOK_SECRET}
+    volumes:
+      - api_uploads:/app/uploads
+    networks: [internal, proxy]
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # ssr:false SPA served by Nitro — public runtimeConfig is injected at runtime.
+      NUXT_PUBLIC_API_BASE: https://${OPS_DOMAIN}/api
+    networks: [internal, proxy]
+    depends_on:
+      - api
+
+networks:
+  internal:
+  proxy:
+    external: true
+    name: website_default
+
+volumes:
+  mysql_data:
+  api_uploads:

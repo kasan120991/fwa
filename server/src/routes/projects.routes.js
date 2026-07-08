@@ -4,7 +4,7 @@ import {
 } from '../repositories/projects.repo.js'
 import { createProject, updateProject, deleteProject } from '../services/projects.service.js'
 import { listTasks } from '../repositories/tasks.repo.js'
-import { getContact, updateContact } from '../repositories/contacts.repo.js'
+import { getClient, updateClient } from '../repositories/clients.repo.js'
 import { getProjectType, getProjectTypeByKey } from '../repositories/projectTypes.repo.js'
 import { generateProjectContract } from '../services/projectContract.js'
 import { stripeEnabled, createStripeCustomer, sendDepositInvoice } from '../services/stripe.js'
@@ -31,7 +31,7 @@ const DATE_FIELDS = ['content_deadline', 'start_date', 'target_launch_date']
 const INT_FIELDS = ['revision_rounds', 'inactivity_days', 'feedback_days', 'late_fee_days', 'bugfix_days']
 const MONEY_FIELDS = ['project_fee', 'hourly_rate']
 
-// Validate + normalize a project body. On create, name is required; contact_id
+// Validate + normalize a project body. On create, name is required; client_id
 // and project_type_id are resolved in the handler. partial=true for PATCH.
 function validateProject(body, { partial = false } = {}) {
   const data = {}
@@ -88,12 +88,12 @@ function validateProject(body, { partial = false } = {}) {
   return data
 }
 
-// GET /api/projects  ?contact_id= ?project_type_id= ?status= ?search= ?overdue=1
+// GET /api/projects  ?client_id= ?project_type_id= ?status= ?search= ?overdue=1
 projectsRouter.get('/', async (req, res) => {
   const status = typeof req.query.status === 'string' ? req.query.status : undefined
   if (status && !PROJECT_STATUSES.has(status)) throw badRequest(`Unknown status: ${status}`)
   const result = await listProjects({
-    contact_id: req.query.contact_id ? Number(req.query.contact_id) : undefined,
+    client_id: req.query.client_id ? Number(req.query.client_id) : undefined,
     project_type_id: req.query.project_type_id ? Number(req.query.project_type_id) : undefined,
     status,
     search: typeof req.query.search === 'string' && req.query.search.trim() ? req.query.search.trim() : undefined,
@@ -121,14 +121,14 @@ projectsRouter.get('/:id/tasks', async (req, res) => {
   res.json({ data: result.rows, total: result.total })
 })
 
-// POST /api/projects — create a project (the SOW). contact_id + name required;
+// POST /api/projects — create a project (the SOW). client_id + name required;
 // project_type_id optional (defaults to the 'website' type).
 projectsRouter.post('/', async (req, res) => {
   const body = req.body ?? {}
-  const contactId = Number(body.contact_id)
-  if (!Number.isInteger(contactId) || contactId <= 0) throw badRequest('Validation failed', { contact_id: 'a valid contact_id is required' })
-  const contact = await getContact(contactId)
-  if (!contact) throw badRequest('Validation failed', { contact_id: 'contact not found' })
+  const clientId = Number(body.client_id)
+  if (!Number.isInteger(clientId) || clientId <= 0) throw badRequest('Validation failed', { client_id: 'a valid client_id is required' })
+  const client = await getClient(clientId)
+  if (!client) throw badRequest('Validation failed', { client_id: 'client not found' })
 
   let type
   if (body.project_type_id != null) {
@@ -140,7 +140,7 @@ projectsRouter.post('/', async (req, res) => {
   }
 
   const data = validateProject(body, { partial: false })
-  const project = await createProject({ ...data, contact_id: contactId, project_type_id: type.id })
+  const project = await createProject({ ...data, client_id: clientId, project_type_id: type.id })
   res.status(201).json({ data: project })
 })
 
@@ -162,9 +162,9 @@ projectsRouter.post('/:id/contract', async (req, res) => {
   if (!project.name || project.project_fee == null) {
     throw badRequest('Validation failed', { project_fee: 'a project name and fee are required before generating a contract' })
   }
-  const contact = await getContact(project.contact_id)
-  if (!contact) return res.status(404).json({ error: { message: 'Project contact not found' } })
-  const contract = await generateProjectContract(project, contact)
+  const client = await getClient(project.client_id)
+  if (!client) return res.status(404).json({ error: { message: 'Project client not found' } })
+  const contract = await generateProjectContract(project, client)
   res.status(201).json({ data: contract })
 })
 
@@ -179,32 +179,32 @@ projectsRouter.post('/:id/deposit-invoice', async (req, res) => {
   }
   if (!stripeEnabled()) return res.status(409).json({ error: { message: 'Stripe is not configured' } })
 
-  let contact = await getContact(project.contact_id)
-  if (!contact) return res.status(404).json({ error: { message: 'Project contact not found' } })
-  // Provision a Stripe customer on demand (project can belong to any contact).
-  if (!contact.stripe_customer_id) {
-    const customerId = await createStripeCustomer(contact)
-    if (customerId) contact = await updateContact(contact.id, { stripe_customer_id: customerId })
+  let client = await getClient(project.client_id)
+  if (!client) return res.status(404).json({ error: { message: 'Project client not found' } })
+  // Provision a Stripe customer on demand (project can belong to any client).
+  if (!client.stripe_customer_id) {
+    const customerId = await createStripeCustomer(client)
+    if (customerId) client = await updateClient(client.id, { stripe_customer_id: customerId })
   }
-  if (!contact.stripe_customer_id) return res.status(409).json({ error: { message: 'Could not create a Stripe customer for this client' } })
+  if (!client.stripe_customer_id) return res.status(409).json({ error: { message: 'Could not create a Stripe customer for this client' } })
 
   const pct = project.deposit_pct ?? 50
   const deposit = Math.round((project.project_fee * pct / 100) * 100) / 100
-  const clientName = contact.company || contact.name
+  const clientName = client.company || client.name
   const description = `Deposit (${pct}%) — ${project.name}`
 
   // Local invoice first (draft), so the deposit shows on the Invoices page and
   // its id can ride along in Stripe metadata (dodges the webhook create race).
   let localInvoice = await createInvoice({
-    contact_id: contact.id, project_id: project.id, kind: 'deposit', description,
+    client_id: client.id, project_id: project.id, kind: 'deposit', description,
     amount_due: deposit, status: 'draft',
     items: [{ service_id: null, name_snapshot: description, description_snapshot: null, unit_price_snapshot: deposit, qty: 1, billing_interval_snapshot: 'one_time', sort_order: 0 }]
   })
 
-  const stripeInvoice = await sendDepositInvoice(contact, {
+  const stripeInvoice = await sendDepositInvoice(client, {
     amountCents: Math.round(deposit * 100),
     description,
-    metadata: { fwa_project_id: String(project.id), fwa_contact_id: String(contact.id), fwa_invoice_id: String(localInvoice.id), kind: 'deposit' }
+    metadata: { fwa_project_id: String(project.id), fwa_client_id: String(client.id), fwa_invoice_id: String(localInvoice.id), kind: 'deposit' }
   })
   if (stripeInvoice) {
     localInvoice = await updateInvoice(localInvoice.id, {
@@ -228,6 +228,67 @@ projectsRouter.post('/:id/deposit-invoice', async (req, res) => {
   }
 
   res.json({ data: { id: localInvoice.id, hosted_invoice_url: localInvoice.hosted_invoice_url, status: localInvoice.status, amount: deposit } })
+})
+
+// POST /api/projects/:id/final-invoice — Stripe-send the client the final
+// (balance) invoice for the remaining fee after the deposit. Mirror of the
+// deposit route; kind = 'balance'.
+projectsRouter.post('/:id/final-invoice', async (req, res) => {
+  const id = parseId(req)
+  const project = await getProject(id)
+  if (!project) return res.status(404).json({ error: { message: 'Project not found' } })
+  if (project.project_fee == null || project.project_fee <= 0) {
+    throw badRequest('Validation failed', { project_fee: 'set a project fee before sending the final invoice' })
+  }
+  if (!stripeEnabled()) return res.status(409).json({ error: { message: 'Stripe is not configured' } })
+
+  let client = await getClient(project.client_id)
+  if (!client) return res.status(404).json({ error: { message: 'Project client not found' } })
+  if (!client.stripe_customer_id) {
+    const customerId = await createStripeCustomer(client)
+    if (customerId) client = await updateClient(client.id, { stripe_customer_id: customerId })
+  }
+  if (!client.stripe_customer_id) return res.status(409).json({ error: { message: 'Could not create a Stripe customer for this client' } })
+
+  const pct = project.deposit_pct ?? 50
+  const deposit = Math.round((project.project_fee * pct / 100) * 100) / 100
+  const balance = Math.round((project.project_fee - deposit) * 100) / 100
+  const finalPct = Math.round((100 - pct) * 100) / 100
+  const clientName = client.company || client.name
+  const description = `Final payment (${finalPct}%) — ${project.name}`
+
+  let localInvoice = await createInvoice({
+    client_id: client.id, project_id: project.id, kind: 'balance', description,
+    amount_due: balance, status: 'draft',
+    items: [{ service_id: null, name_snapshot: description, description_snapshot: null, unit_price_snapshot: balance, qty: 1, billing_interval_snapshot: 'one_time', sort_order: 0 }]
+  })
+
+  const stripeInvoice = await sendDepositInvoice(client, {
+    amountCents: Math.round(balance * 100),
+    description,
+    metadata: { fwa_project_id: String(project.id), fwa_client_id: String(client.id), fwa_invoice_id: String(localInvoice.id), kind: 'balance' }
+  })
+  if (stripeInvoice) {
+    localInvoice = await updateInvoice(localInvoice.id, {
+      stripe_invoice_id: stripeInvoice.id, number: stripeInvoice.number,
+      hosted_invoice_url: stripeInvoice.hosted_invoice_url, invoice_pdf: stripeInvoice.invoice_pdf,
+      status: 'open', finalized_at: new Date(), due_date: stripeInvoice.due_date
+    })
+  }
+  emitInvoiceChanged(localInvoice.id)
+
+  try {
+    await notify({
+      category: 'invoice', tone: 'info', icon: 'i-lucide-receipt-text',
+      title: 'Final invoice sent',
+      body: `$${balance.toLocaleString('en-US')} final invoice sent to ${clientName}.`,
+      link: `/projects/${project.id}`
+    })
+  } catch (err) {
+    console.error(`Final-invoice notification failed for project ${project.id}:`, err.message)
+  }
+
+  res.json({ data: { id: localInvoice.id, hosted_invoice_url: localInvoice.hosted_invoice_url, status: localInvoice.status, amount: balance } })
 })
 
 // DELETE /api/projects/:id

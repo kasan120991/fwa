@@ -25,3 +25,6 @@ node_modules
 
 # Playwright MCP session artifacts (screenshots, snapshots, console logs)
 .playwright-mcp
+
+# Marketing website — its own git repo, tracked separately (see website/CLAUDE.md)
+website/

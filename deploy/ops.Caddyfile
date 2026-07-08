@@ -1,0 +1,15 @@
+# Ops app routing. Append this block to the marketing site's Caddyfile
+# (/opt/website/deploy/Caddyfile) on the server, then reload Caddy:
+#   docker compose -f /opt/website/docker-compose.yml exec caddy \
+#     caddy reload --config /etc/caddy/Caddyfile
+#
+# `api` and `app` resolve on the shared website_default network (the ops
+# stack attaches to it as the `proxy` network). Same-origin: the SPA and API
+# share app.franciswebagency.com, so the session cookie + websockets just work.
+
+app.franciswebagency.com {
+	encode zstd gzip
+	@ops path /api/* /socket.io/* /uploads/*
+	reverse_proxy @ops api:4000
+	reverse_proxy app:3000
+}

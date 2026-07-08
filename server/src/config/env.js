@@ -34,6 +34,20 @@ export const config = {
     // contact-form submission. Empty = the webhook is disabled (fails closed).
     webhookSecret: process.env.CONTACT_FORM_WEBHOOK_SECRET || ''
   },
+  plausible: {
+    // Plausible Stats API key (Bearer token). Empty = analytics sync disabled:
+    // website_metrics keeps its seeded/last-synced values, no live pull.
+    apiKey: process.env.PLAUSIBLE_API_KEY || '',
+    baseUrl: process.env.PLAUSIBLE_BASE_URL || 'https://plausible.io'
+  },
+  websites: {
+    // Live uptime checks hit each site's real URL, so they're off by default
+    // (seeded domains are placeholders). Enable in production. Interval in ms.
+    checksEnabled: process.env.WEBSITE_CHECKS_ENABLED === 'true',
+    checkIntervalMs: Number(process.env.WEBSITE_CHECK_INTERVAL_MS) || 10 * 60_000,
+    // How often to pull analytics from the provider (when a key is set).
+    syncIntervalMs: Number(process.env.WEBSITE_SYNC_INTERVAL_MS) || 60 * 60_000
+  },
   db: {
     host: process.env.DB_HOST || '127.0.0.1',
     port: Number(process.env.DB_PORT) || 3306,

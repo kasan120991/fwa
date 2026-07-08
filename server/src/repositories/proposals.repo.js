@@ -3,7 +3,7 @@ import { query, withTransaction } from '../db/pool.js'
 export const PROPOSAL_STATUSES = new Set(['draft', 'sent', 'viewed', 'accepted', 'declined', 'expired', 'voided'])
 
 // Columns a status/sync write may touch (used by send + the webhook). The
-// business columns (contact_id, title, currency) and line items are set only at
+// business columns (client_id, title, currency) and line items are set only at
 // creation.
 const UPDATABLE = [
   'status', 'total', 'pandadoc_document_id', 'pandadoc_template_id', 'pandadoc_status',
@@ -49,12 +49,12 @@ async function insertItems(q, proposalId, items) {
 
 /** Create a proposal and its snapshotted line items atomically. `items` are
  *  ready-to-insert snapshot rows; `total` is the caller-computed sum. */
-export async function createProposal({ contact_id, project_id = null, title, currency = 'USD', total = 0, items = [] }) {
+export async function createProposal({ client_id, project_id = null, title, currency = 'USD', total = 0, items = [] }) {
   const id = await withTransaction(async (q) => {
     const rows = await q(
-      `INSERT INTO proposals (contact_id, project_id, title, currency, total, status)
-       VALUES (:contact_id, :project_id, :title, :currency, :total, 'draft')`,
-      { contact_id, project_id, title, currency, total }
+      `INSERT INTO proposals (client_id, project_id, title, currency, total, status)
+       VALUES (:client_id, :project_id, :title, :currency, :total, 'draft')`,
+      { client_id, project_id, title, currency, total }
     )
     const proposalId = rows.insertId
     await insertItems(q, proposalId, items)
@@ -81,7 +81,7 @@ export async function listProposals(opts = {}) {
   const offset = Math.max(Number(opts.offset) || 0, 0)
   const where = []
   const params = {}
-  if (opts.contact_id) { where.push('contact_id = :contact_id'); params.contact_id = opts.contact_id }
+  if (opts.client_id) { where.push('client_id = :client_id'); params.client_id = opts.client_id }
   if (opts.project_id) { where.push('project_id = :project_id'); params.project_id = opts.project_id }
   if (opts.statuses?.length) {
     where.push(`status IN (${opts.statuses.map((_, i) => `:s${i}`).join(', ')})`)
