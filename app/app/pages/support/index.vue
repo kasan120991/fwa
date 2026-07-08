@@ -103,7 +103,7 @@ const filtered = computed(() => {
     if (statusTab.value === 'active' && (t.status === 'resolved' || t.status === 'closed')) return false
     else if (statusTab.value !== 'all' && statusTab.value !== 'active' && t.status !== statusTab.value) return false
     const client = t.client_company || t.client_name || ''
-    if (q && !`${t.subject} ${client}`.toLowerCase().includes(q)) return false
+    if (q && !`${ticketCode(t.id)} ${t.subject} ${client}`.toLowerCase().includes(q)) return false
     return true
   })
 })
@@ -200,7 +200,7 @@ const siteLabel = (t: ApiTicket) => t.website_name || t.website_domain || ''
                     {{ t.subject }}
                   </div>
                   <div class="mt-0.5 flex items-center gap-2 font-mono text-[11px] tracking-[0.03em] text-muted">
-                    <span>#{{ t.id }}</span>
+                    <span>{{ ticketCode(t.id) }}</span>
                     <span>· {{ TYPE_LABEL[t.type] || t.type }}</span>
                     <span
                       v-if="siteLabel(t)"

@@ -97,6 +97,11 @@ export function shortDate(input?: string | null): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+/** Support-ticket display number: SR-001, SR-002, … (derived from the id). */
+export function ticketCode(id?: number | null): string {
+  return id == null ? '' : `SR-${String(id).padStart(3, '0')}`
+}
+
 /** Build SVG polyline point strings for a sparkline/area chart from a number
  *  series, scaled to a `w`×`h` box. Returns `line` (the stroke) + `area` (a closed
  *  fill down to the baseline). Empty when there aren't at least two points. */

@@ -374,7 +374,7 @@ async function loadTickets() {
 }
 const tickets = computed(() => ticketsRaw.value.map(t => ({
   id: t.id,
-  code: `#${t.id}`,
+  code: ticketCode(t.id),
   subject: t.subject,
   status: TICKET_CHIP[t.status] ?? 'neutral',
   statusLabel: TICKET_STATUS_LABEL[t.status] ?? t.status,

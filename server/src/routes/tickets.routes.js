@@ -29,6 +29,7 @@ async function raiseTicketNotification(ticket, { title, body, tone = 'info' }, a
   }
 }
 const ticketWho = t => t.client_company || t.client_name || 'A client'
+const ticketCode = id => `SR-${String(id).padStart(3, '0')}` // display number (mirrors app/utils/format.ts)
 
 export const ticketsRouter = Router()
 
@@ -135,7 +136,7 @@ ticketsRouter.post('/', async (req, res) => {
   data.opened_by = 'admin' // client-opened tickets arrive in the portal phase
   const ticket = await createTicket(data)
   await raiseTicketNotification(ticket, {
-    title: 'New support ticket',
+    title: `New support ticket ${ticketCode(ticket.id)}`,
     body: `${ticketWho(ticket)}: ${ticket.subject}`,
     tone: PRIORITY_TONE[ticket.priority] ?? 'info'
   }, req.user.id)
@@ -164,7 +165,7 @@ ticketsRouter.patch('/:id', async (req, res) => {
     const reopened = wasDone && !isDone
     const tone = ticket.status === 'resolved' ? 'success' : reopened ? 'warning' : 'info'
     await raiseTicketNotification(ticket, {
-      title: reopened ? 'Ticket reopened' : `Ticket ${(STATUS_LABEL[ticket.status] ?? ticket.status).toLowerCase()}`,
+      title: `${ticketCode(ticket.id)} ${reopened ? 'reopened' : (STATUS_LABEL[ticket.status] ?? ticket.status).toLowerCase()}`,
       body: `${ticketWho(ticket)}: ${ticket.subject}`,
       tone
     }, req.user.id)
@@ -198,7 +199,7 @@ ticketsRouter.post('/:id/messages', async (req, res) => {
   if (!body) throw badRequest('Validation failed', { body: 'a message is required' })
   const message = await addMessage(id, { body, author_type: 'admin', author_user_id: req.user.id })
   await raiseTicketNotification(ticket, {
-    title: 'New ticket reply',
+    title: `New reply on ${ticketCode(ticket.id)}`,
     body: `${ticketWho(ticket)}: ${ticket.subject}`,
     tone: 'info'
   }, req.user.id)

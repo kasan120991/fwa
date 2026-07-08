@@ -76,7 +76,7 @@ const ticketId = Number(route.params.id)
 const ticket = ref<Ticket | null>(null)
 const pending = ref(true)
 
-useHead({ title: () => `${ticket.value?.subject || 'Ticket'} · Francis Web Agency` })
+useHead({ title: () => `${ticket.value ? `${ticketCode(ticket.value.id)} · ${ticket.value.subject}` : 'Ticket'} · Francis Web Agency` })
 
 async function load() {
   try {
@@ -261,7 +261,7 @@ async function removeAttachment(a: Attachment) {
         <div class="flex items-start justify-between gap-4">
           <div class="min-w-0">
             <div class="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">
-              <span>#{{ ticket.id }}</span>
+              <span>{{ ticketCode(ticket.id) }}</span>
               <span>· {{ TYPE_LABEL[ticket.type] || ticket.type }}</span>
             </div>
             <h1 class="mt-1 font-display text-[24px] font-medium leading-tight tracking-tight text-highlighted">
