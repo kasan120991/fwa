@@ -164,7 +164,7 @@ ticketsRouter.patch('/:id', async (req, res) => {
     const reopened = wasDone && !isDone
     const tone = ticket.status === 'resolved' ? 'success' : reopened ? 'warning' : 'info'
     await raiseTicketNotification(ticket, {
-      title: `${ticketCode(ticket.id)} ${reopened ? 'reopened' : (STATUS_LABEL[ticket.status] ?? ticket.status).toLowerCase()}`,
+      title: `${ticketCode(ticket.id)} ${reopened ? 'Reopened' : (STATUS_LABEL[ticket.status] ?? ticket.status)}`,
       body: `${ticketWho(ticket)}: ${ticket.subject}`,
       tone
     }, req.user.id)
