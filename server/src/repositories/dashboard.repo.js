@@ -225,9 +225,9 @@ export async function dashboardAttention() {
   }
 
   // 6) Support tickets needing attention — active + (high priority OR stale 3+ days).
-  const TICKET_ATTN = `status NOT IN ('resolved', 'closed')
-      AND (priority = 'high' OR last_activity_at < (NOW() - INTERVAL 3 DAY))`
-  const [{ n: tkN }] = await query(`SELECT COUNT(*) AS n FROM tickets WHERE ${TICKET_ATTN}`)
+  const TICKET_ATTN = `t.status NOT IN ('resolved', 'closed')
+      AND (t.priority = 'high' OR t.last_activity_at < (NOW() - INTERVAL 3 DAY))`
+  const [{ n: tkN }] = await query(`SELECT COUNT(*) AS n FROM tickets t WHERE ${TICKET_ATTN}`)
   total += Number(tkN)
   const attnTickets = await query(
     `SELECT t.id, t.subject, t.priority, DATEDIFF(CURDATE(), t.last_activity_at) AS days_stale,
