@@ -2,9 +2,9 @@ import { Router } from 'express'
 import {
   listLeads, getLead, createLead, updateLead, deleteLead
 } from '../repositories/leads.repo.js'
-import { createClient, updateClient } from '../repositories/clients.repo.js'
+import { createClient, updateClient, deleteClient } from '../repositories/clients.repo.js'
 import { createStripeCustomer } from '../services/stripe.js'
-import { createProject } from '../services/projects.service.js'
+import { createProject, deleteProject } from '../services/projects.service.js'
 import { getProjectTypeByKey, getProjectType } from '../repositories/projectTypes.repo.js'
 import { listTouches, getTouch, createTouch, deleteTouch, TOUCH_CHANNELS } from '../repositories/leadTouches.repo.js'
 import { query } from '../db/pool.js'
@@ -151,20 +151,65 @@ const COPY_FIELDS = ['name', 'email', 'phone', 'company', 'title', 'website', 'n
 
 // POST /api/leads/:id/convert — turn a lead into a client.
 //   Copies the lead into a new `clients` row (status active, client_since today),
-//   provisions a Stripe customer, moves any linked calls to the client, optionally
-//   creates a project, then DELETES the lead. Body: { project?: {...} }.
+//   moves any linked calls to the client, optionally creates a project, deletes
+//   the lead, then provisions a Stripe customer. Body: { project?: {...} }.
+//
+//   Failure-safe: the project request is fully validated BEFORE any write, the
+//   client/calls/project/lead mutations are undone (in reverse) if any of them
+//   throws, and the Stripe customer is provisioned LAST — so a failed conversion
+//   never leaves an orphan client (in the app or in Stripe) behind.
 leadsRouter.post('/:id/convert', async (req, res) => {
   const id = parseId(req)
   const lead = await getLead(id)
   if (!lead) return res.status(404).json({ error: { message: 'Lead not found' } })
+
+  // Validate the (optional) project up front — before creating anything — so a
+  // bad request can't leave a half-converted client behind.
+  const p = req.body?.project
+  const wantsProject = p != null && typeof p === 'object'
+  let projectName = null
+  let projectType = null
+  if (wantsProject) {
+    projectName = typeof p.name === 'string' ? p.name.trim() : ''
+    if (!projectName) throw badRequest('Validation failed', { 'project.name': 'a project name is required' })
+    if (p.project_type_id) projectType = await getProjectType(Number(p.project_type_id))
+    if (!projectType) projectType = await getProjectTypeByKey('website')
+    if (!projectType) throw badRequest('No default project type configured; run the seed')
+  }
 
   const today = new Date().toISOString().slice(0, 10)
   const clientData = { status: 'active', source: lead.source || 'direct', client_since: today }
   for (const f of COPY_FIELDS) clientData[f] = lead[f] ?? null
 
   let client = await createClient(clientData)
+  let project = null
+  try {
+    // Preserve call history: repoint the lead's calls to the new client before
+    // the lead (and its SET NULL link) disappears.
+    await query('UPDATE calls SET client_id = :cid, lead_id = NULL WHERE lead_id = :lid', { cid: client.id, lid: id })
 
-  // Provision the Stripe customer (best-effort — never blocks conversion).
+    if (wantsProject) {
+      project = await createProject({
+        client_id: client.id,
+        project_type_id: projectType.id,
+        name: projectName,
+        status: p.status || 'planning',
+        goals: typeof p.goals === 'string' ? p.goals.trim() || null : null
+      })
+    }
+
+    await deleteLead(id)
+  } catch (err) {
+    // Undo everything we just created so the failed conversion leaves no trace
+    // (the lead stays put, ready to retry). Best-effort — swallow cleanup errors.
+    await query('UPDATE calls SET lead_id = :lid, client_id = NULL WHERE client_id = :cid', { lid: id, cid: client.id }).catch(() => {})
+    if (project) await deleteProject(project.id).catch(() => {})
+    await deleteClient(client.id).catch(() => {})
+    throw err
+  }
+
+  // Provision the Stripe customer LAST (best-effort — never blocks conversion,
+  // and a DB failure above can't orphan a customer since we're past it).
   try {
     const customerId = await createStripeCustomer(client)
     if (customerId) client = await updateClient(client.id, { stripe_customer_id: customerId })
@@ -172,30 +217,6 @@ leadsRouter.post('/:id/convert', async (req, res) => {
     console.error(`Stripe customer creation failed for client ${client.id}:`, err.message)
   }
 
-  // Preserve call history: repoint the lead's calls to the new client before the
-  // lead (and its SET NULL link) disappears.
-  await query('UPDATE calls SET client_id = :cid, lead_id = NULL WHERE lead_id = :lid', { cid: client.id, lid: id })
-
-  // Optionally create the project the conversion was started for.
-  let project = null
-  const p = req.body?.project
-  if (p && typeof p === 'object') {
-    const name = typeof p.name === 'string' ? p.name.trim() : ''
-    if (!name) throw badRequest('Validation failed', { 'project.name': 'a project name is required' })
-    let type = null
-    if (p.project_type_id) type = await getProjectType(Number(p.project_type_id))
-    if (!type) type = await getProjectTypeByKey('website')
-    if (!type) throw badRequest('No default project type configured; run the seed')
-    project = await createProject({
-      client_id: client.id,
-      project_type_id: type.id,
-      name,
-      status: p.status || 'planning',
-      goals: typeof p.goals === 'string' ? p.goals.trim() || null : null
-    })
-  }
-
-  await deleteLead(id)
   res.status(201).json({ data: { client, project } })
 })
 
