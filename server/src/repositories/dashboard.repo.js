@@ -244,8 +244,8 @@ export async function dashboardAttention() {
       id: `ticket-${r.id}`,
       title: r.subject,
       meta: `${r.client} · ${ticketCode(r.id)} · ${reason}`,
-      icon: 'i-lucide-life-buoy', tone: high ? 'warning' : 'neutral',
-      chip: high ? 'warning' : 'neutral', chipText: high ? 'High' : 'Stale',
+      icon: 'i-lucide-life-buoy', tone: high ? 'warning' : 'info',
+      chip: high ? 'warning' : 'info', chipText: high ? 'High' : 'Stale',
       to: `/support/${r.id}`, priority: 3000 - (high ? 800 : 0) - Math.min(days, 30)
     })
   }
