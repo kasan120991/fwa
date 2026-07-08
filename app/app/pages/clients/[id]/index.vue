@@ -396,10 +396,10 @@ const tabs = computed(() => [
 
 const metrics = computed(() => [
   { label: 'Active Projects', value: String(projects.value.length), sub: '', tone: 'text-highlighted' },
-  { label: 'Outstanding', value: money(outstanding.value), sub: openCount.value ? `${openCount.value} unpaid` : '', tone: outstanding.value > 0 ? 'text-error' : 'text-highlighted' },
-  { label: 'Total Billed', value: money(totalBilled.value), sub: 'lifetime', tone: 'text-highlighted' },
   { label: 'Open Tickets', value: String(tickets.filter(t => t.open).length), sub: '', tone: 'text-highlighted' },
-  { label: 'Websites', value: String(websites.value.length), sub: liveWebsites.value ? `${liveWebsites.value} live` : '', tone: 'text-highlighted' }
+  { label: 'Websites', value: String(websites.value.length), sub: liveWebsites.value ? `${liveWebsites.value} live` : '', tone: 'text-highlighted' },
+  { label: 'Outstanding', value: money(outstanding.value), sub: openCount.value ? `${openCount.value} unpaid` : '', tone: outstanding.value > 0 ? 'text-error' : 'text-highlighted' },
+  { label: 'Total Billed', value: money(totalBilled.value), sub: 'lifetime', tone: 'text-highlighted' }
 ])
 
 const headerMenu = [[
