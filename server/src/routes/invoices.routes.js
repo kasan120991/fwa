@@ -161,7 +161,7 @@ invoicesRouter.post('/:id/pay', async (req, res) => {
       title: 'Payment recorded',
       body: `$${amount.toLocaleString('en-US')} recorded from ${who}.`,
       link: '/payments'
-    })
+    }, req.user.id)
   } catch (err) {
     console.error(`Payment notification failed for invoice ${id}:`, err.message)
   }

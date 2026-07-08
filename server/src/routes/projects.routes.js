@@ -222,7 +222,7 @@ projectsRouter.post('/:id/deposit-invoice', async (req, res) => {
       title: 'Deposit invoice sent',
       body: `$${deposit.toLocaleString('en-US')} deposit sent to ${clientName}.`,
       link: `/projects/${project.id}`
-    })
+    }, req.user.id)
   } catch (err) {
     console.error(`Deposit-invoice notification failed for project ${project.id}:`, err.message)
   }
@@ -283,7 +283,7 @@ projectsRouter.post('/:id/final-invoice', async (req, res) => {
       title: 'Final invoice sent',
       body: `$${balance.toLocaleString('en-US')} final invoice sent to ${clientName}.`,
       link: `/projects/${project.id}`
-    })
+    }, req.user.id)
   } catch (err) {
     console.error(`Final-invoice notification failed for project ${project.id}:`, err.message)
   }

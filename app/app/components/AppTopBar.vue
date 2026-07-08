@@ -65,6 +65,9 @@ interface ApiNotification {
   link: string | null
   created_at: string
   read: boolean
+  // Transient (live emit only): the user who triggered this via a foreground
+  // action they already saw a local toast for. Present → skip re-toasting here.
+  actor_user_id?: number | null
 }
 
 const api = useApi()
@@ -110,7 +113,10 @@ function onRemoteNew(raw: ApiNotification) {
   if (notifications.value.some(n => n.id === raw.id)) return
   const n = mapNotification(raw)
   notifications.value.unshift(n)
-  // Surface every incoming alert as a transient toast, then leave it in the feed.
+  // Skip the toast for an action this user just performed themselves (they
+  // already got a local toast); still surface background events — webhook
+  // payments, inbound leads, other users' actions — as a transient toast.
+  if (raw.actor_user_id != null && raw.actor_user_id === user.value?.id) return
   toast.add({
     title: n.title,
     description: n.body || undefined,

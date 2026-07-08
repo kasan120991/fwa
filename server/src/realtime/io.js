@@ -62,8 +62,10 @@ function newRoom(userId) {
   return userId ? `user:${userId}` : 'role:admin'
 }
 
-export function emitNotificationNew(notification) {
-  io?.to(newRoom(notification.user_id)).emit('notification:new', notification)
+export function emitNotificationNew(notification, actorUserId = null) {
+  // `actor_user_id` is transient (not stored) — it lets the acting user's own
+  // tabs skip the live toast for an action they already toasted locally.
+  io?.to(newRoom(notification.user_id)).emit('notification:new', { ...notification, actor_user_id: actorUserId })
 }
 
 export function emitNotificationRead(userId, id) {

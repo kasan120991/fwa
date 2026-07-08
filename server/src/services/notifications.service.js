@@ -6,8 +6,12 @@ import { emitNotificationNew } from '../realtime/io.js'
  * that should raise an alert (new lead, paid invoice, call logged, …) calls
  * this instead of the repo directly, so the bell updates live everywhere.
  */
-export async function notify(data) {
+// `actorUserId` (optional) is the admin who triggered this notification via a
+// foreground action they already got a local toast for. It's passed through to
+// the live emit (not persisted) so that user's own browser can skip re-toasting
+// it. Omit it for background events (webhooks, jobs) so they always toast.
+export async function notify(data, actorUserId = null) {
   const notification = await createNotification(data)
-  emitNotificationNew(notification)
+  emitNotificationNew(notification, actorUserId)
   return notification
 }
