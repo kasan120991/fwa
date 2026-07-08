@@ -68,7 +68,17 @@ interface ApiNotification {
 }
 
 const api = useApi()
+const toast = useToast()
 const notifications = ref<Notification[]>([])
+
+// Map a notification tone to a Nuxt UI toast color.
+const toneColor: Record<NotifTone, 'primary' | 'success' | 'warning' | 'info' | 'error'> = {
+  brand: 'primary',
+  success: 'success',
+  warning: 'warning',
+  info: 'info',
+  error: 'error'
+}
 
 function mapNotification(n: ApiNotification): Notification {
   return {
@@ -98,7 +108,16 @@ const socket = useSocket()
 
 function onRemoteNew(raw: ApiNotification) {
   if (notifications.value.some(n => n.id === raw.id)) return
-  notifications.value.unshift(mapNotification(raw))
+  const n = mapNotification(raw)
+  notifications.value.unshift(n)
+  // Surface every incoming alert as a transient toast, then leave it in the feed.
+  toast.add({
+    title: n.title,
+    description: n.body || undefined,
+    icon: n.icon,
+    color: toneColor[n.tone],
+    ...(n.to ? { actions: [{ label: 'View', to: n.to, color: 'neutral', variant: 'outline' }] } : {})
+  })
 }
 function onRemoteRead(payload: { id: number }) {
   const hit = notifications.value.find(n => n.id === payload.id)
@@ -109,17 +128,22 @@ function onRemoteReadAll() {
     n.read = true
   })
 }
+function onRemoteCleared() {
+  notifications.value = []
+}
 
 onMounted(() => {
   loadNotifications()
   socket.on('notification:new', onRemoteNew)
   socket.on('notification:read', onRemoteRead)
   socket.on('notification:read-all', onRemoteReadAll)
+  socket.on('notification:cleared', onRemoteCleared)
 })
 onBeforeUnmount(() => {
   socket.off('notification:new', onRemoteNew)
   socket.off('notification:read', onRemoteRead)
   socket.off('notification:read-all', onRemoteReadAll)
+  socket.off('notification:cleared', onRemoteCleared)
 })
 
 const unreadCount = computed(() => notifications.value.filter(n => !n.read).length)
@@ -157,6 +181,19 @@ async function markAllRead() {
     notifications.value.forEach((n, i) => {
       n.read = prev[i] ?? n.read
     })
+  }
+}
+
+// Optimistic clear-all with rollback on failure.
+async function clearAll() {
+  if (!notifications.value.length) return
+  const prev = notifications.value
+  notifications.value = []
+  try {
+    await api('/notifications', { method: 'DELETE' })
+  } catch {
+    notifications.value = prev
+    toast.add({ title: 'Could not clear notifications', color: 'error' })
   }
 }
 
@@ -263,13 +300,22 @@ function onNotifOpen(n: Notification) {
                 class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-teal-50 px-1.5 text-[11px] font-semibold text-primary"
               >{{ unreadCount }}</span>
             </div>
-            <button
-              v-if="unreadCount"
-              class="text-[13px] font-medium text-primary transition-colors hover:text-primary/80"
-              @click="markAllRead"
-            >
-              Mark all read
-            </button>
+            <div class="flex items-center gap-3">
+              <button
+                v-if="unreadCount"
+                class="text-[13px] font-medium text-primary transition-colors hover:text-primary/80"
+                @click="markAllRead"
+              >
+                Mark all read
+              </button>
+              <button
+                v-if="notifications.length"
+                class="text-[13px] font-medium text-muted transition-colors hover:text-highlighted"
+                @click="clearAll"
+              >
+                Clear all
+              </button>
+            </div>
           </div>
 
           <!-- list -->
@@ -385,13 +431,22 @@ function onNotifOpen(n: Notification) {
                     >{{ f === 'unread' ? unreadCount : notifications.length }}</span>
                   </button>
                 </div>
-                <button
-                  v-if="unreadCount"
-                  class="whitespace-nowrap text-[13px] font-medium text-primary transition-colors hover:text-primary/80"
-                  @click="markAllRead"
-                >
-                  Mark all read
-                </button>
+                <div class="flex items-center gap-3">
+                  <button
+                    v-if="unreadCount"
+                    class="whitespace-nowrap text-[13px] font-medium text-primary transition-colors hover:text-primary/80"
+                    @click="markAllRead"
+                  >
+                    Mark all read
+                  </button>
+                  <button
+                    v-if="notifications.length"
+                    class="whitespace-nowrap text-[13px] font-medium text-muted transition-colors hover:text-highlighted"
+                    @click="clearAll"
+                  >
+                    Clear all
+                  </button>
+                </div>
               </div>
             </div>
 

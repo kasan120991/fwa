@@ -60,6 +60,15 @@ export async function markAllRead(userId) {
   return { updated: result.affectedRows ?? 0, unread: 0 }
 }
 
+/** Delete every notification visible to the user. Returns the number removed. */
+export async function clearNotifications(userId) {
+  const result = await query(
+    `DELETE FROM notifications WHERE ${SCOPE}`,
+    { uid: userId }
+  )
+  return { deleted: result.affectedRows ?? 0 }
+}
+
 export async function unreadCount(userId) {
   const [{ unread }] = await query(
     `SELECT COUNT(*) AS unread FROM notifications WHERE ${SCOPE} AND read_at IS NULL`,

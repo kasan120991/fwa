@@ -1,6 +1,6 @@
 import { Router } from 'express'
-import { listNotifications, getNotification, setRead, markAllRead } from '../repositories/notifications.repo.js'
-import { emitNotificationRead, emitNotificationReadAll } from '../realtime/io.js'
+import { listNotifications, getNotification, setRead, markAllRead, clearNotifications } from '../repositories/notifications.repo.js'
+import { emitNotificationRead, emitNotificationReadAll, emitNotificationCleared } from '../realtime/io.js'
 import { notify } from '../services/notifications.service.js'
 import { config } from '../config/env.js'
 
@@ -32,6 +32,13 @@ notificationsRouter.get('/', async (req, res) => {
 notificationsRouter.post('/mark-all-read', async (req, res) => {
   const result = await markAllRead(req.user.id)
   emitNotificationReadAll(req.user.id) // sync the user's other tabs
+  res.json({ data: result })
+})
+
+// DELETE /api/notifications — clear the user's feed entirely.
+notificationsRouter.delete('/', async (req, res) => {
+  const result = await clearNotifications(req.user.id)
+  emitNotificationCleared(req.user.id) // sync the user's other tabs
   res.json({ data: result })
 })
 

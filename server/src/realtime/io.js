@@ -74,6 +74,10 @@ export function emitNotificationReadAll(userId) {
   io?.to(`user:${userId}`).emit('notification:read-all')
 }
 
+export function emitNotificationCleared(userId) {
+  io?.to(`user:${userId}`).emit('notification:cleared')
+}
+
 // --- project + task emitters ----------------------------------------------
 // Single-admin app today, so these broadcast to every admin. Payloads are the
 // full mapped row (or { id } for deletes) so listeners can upsert/remove in place.
