@@ -92,9 +92,18 @@ onMounted(() => {
   loadProjects()
   loadInvoices()
   loadWebsites()
+  loadTickets()
   websiteSocket.on('website:changed', loadWebsites)
+  websiteSocket.on('ticket:created', loadTickets)
+  websiteSocket.on('ticket:updated', loadTickets)
+  websiteSocket.on('ticket:deleted', loadTickets)
 })
-onBeforeUnmount(() => websiteSocket.off('website:changed', loadWebsites))
+onBeforeUnmount(() => {
+  websiteSocket.off('website:changed', loadWebsites)
+  websiteSocket.off('ticket:created', loadTickets)
+  websiteSocket.off('ticket:updated', loadTickets)
+  websiteSocket.off('ticket:deleted', loadTickets)
+})
 
 useHead({ title: () => `${client.value?.name ?? 'Client'} · Francis Web Agency` })
 
@@ -350,27 +359,52 @@ const fileGroups = [
 ]
 
 const PRIO_CLASS: Record<string, string> = { High: 'bg-error', Medium: 'bg-warning', Low: 'bg-ink-400' }
-const tickets = [
-  { id: '#4821', subject: 'Checkout button misaligned on mobile', status: 'warning', statusLabel: 'In Progress', prio: 'High', created: 'Jun 30', updated: '2h ago', open: true },
-  { id: '#4805', subject: 'Add PayPal to checkout options', status: 'info', statusLabel: 'Waiting', prio: 'Medium', created: 'Jun 28', updated: '1d ago', open: true },
-  { id: '#4788', subject: '404 on old blog post links', status: 'success', statusLabel: 'Resolved', prio: 'Low', created: 'Jun 20', updated: '5d ago', open: false },
-  { id: '#4750', subject: 'SSL certificate renewal question', status: 'neutral', statusLabel: 'Closed', prio: 'Low', created: 'Jun 10', updated: '2w ago', open: false }
-] as const
+// Support tickets (real, from /tickets?client_id=). Mapped to a small view model
+// so the Support tab + overview widget render without per-row lookups.
+interface ApiTicket { id: number, subject: string, status: string, priority: string, created_at: string, last_activity_at: string }
+const TICKET_CHIP: Record<string, 'info' | 'warning' | 'success' | 'neutral'> = { open: 'info', in_progress: 'info', waiting: 'warning', resolved: 'success', closed: 'neutral' }
+const TICKET_STATUS_LABEL: Record<string, string> = { open: 'Open', in_progress: 'In Progress', waiting: 'Waiting', resolved: 'Resolved', closed: 'Closed' }
+const TICKET_PRIO_LABEL: Record<string, string> = { high: 'High', medium: 'Medium', low: 'Low' }
+const ticketsRaw = ref<ApiTicket[]>([])
+async function loadTickets() {
+  try {
+    const { data } = await api<{ data: ApiTicket[] }>('/tickets', { query: { client_id: route.params.id } })
+    ticketsRaw.value = data
+  } catch { /* non-fatal */ }
+}
+const tickets = computed(() => ticketsRaw.value.map(t => ({
+  id: t.id,
+  code: `#${t.id}`,
+  subject: t.subject,
+  status: TICKET_CHIP[t.status] ?? 'neutral',
+  statusLabel: TICKET_STATUS_LABEL[t.status] ?? t.status,
+  prio: TICKET_PRIO_LABEL[t.priority] ?? 'Medium',
+  created: shortDate(t.created_at),
+  updated: timeAgo(t.last_activity_at),
+  open: t.status !== 'resolved' && t.status !== 'closed'
+})))
+const openTicketCount = computed(() => tickets.value.filter(t => t.open).length)
 
 const supportFilter = ref<'all' | 'open' | 'resolved' | 'closed'>('all')
 const supportFilters = computed(() => [
-  { key: 'all' as const, label: 'All', count: tickets.length },
-  { key: 'open' as const, label: 'Open', count: tickets.filter(t => t.open).length },
-  { key: 'resolved' as const, label: 'Resolved', count: tickets.filter(t => t.statusLabel === 'Resolved').length },
-  { key: 'closed' as const, label: 'Closed', count: tickets.filter(t => t.statusLabel === 'Closed').length }
+  { key: 'all' as const, label: 'All', count: tickets.value.length },
+  { key: 'open' as const, label: 'Open', count: openTicketCount.value },
+  { key: 'resolved' as const, label: 'Resolved', count: tickets.value.filter(t => t.statusLabel === 'Resolved').length },
+  { key: 'closed' as const, label: 'Closed', count: tickets.value.filter(t => t.statusLabel === 'Closed').length }
 ])
-const visibleTickets = computed(() => tickets.filter((t) => {
+const visibleTickets = computed(() => tickets.value.filter((t) => {
   const f = supportFilter.value
   if (f === 'all') return true
   if (f === 'open') return t.open
   if (f === 'resolved') return t.statusLabel === 'Resolved'
   return t.statusLabel === 'Closed'
 }))
+
+// ---- new-ticket form (client prefilled) ----
+const ticketFormOpen = ref(false)
+function openNewTicket() {
+  ticketFormOpen.value = true
+}
 
 const activity = [
   { icon: 'i-lucide-life-buoy', tone: 'text-warning', text: 'Ticket #4821 moved to In progress', meta: 'by Jordan Rivera', time: '2h ago' },
@@ -390,13 +424,13 @@ const tabs = computed(() => [
   { key: 'invoices' as const, label: 'Invoices', badge: invoicesRaw.value.length || null },
   { key: 'contracts' as const, label: 'Contracts', badge: contracts.value.length || null },
   { key: 'files' as const, label: 'Files', badge: null },
-  { key: 'support' as const, label: 'Support', badge: tickets.filter(t => t.open).length },
+  { key: 'support' as const, label: 'Support', badge: openTicketCount.value || null },
   { key: 'activity' as const, label: 'Activity', badge: null }
 ])
 
 const metrics = computed(() => [
   { label: 'Active Projects', value: String(projects.value.length), sub: '', tone: 'text-highlighted' },
-  { label: 'Open Tickets', value: String(tickets.filter(t => t.open).length), sub: '', tone: 'text-highlighted' },
+  { label: 'Open Tickets', value: String(openTicketCount.value), sub: '', tone: 'text-highlighted' },
   { label: 'Websites', value: String(websites.value.length), sub: liveWebsites.value ? `${liveWebsites.value} live` : '', tone: 'text-highlighted' },
   { label: 'Outstanding', value: money(outstanding.value), sub: openCount.value ? `${openCount.value} unpaid` : '', tone: outstanding.value > 0 ? 'text-error' : 'text-highlighted' },
   { label: 'Total Billed', value: money(totalBilled.value), sub: 'lifetime', tone: 'text-highlighted' }
@@ -405,7 +439,7 @@ const metrics = computed(() => [
 const headerMenu = [[
   { label: 'New Invoice', icon: 'i-lucide-receipt-text' },
   { label: 'New Proposal', icon: 'i-lucide-file-text' },
-  { label: 'New Ticket', icon: 'i-lucide-life-buoy' },
+  { label: 'New Ticket', icon: 'i-lucide-life-buoy', onSelect: openNewTicket },
   { label: 'Add Website', icon: 'i-lucide-globe', onSelect: () => { websiteFormOpen.value = true } }
 ], [
   { label: 'Archive Client', icon: 'i-lucide-archive', color: 'error' as const }
@@ -812,10 +846,11 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                   Support
                 </button>
               </div>
-              <div
+              <NuxtLink
                 v-for="t in tickets.filter(x => x.open)"
                 :key="t.id"
-                class="flex items-center gap-3 border-t border-default px-[18px] py-3"
+                :to="`/support/${t.id}`"
+                class="flex items-center gap-3 border-t border-default px-[18px] py-3 transition-colors hover:bg-muted"
               >
                 <span
                   class="size-[9px] flex-none rounded-full"
@@ -826,12 +861,18 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                     {{ t.subject }}
                   </div>
                   <div class="mt-0.5 text-xs text-muted tabular-nums">
-                    {{ t.id }} · {{ t.updated }}
+                    {{ t.code }} · {{ t.updated }}
                   </div>
                 </div>
                 <StatusChip :status="t.status">
                   {{ t.statusLabel }}
                 </StatusChip>
+              </NuxtLink>
+              <div
+                v-if="!openTicketCount"
+                class="border-t border-default px-[18px] py-6 text-center text-[13px] text-muted"
+              >
+                No open tickets.
               </div>
             </div>
             <!-- recent activity -->
@@ -1338,6 +1379,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
               icon="i-lucide-plus"
               color="primary"
               size="sm"
+              @click="openNewTicket"
             >
               New Ticket
             </UButton>
@@ -1363,6 +1405,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
               :key="t.id"
               class="flex cursor-pointer items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted"
               :class="i > 0 ? 'border-t border-default' : ''"
+              @click="navigateTo(`/support/${t.id}`)"
             >
               <span
                 class="size-[9px] flex-none rounded-full"
@@ -1374,7 +1417,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                   {{ t.subject }}
                 </div>
                 <div class="mt-0.5 text-[12.5px] text-muted tabular-nums">
-                  {{ t.id }} · opened {{ t.created }}
+                  {{ t.code }} · opened {{ t.created }}
                 </div>
               </div>
               <span class="hidden whitespace-nowrap text-[13px] text-muted tabular-nums sm:block">{{ t.updated }}</span>
@@ -1387,6 +1430,18 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                 name="i-lucide-chevron-right"
                 class="size-[17px] text-muted"
               />
+            </div>
+            <div
+              v-if="!visibleTickets.length"
+              class="flex flex-col items-center px-6 py-12 text-center"
+            >
+              <UIcon
+                name="i-lucide-life-buoy"
+                class="size-6 text-dimmed"
+              />
+              <p class="mt-2 text-[13px] text-muted">
+                {{ tickets.length ? 'No tickets in this view.' : 'No tickets yet for this client.' }}
+              </p>
             </div>
           </div>
         </div>
@@ -1460,6 +1515,14 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
       :contact-id="Number(route.params.id)"
       :contact-label="client?.name"
       @created="loadWebsites"
+    />
+
+    <TicketForm
+      v-model:open="ticketFormOpen"
+      mode="create"
+      :client-id="Number(route.params.id)"
+      :client-label="client?.name"
+      @saved="loadTickets"
     />
   </template>
 </template>

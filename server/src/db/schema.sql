@@ -782,3 +782,87 @@ CREATE TABLE IF NOT EXISTS website_checks (
     FOREIGN KEY (website_id) REFERENCES websites (id)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- =====================================================================
+-- SUPPORT TICKETS — the admin opens tickets for a client (site updates,
+--   issues, bugs) with a reply thread and file attachments. Built portal-
+--   ready: opened_by / author_type / uploaded_by carry an admin|client
+--   distinction so the future client portal reuses these tables unchanged
+--   (only 'admin' is written this phase).
+-- =====================================================================
+
+CREATE TABLE IF NOT EXISTS tickets (
+  id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  client_id        BIGINT UNSIGNED NOT NULL,
+  website_id       BIGINT UNSIGNED NULL,            -- optional: a specific site
+  subject          VARCHAR(255)    NOT NULL,
+  description      TEXT            NULL,
+  type             ENUM('update', 'issue', 'bug', 'question', 'other') NOT NULL DEFAULT 'other',
+  status           ENUM('open', 'in_progress', 'waiting', 'resolved', 'closed') NOT NULL DEFAULT 'open',
+  priority         ENUM('low', 'medium', 'high') NOT NULL DEFAULT 'medium',
+  opened_by        ENUM('admin', 'client') NOT NULL DEFAULT 'admin',
+  resolved_at      TIMESTAMP       NULL,
+  closed_at        TIMESTAMP       NULL,
+  last_activity_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at       TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                   ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_tickets_client   (client_id),
+  KEY idx_tickets_status   (status),
+  KEY idx_tickets_website  (website_id),
+  CONSTRAINT fk_tickets_client
+    FOREIGN KEY (client_id) REFERENCES clients (id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_tickets_website
+    FOREIGN KEY (website_id) REFERENCES websites (id)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ticket_messages — the reply thread on a ticket (admin now; client + admin
+-- in the portal phase). author_user_id is who wrote it (NULL if the author is
+-- gone).
+CREATE TABLE IF NOT EXISTS ticket_messages (
+  id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  ticket_id      BIGINT UNSIGNED NOT NULL,
+  author_type    ENUM('admin', 'client') NOT NULL DEFAULT 'admin',
+  author_user_id BIGINT UNSIGNED NULL,
+  body           TEXT            NOT NULL,
+  created_at     TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_tmsg_ticket (ticket_id, id),
+  CONSTRAINT fk_tmsg_ticket
+    FOREIGN KEY (ticket_id) REFERENCES tickets (id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_tmsg_author
+    FOREIGN KEY (author_user_id) REFERENCES users (id)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ticket_attachments — files on a ticket, optionally hung off a specific reply
+-- (message_id). Reuses the shared upload store: `path` is the /uploads/<name>
+-- returned by POST /api/uploads.
+CREATE TABLE IF NOT EXISTS ticket_attachments (
+  id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  ticket_id        BIGINT UNSIGNED NOT NULL,
+  message_id       BIGINT UNSIGNED NULL,
+  path             VARCHAR(512)    NOT NULL,
+  name             VARCHAR(255)    NOT NULL,
+  mime             VARCHAR(120)    NULL,
+  size_bytes       BIGINT UNSIGNED NULL,
+  uploaded_by      ENUM('admin', 'client') NOT NULL DEFAULT 'admin',
+  uploaded_user_id BIGINT UNSIGNED NULL,
+  created_at       TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_tatt_ticket  (ticket_id, id),
+  KEY idx_tatt_message (message_id),
+  CONSTRAINT fk_tatt_ticket
+    FOREIGN KEY (ticket_id) REFERENCES tickets (id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_tatt_message
+    FOREIGN KEY (message_id) REFERENCES ticket_messages (id)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_tatt_uploader
+    FOREIGN KEY (uploaded_user_id) REFERENCES users (id)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

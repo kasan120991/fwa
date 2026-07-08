@@ -104,6 +104,21 @@ export function emitTaskDeleted(id, project_id = null) {
   io?.to('role:admin').emit('task:deleted', { id, project_id })
 }
 
+// --- support ticket emitters ----------------------------------------------
+// Broadcast to admins so the /support list, a ticket detail, and the client
+// Support tab refresh live. Payload is the full mapped ticket (or { id } for
+// deletes); message/attachment changes ride on ticket:updated.
+
+export function emitTicketCreated(ticket) {
+  io?.to('role:admin').emit('ticket:created', ticket)
+}
+export function emitTicketUpdated(ticket) {
+  io?.to('role:admin').emit('ticket:updated', ticket)
+}
+export function emitTicketDeleted(id, client_id = null) {
+  io?.to('role:admin').emit('ticket:deleted', { id, client_id })
+}
+
 // --- billing emitters -----------------------------------------------------
 // Broadcast so the Invoices/Payments pages refresh live. Payload is minimal;
 // listeners refetch (list pages) rather than upsert in place.
