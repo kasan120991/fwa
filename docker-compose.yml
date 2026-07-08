@@ -43,6 +43,8 @@ services:
       PANDADOC_API_KEY: ${PANDADOC_API_KEY}
       PANDADOC_WEBHOOK_KEY: ${PANDADOC_WEBHOOK_KEY}
       CONTACT_FORM_WEBHOOK_SECRET: ${CONTACT_FORM_WEBHOOK_SECRET}
+      PLAUSIBLE_API_KEY: ${PLAUSIBLE_API_KEY:-}
+      PLAUSIBLE_BASE_URL: ${PLAUSIBLE_BASE_URL:-https://plausible.io}
     volumes:
       - api_uploads:/app/uploads
     networks: [internal, proxy]
