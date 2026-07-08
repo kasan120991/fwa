@@ -9,6 +9,26 @@ import { getWebsite } from '../repositories/websites.repo.js'
 import { notify } from '../services/notifications.service.js'
 
 const PRIORITY_TONE = { high: 'warning', medium: 'info', low: 'info' }
+const STATUS_LABEL = { open: 'Open', in_progress: 'In Progress', waiting: 'Waiting', resolved: 'Resolved', closed: 'Closed' }
+
+// Raise a live bell alert for a ticket event (best-effort — never fails the
+// request). Tagged with the acting user so their own toast is suppressed; a
+// client-driven event (portal phase) has no actor and toasts the admin.
+async function raiseTicketNotification(ticket, { title, body, tone = 'info' }, actorUserId) {
+  try {
+    await notify({
+      category: 'ticket',
+      tone,
+      icon: 'i-lucide-life-buoy',
+      title,
+      body,
+      link: `/support/${ticket.id}`
+    }, actorUserId)
+  } catch (err) {
+    console.error(`Ticket notification failed for ticket ${ticket.id}:`, err.message)
+  }
+}
+const ticketWho = t => t.client_company || t.client_name || 'A client'
 
 export const ticketsRouter = Router()
 
@@ -114,24 +134,11 @@ ticketsRouter.post('/', async (req, res) => {
   await checkWebsite(data.website_id ?? null, data.client_id)
   data.opened_by = 'admin' // client-opened tickets arrive in the portal phase
   const ticket = await createTicket(data)
-
-  // Raise a live bell alert (best-effort). Tagged with the acting admin so their
-  // own toast is suppressed; a client-opened ticket (portal phase) has no actor
-  // and will toast the admin.
-  try {
-    const who = ticket.client_company || ticket.client_name || 'A client'
-    await notify({
-      category: 'ticket',
-      tone: PRIORITY_TONE[ticket.priority] ?? 'info',
-      icon: 'i-lucide-life-buoy',
-      title: 'New support ticket',
-      body: `${who}: ${ticket.subject}`,
-      link: `/support/${ticket.id}`
-    }, req.user.id)
-  } catch (err) {
-    console.error(`Ticket notification failed for ticket ${ticket.id}:`, err.message)
-  }
-
+  await raiseTicketNotification(ticket, {
+    title: 'New support ticket',
+    body: `${ticketWho(ticket)}: ${ticket.subject}`,
+    tone: PRIORITY_TONE[ticket.priority] ?? 'info'
+  }, req.user.id)
   res.status(201).json({ data: ticket })
 })
 
@@ -149,6 +156,20 @@ ticketsRouter.patch('/:id', async (req, res) => {
     await checkWebsite(data.website_id, data.client_id ?? existing.client_id)
   }
   const ticket = await updateTicket(id, data)
+
+  // Alert on a status transition (e.g. resolved, closed, or reopened).
+  if (data.status !== undefined && data.status !== existing.status) {
+    const wasDone = existing.status === 'resolved' || existing.status === 'closed'
+    const isDone = ticket.status === 'resolved' || ticket.status === 'closed'
+    const reopened = wasDone && !isDone
+    const tone = ticket.status === 'resolved' ? 'success' : reopened ? 'warning' : 'info'
+    await raiseTicketNotification(ticket, {
+      title: reopened ? 'Ticket reopened' : `Ticket ${(STATUS_LABEL[ticket.status] ?? ticket.status).toLowerCase()}`,
+      body: `${ticketWho(ticket)}: ${ticket.subject}`,
+      tone
+    }, req.user.id)
+  }
+
   res.json({ data: ticket })
 })
 
@@ -171,10 +192,16 @@ ticketsRouter.get('/:id/messages', async (req, res) => {
 // POST /api/tickets/:id/messages  { body }
 ticketsRouter.post('/:id/messages', async (req, res) => {
   const id = parseId(req)
-  if (!await getTicket(id)) return res.status(404).json({ error: { message: 'Ticket not found' } })
+  const ticket = await getTicket(id)
+  if (!ticket) return res.status(404).json({ error: { message: 'Ticket not found' } })
   const body = String(req.body?.body ?? '').trim()
   if (!body) throw badRequest('Validation failed', { body: 'a message is required' })
   const message = await addMessage(id, { body, author_type: 'admin', author_user_id: req.user.id })
+  await raiseTicketNotification(ticket, {
+    title: 'New ticket reply',
+    body: `${ticketWho(ticket)}: ${ticket.subject}`,
+    tone: 'info'
+  }, req.user.id)
   res.status(201).json({ data: message })
 })
 
