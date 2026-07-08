@@ -77,6 +77,7 @@ function onPayment() { loadAttention(); loadSummary(); loadRevenue() }
 function onTask() { loadAttention(); loadSummary(); loadDueToday() }
 function onCall() { loadAttention() }
 function onProject() { loadSummary(); loadProjects() }
+function onTicket() { loadAttention() }
 const SOCKET_EVENTS: [string, (...args: unknown[]) => void][] = [
   ['invoice:changed', onInvoice],
   ['payment:created', onPayment],
@@ -86,7 +87,10 @@ const SOCKET_EVENTS: [string, (...args: unknown[]) => void][] = [
   ['call:changed', onCall],
   ['project:created', onProject],
   ['project:updated', onProject],
-  ['project:deleted', onProject]
+  ['project:deleted', onProject],
+  ['ticket:created', onTicket],
+  ['ticket:updated', onTicket],
+  ['ticket:deleted', onTicket]
 ]
 
 onMounted(() => {

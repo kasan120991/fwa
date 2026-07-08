@@ -4,6 +4,9 @@ export const TICKET_STATUSES = new Set(['open', 'in_progress', 'waiting', 'resol
 export const TICKET_PRIORITIES = new Set(['low', 'medium', 'high'])
 export const TICKET_TYPES = new Set(['update', 'issue', 'bug', 'question', 'other'])
 
+/** Display number for a ticket: SR-001, SR-002, … (mirrors app/utils/format.ts). */
+export const ticketCode = id => `SR-${String(id).padStart(3, '0')}`
+
 // Statuses that count as "still needs work" (drives the open badge/metric).
 const OPEN_STATUSES = "('open', 'in_progress', 'waiting')"
 

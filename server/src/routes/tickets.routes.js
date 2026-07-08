@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import {
   getTicket, listTickets, listMessages, listAttachments, getMessage, getAttachment,
-  TICKET_STATUSES, TICKET_PRIORITIES, TICKET_TYPES
+  ticketCode, TICKET_STATUSES, TICKET_PRIORITIES, TICKET_TYPES
 } from '../repositories/tickets.repo.js'
 import { createTicket, updateTicket, deleteTicket, addMessage, addAttachment, removeAttachment } from '../services/tickets.service.js'
 import { getClient } from '../repositories/clients.repo.js'
@@ -29,7 +29,6 @@ async function raiseTicketNotification(ticket, { title, body, tone = 'info' }, a
   }
 }
 const ticketWho = t => t.client_company || t.client_name || 'A client'
-const ticketCode = id => `SR-${String(id).padStart(3, '0')}` // display number (mirrors app/utils/format.ts)
 
 export const ticketsRouter = Router()
 

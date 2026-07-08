@@ -1,5 +1,6 @@
 import { query } from '../db/pool.js'
 import { invoiceStats } from './invoices.repo.js'
+import { ticketCode } from './tickets.repo.js'
 
 const num = v => Number(v ?? 0)
 
@@ -220,6 +221,32 @@ export async function dashboardAttention() {
       meta: 'AI Receptionist inbox',
       icon: 'i-lucide-phone', tone: 'info', chip: 'info', chipText: 'New',
       to: '/receptionist', priority: 4500
+    })
+  }
+
+  // 6) Support tickets needing attention — active + (high priority OR stale 3+ days).
+  const TICKET_ATTN = `status NOT IN ('resolved', 'closed')
+      AND (priority = 'high' OR last_activity_at < (NOW() - INTERVAL 3 DAY))`
+  const [{ n: tkN }] = await query(`SELECT COUNT(*) AS n FROM tickets WHERE ${TICKET_ATTN}`)
+  total += Number(tkN)
+  const attnTickets = await query(
+    `SELECT t.id, t.subject, t.priority, DATEDIFF(CURDATE(), t.last_activity_at) AS days_stale,
+            COALESCE(c.company, c.name) AS client
+       FROM tickets t JOIN clients c ON c.id = t.client_id
+      WHERE ${TICKET_ATTN}
+      ORDER BY (t.priority = 'high') DESC, t.last_activity_at ASC LIMIT 2`
+  )
+  for (const r of attnTickets) {
+    const high = r.priority === 'high'
+    const days = Number(r.days_stale) || 0
+    const reason = high ? 'High priority' : `${plural(days, 'day')} stale`
+    items.push({
+      id: `ticket-${r.id}`,
+      title: r.subject,
+      meta: `${r.client} · ${ticketCode(r.id)} · ${reason}`,
+      icon: 'i-lucide-life-buoy', tone: high ? 'warning' : 'neutral',
+      chip: high ? 'warning' : 'neutral', chipText: high ? 'High' : 'Stale',
+      to: `/support/${r.id}`, priority: 3000 - (high ? 800 : 0) - Math.min(days, 30)
     })
   }
 
