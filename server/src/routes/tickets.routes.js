@@ -6,6 +6,9 @@ import {
 import { createTicket, updateTicket, deleteTicket, addMessage, addAttachment, removeAttachment } from '../services/tickets.service.js'
 import { getClient } from '../repositories/clients.repo.js'
 import { getWebsite } from '../repositories/websites.repo.js'
+import { notify } from '../services/notifications.service.js'
+
+const PRIORITY_TONE = { high: 'warning', medium: 'info', low: 'info' }
 
 export const ticketsRouter = Router()
 
@@ -111,6 +114,24 @@ ticketsRouter.post('/', async (req, res) => {
   await checkWebsite(data.website_id ?? null, data.client_id)
   data.opened_by = 'admin' // client-opened tickets arrive in the portal phase
   const ticket = await createTicket(data)
+
+  // Raise a live bell alert (best-effort). Tagged with the acting admin so their
+  // own toast is suppressed; a client-opened ticket (portal phase) has no actor
+  // and will toast the admin.
+  try {
+    const who = ticket.client_company || ticket.client_name || 'A client'
+    await notify({
+      category: 'ticket',
+      tone: PRIORITY_TONE[ticket.priority] ?? 'info',
+      icon: 'i-lucide-life-buoy',
+      title: 'New support ticket',
+      body: `${who}: ${ticket.subject}`,
+      link: `/support/${ticket.id}`
+    }, req.user.id)
+  } catch (err) {
+    console.error(`Ticket notification failed for ticket ${ticket.id}:`, err.message)
+  }
+
   res.status(201).json({ data: ticket })
 })
 

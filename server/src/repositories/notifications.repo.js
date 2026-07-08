@@ -2,7 +2,7 @@ import { query } from '../db/pool.js'
 
 // Presentation + semantics are producer-chosen (see schema). Kept here so the
 // routes can validate any future write path.
-const CATEGORIES = new Set(['lead', 'call', 'proposal', 'contract', 'invoice', 'payment', 'task', 'system'])
+const CATEGORIES = new Set(['lead', 'call', 'proposal', 'contract', 'invoice', 'payment', 'task', 'ticket', 'system'])
 const TONES = new Set(['brand', 'success', 'warning', 'info', 'error'])
 
 // A notification is visible to a user if it's targeted to them or broadcast

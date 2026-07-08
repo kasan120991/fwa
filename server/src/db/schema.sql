@@ -456,7 +456,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   user_id     BIGINT UNSIGNED NULL,
 
   category    ENUM('lead', 'call', 'proposal', 'contract',
-                   'invoice', 'payment', 'task', 'system') NOT NULL,
+                   'invoice', 'payment', 'task', 'ticket', 'system') NOT NULL,
   tone        ENUM('brand', 'success', 'warning', 'info', 'error')
                 NOT NULL DEFAULT 'brand',
   icon        VARCHAR(64)  NOT NULL,   -- lucide id, e.g. 'i-lucide-user-plus'

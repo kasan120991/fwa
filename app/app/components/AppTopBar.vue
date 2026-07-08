@@ -42,6 +42,31 @@ const accountItems = computed(() => [
   ]
 ])
 
+// --- Quick create (top-bar Create menu) -----------------------------------
+// Leads/clients have dedicated /new pages; projects/tickets/invoices use their
+// self-contained modal forms, mounted here so Create works from any page.
+const projectFormOpen = ref(false)
+const ticketFormOpen = ref(false)
+const invoiceFormOpen = ref(false)
+
+const createItems = [[
+  { label: 'New Lead', icon: 'i-lucide-user-plus', onSelect: () => navigateTo('/leads/new') },
+  { label: 'New Client', icon: 'i-lucide-building-2', onSelect: () => navigateTo('/clients/new') },
+  { label: 'New Project', icon: 'i-lucide-folder-plus', onSelect: () => { projectFormOpen.value = true } },
+  { label: 'New Ticket', icon: 'i-lucide-life-buoy', onSelect: () => { ticketFormOpen.value = true } },
+  { label: 'New Invoice', icon: 'i-lucide-receipt-text', onSelect: () => { invoiceFormOpen.value = true } }
+]]
+
+function onProjectCreated(p: { id: number }) {
+  navigateTo(`/projects/${p.id}`)
+}
+function onTicketCreated(t: { id: number }) {
+  navigateTo(`/support/${t.id}`)
+}
+function onInvoiceCreated() {
+  navigateTo('/invoices')
+}
+
 // --- Notifications (backed by GET/PATCH /api/notifications) ---------------
 type NotifTone = 'brand' | 'success' | 'warning' | 'info' | 'error'
 interface Notification {
@@ -267,13 +292,20 @@ function onNotifOpen(n: Notification) {
         <span class="rounded-md border border-default bg-default px-1.5 py-px font-mono text-[11px] text-muted">⌘K</span>
       </button>
 
-      <UButton
-        icon="i-lucide-plus"
-        color="primary"
-        class="whitespace-nowrap"
+      <UDropdownMenu
+        :items="createItems"
+        :content="{ align: 'end' }"
+        :ui="{ content: 'w-48' }"
       >
-        Create
-      </UButton>
+        <UButton
+          icon="i-lucide-plus"
+          color="primary"
+          trailing-icon="i-lucide-chevron-down"
+          class="whitespace-nowrap"
+        >
+          Create
+        </UButton>
+      </UDropdownMenu>
 
       <UPopover
         v-model:open="notifPopoverOpen"
@@ -543,5 +575,21 @@ function onNotifOpen(n: Notification) {
         </template>
       </UDropdownMenu>
     </div>
+
+    <!-- Quick-create forms (portal to body; opened from the Create menu) -->
+    <ProjectForm
+      v-model:open="projectFormOpen"
+      mode="create"
+      @saved="onProjectCreated"
+    />
+    <TicketForm
+      v-model:open="ticketFormOpen"
+      mode="create"
+      @saved="onTicketCreated"
+    />
+    <InvoiceForm
+      v-model:open="invoiceFormOpen"
+      @created="onInvoiceCreated"
+    />
   </header>
 </template>
