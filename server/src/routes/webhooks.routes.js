@@ -385,6 +385,14 @@ function vapiSecretValid(header) {
 
 const CALL_CLASSIFICATIONS = new Set(['inquiry', 'client', 'spam', 'wrong_number', 'other'])
 
+// Which classifications raise a bell alert, and how (seed convention: link
+// /receptionist, a phone icon, tone by urgency). spam/wrong_number stay silent.
+const CALL_ALERT = {
+  inquiry: { tone: 'brand', icon: 'i-lucide-phone-incoming', title: 'New inquiry call' },
+  client: { tone: 'info', icon: 'i-lucide-phone-call', title: 'Client call logged' },
+  other: { tone: 'info', icon: 'i-lucide-phone', title: 'New call logged' }
+}
+
 // Build the variableValues injected into the assistant for the whole call. Never
 // throws — on any lookup failure it returns the "unknown caller" shape so a DB
 // hiccup can't block a live inbound call from being answered.
@@ -478,14 +486,15 @@ async function ingestEndOfCall(message) {
     occurred_at: message.startedAt ? new Date(message.startedAt) : new Date()
   })
 
-  // Live inbox update + a bell alert for inquiries (mirrors the contact-form flow).
+  // Live inbox update + a bell alert (per classification; spam/wrong_number stay silent).
   emitCallCreated(call)
-  if (classification === 'inquiry') {
+  const alert = CALL_ALERT[classification]
+  if (alert) {
     try {
       await notify({
-        category: 'call', tone: 'brand', icon: 'i-lucide-phone-incoming',
-        title: 'New receptionist call',
-        body: `${call.caller_name || call.caller_number || 'A caller'} — ${call.summary || 'inquiry received'}.`,
+        category: 'call', tone: alert.tone, icon: alert.icon,
+        title: alert.title,
+        body: `${call.caller_name || call.caller_number || 'A caller'} — ${call.summary || 'call logged'}.`,
         link: '/receptionist'
       })
     } catch (err) {
