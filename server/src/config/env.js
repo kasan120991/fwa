@@ -34,6 +34,17 @@ export const config = {
     // contact-form submission. Empty = the webhook is disabled (fails closed).
     webhookSecret: process.env.CONTACT_FORM_WEBHOOK_SECRET || ''
   },
+  vapi: {
+    // Shared secret Vapi sends as `X-Vapi-Secret` on every server message
+    // (assistant-request, end-of-call-report). Empty = the webhook is disabled
+    // (fails closed, returns 503).
+    webhookSecret: process.env.VAPI_WEBHOOK_SECRET || '',
+    // The receptionist assistant's id — returned in assistant-request responses so
+    // an inbound call is answered by it with per-caller context injected.
+    assistantId: process.env.VAPI_ASSISTANT_ID || '',
+    // The receptionist's public phone number — display only (header/stat strip).
+    phoneNumber: process.env.VAPI_PHONE_NUMBER || ''
+  },
   plausible: {
     // Plausible Stats API key (Bearer token). Empty = analytics sync disabled:
     // website_metrics keeps its seeded/last-synced values, no live pull.

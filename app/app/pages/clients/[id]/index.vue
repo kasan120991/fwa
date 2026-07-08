@@ -93,16 +93,21 @@ onMounted(() => {
   loadInvoices()
   loadWebsites()
   loadTickets()
+  loadCalls()
   websiteSocket.on('website:changed', loadWebsites)
   websiteSocket.on('ticket:created', loadTickets)
   websiteSocket.on('ticket:updated', loadTickets)
   websiteSocket.on('ticket:deleted', loadTickets)
+  websiteSocket.on('call:new', loadCalls)
+  websiteSocket.on('call:changed', loadCalls)
 })
 onBeforeUnmount(() => {
   websiteSocket.off('website:changed', loadWebsites)
   websiteSocket.off('ticket:created', loadTickets)
   websiteSocket.off('ticket:updated', loadTickets)
   websiteSocket.off('ticket:deleted', loadTickets)
+  websiteSocket.off('call:new', loadCalls)
+  websiteSocket.off('call:changed', loadCalls)
 })
 
 useHead({ title: () => `${client.value?.name ?? 'Client'} · Francis Web Agency` })
@@ -415,8 +420,41 @@ const activity = [
   { icon: 'i-lucide-flag', tone: 'text-success', text: 'Status changed Lead → Active', meta: 'by Jordan Rivera', time: 'Mar 14, 2023' }
 ]
 
+// ---------- calls (real, from /calls?client_id=) ----------
+type CallClass = 'inquiry' | 'client' | 'spam' | 'wrong_number' | 'other'
+interface ApiCall {
+  id: number
+  classification: CallClass
+  caller_number: string
+  caller_name: string | null
+  summary: string | null
+  duration_seconds: number | null
+  recording_url: string | null
+  occurred_at: string
+}
+const CALL_LABEL: Record<CallClass, string> = { inquiry: 'Inquiry', client: 'Client', spam: 'Spam', wrong_number: 'Wrong Number', other: 'Other' }
+const CALL_CHIP: Record<CallClass, ChipStatus> = { inquiry: 'info', client: 'success', spam: 'error', wrong_number: 'neutral', other: 'neutral' }
+const callsRaw = ref<ApiCall[]>([])
+async function loadCalls() {
+  try {
+    const { data } = await api<{ data: ApiCall[] }>('/calls', { query: { client_id: route.params.id } })
+    callsRaw.value = data
+  } catch { /* non-fatal */ }
+}
+const calls = computed(() => callsRaw.value.map(c => ({
+  id: c.id,
+  who: c.caller_name || formatPhone(c.caller_number),
+  summary: c.summary || 'No summary captured.',
+  status: CALL_CHIP[c.classification] ?? 'neutral',
+  statusLabel: CALL_LABEL[c.classification] ?? c.classification,
+  when: shortDate(c.occurred_at),
+  ago: timeAgo(c.occurred_at),
+  duration: c.duration_seconds ? durationMMSS(c.duration_seconds) : '—',
+  hasRecording: !!c.recording_url
+})))
+
 // ---------- tabs ----------
-const activeTab = ref<'overview' | 'projects' | 'websites' | 'invoices' | 'contracts' | 'files' | 'support' | 'activity'>('overview')
+const activeTab = ref<'overview' | 'projects' | 'websites' | 'invoices' | 'contracts' | 'files' | 'support' | 'calls' | 'activity'>('overview')
 const tabs = computed(() => [
   { key: 'overview' as const, label: 'Overview', badge: null },
   { key: 'projects' as const, label: 'Projects', badge: projects.value.length || null },
@@ -425,6 +463,7 @@ const tabs = computed(() => [
   { key: 'contracts' as const, label: 'Contracts', badge: contracts.value.length || null },
   { key: 'files' as const, label: 'Files', badge: null },
   { key: 'support' as const, label: 'Support', badge: openTicketCount.value || null },
+  { key: 'calls' as const, label: 'Calls', badge: callsRaw.value.length || null },
   { key: 'activity' as const, label: 'Activity', badge: null }
 ])
 
@@ -1441,6 +1480,77 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
               />
               <p class="mt-2 text-[13px] text-muted">
                 {{ tickets.length ? 'No tickets in this view.' : 'No tickets yet for this client.' }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- CALLS -->
+        <div v-else-if="activeTab === 'calls'">
+          <div class="mb-3.5 flex flex-wrap items-center justify-between gap-3.5">
+            <div>
+              <span class="text-base font-semibold text-highlighted">Call history</span>
+              <span class="ml-2 text-sm text-muted">{{ calls.length }} {{ calls.length === 1 ? 'call' : 'calls' }}</span>
+            </div>
+            <UButton
+              to="/receptionist"
+              icon="i-lucide-phone-call"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              class="rounded-full"
+            >
+              Open Receptionist
+            </UButton>
+          </div>
+          <div class="overflow-hidden rounded-card bg-default ring ring-default">
+            <div
+              v-for="(c, i) in calls"
+              :key="c.id"
+              class="flex gap-3.5 px-4 py-3.5"
+              :class="i > 0 ? 'border-t border-default' : ''"
+            >
+              <span class="inline-flex size-[38px] flex-none items-center justify-center rounded-full bg-mist text-teal-700">
+                <UIcon
+                  name="i-lucide-phone"
+                  class="size-[17px]"
+                />
+              </span>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-start justify-between gap-3">
+                  <span class="truncate text-sm font-semibold text-highlighted">{{ c.who }}</span>
+                  <span class="flex-none whitespace-nowrap text-xs text-muted tabular-nums">{{ c.ago }}</span>
+                </div>
+                <p class="mt-1 line-clamp-2 text-[13px] leading-snug text-default">
+                  {{ c.summary }}
+                </p>
+                <div class="mt-2 flex flex-wrap items-center gap-2.5">
+                  <StatusChip :status="c.status">
+                    {{ c.statusLabel }}
+                  </StatusChip>
+                  <span class="inline-flex items-center gap-1 text-xs text-muted tabular-nums"><UIcon
+                    name="i-lucide-clock"
+                    class="size-3"
+                  />{{ c.duration }}</span>
+                  <span class="text-xs text-muted tabular-nums">{{ c.when }}</span>
+                  <UIcon
+                    v-if="c.hasRecording"
+                    name="i-lucide-mic"
+                    class="size-[13px] text-muted"
+                  />
+                </div>
+              </div>
+            </div>
+            <div
+              v-if="!calls.length"
+              class="flex flex-col items-center px-6 py-12 text-center"
+            >
+              <span class="mb-3 inline-flex size-11 items-center justify-center rounded-[12px] bg-muted text-muted"><UIcon
+                name="i-lucide-phone-off"
+                class="size-5"
+              /></span>
+              <p class="text-sm text-muted">
+                No calls logged for this client yet.
               </p>
             </div>
           </div>

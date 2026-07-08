@@ -19,6 +19,7 @@ interface Call {
   summary: string
   captured: [string, string][]
   transcript: Turn[]
+  recordingUrl: string | null
 }
 
 // Raw API row shape (subset we use).
@@ -32,6 +33,7 @@ interface ApiCall {
   summary: string | null
   transcript: Turn[] | null
   duration_seconds: number | null
+  recording_url: string | null
   extracted: { business?: string | null, captured?: [string, string][] } | null
   reviewed: boolean
   occurred_at: string
@@ -60,7 +62,8 @@ function mapCall(c: ApiCall): Call {
     dur: c.duration_seconds ?? 0,
     summary: c.summary ?? '',
     captured: c.extracted?.captured ?? [],
-    transcript: c.transcript ?? []
+    transcript: c.transcript ?? [],
+    recordingUrl: c.recording_url ?? null
   }
 }
 
@@ -82,20 +85,60 @@ const TYPE_CHIP: Record<Classification, string> = {
 }
 const RECLASS_ORDER: Classification[] = ['inquiry', 'client', 'spam', 'wrong_number', 'other']
 
-const stats = [
-  { label: 'Calls This Week', value: '34', trend: '+12%' },
-  { label: 'Inquiries Captured', value: '11', trend: '+4' },
-  { label: 'After-Hours Answered', value: '7', trend: '' },
-  { label: 'Avg. Duration', value: '3:12', trend: '' },
-  { label: 'Converted To Leads', value: '6', trend: '+2' }
-]
+// Header + stat strip — 7-day metrics and line status from the server.
+const stats = ref<{ label: string, value: string, trend: string }[]>([])
+const phoneNumber = ref<string | null>(null)
+const online = ref(false)
+
+interface ApiStats {
+  calls_week: number, inquiries: number, after_hours: number, avg_duration: number,
+  converted: number, phone_number: string | null, online: boolean
+}
+async function loadStats() {
+  try {
+    const { data } = await api<{ data: ApiStats }>('/calls/stats')
+    phoneNumber.value = data.phone_number
+    online.value = data.online
+    stats.value = [
+      { label: 'Calls This Week', value: String(data.calls_week), trend: '' },
+      { label: 'Inquiries Captured', value: String(data.inquiries), trend: '' },
+      { label: 'After-Hours Answered', value: String(data.after_hours), trend: '' },
+      { label: 'Avg. Duration', value: durationMMSS(data.avg_duration), trend: '' },
+      { label: 'Converted To Leads', value: String(data.converted), trend: '' }
+    ]
+  } catch { /* leave strip empty on failure */ }
+}
 
 const activeTab = ref<'all' | 'inquiry' | 'client' | 'other'>('all')
 const search = ref('')
 const selected = ref<Record<number, boolean>>({})
-const playing = ref(false)
 const convertTarget = ref<Call | null>(null)
 const newCall = ref(false)
+
+// Recording playback — a hidden <audio> element drives the styled player.
+const socket = useSocket()
+const audioEl = ref<HTMLAudioElement | null>(null)
+const playing = ref(false)
+const currentTime = ref(0)
+const audioDuration = ref(0)
+const playProgress = computed(() => audioDuration.value ? currentTime.value / audioDuration.value : 0)
+
+function togglePlay() {
+  const el = audioEl.value
+  if (!el) return
+  if (el.paused) el.play().catch(() => {})
+  else el.pause()
+}
+function onLoadedMeta() { audioDuration.value = audioEl.value?.duration || 0 }
+function onTimeUpdate() { currentTime.value = audioEl.value?.currentTime ?? 0 }
+function onEnded() { playing.value = false; currentTime.value = 0 }
+
+// A brand-new call pushed over Socket.IO — prepend it and surface the banner.
+function onNewCall(row: ApiCall) {
+  if (!row || calls.value.some(c => c.id === row.id)) return
+  calls.value.unshift(mapCall(row))
+  newCall.value = true
+}
 
 function initialsOf(c: Call) { return initials(c.name) }
 
@@ -137,6 +180,9 @@ function toggleAll() {
 async function selectCall(c: Call) {
   selectedId.value = c.id
   playing.value = false
+  currentTime.value = 0
+  audioDuration.value = 0
+  if (audioEl.value) { audioEl.value.pause(); audioEl.value.currentTime = 0 }
   if (c.unread) {
     c.unread = false
     try { await api(`/calls/${c.id}`, { method: 'PATCH', body: { reviewed: true } }) } catch { c.unread = true }
@@ -192,13 +238,47 @@ const waveform = computed(() => {
   const seed = cur.value?.dur ?? 100
   return Array.from({ length: 44 }, (_, i) => {
     const h = 5 + Math.abs(Math.sin(i * 1.7 + seed) * Math.cos(i * 0.6)) * 20
-    return { h: Math.round(h), played: playing.value && i < 14 }
+    return { h: Math.round(h), played: i / 44 < playProgress.value }
   })
 })
 
+// Bulk actions honor the append-only calls log — no delete, only review/reclassify.
+function selectedIds() {
+  return Object.entries(selected.value).filter(([, v]) => v).map(([id]) => Number(id))
+}
+async function bulkMarkReviewed() {
+  await Promise.all(selectedIds().map(async (id) => {
+    const c = calls.value.find(x => x.id === id)
+    if (c) c.unread = false
+    try { await api(`/calls/${id}`, { method: 'PATCH', body: { reviewed: true } }) } catch { /* best effort */ }
+  }))
+  selected.value = {}
+}
+async function bulkReclassify(k: Classification) {
+  await Promise.all(selectedIds().map(async (id) => {
+    const c = calls.value.find(x => x.id === id)
+    if (c) c.type = k
+    try { await api(`/calls/${id}`, { method: 'PATCH', body: { classification: k } }) } catch { /* best effort */ }
+  }))
+  selected.value = {}
+}
+const bulkReclassItems = computed(() => [RECLASS_ORDER.map(k => ({
+  label: TYPE_LABEL[k], onSelect: () => bulkReclassify(k)
+}))])
+
+// Archive = dismiss from attention by marking reviewed (append-only: never deletes).
+async function archiveCurrent() {
+  if (!cur.value || !cur.value.unread) return
+  cur.value.unread = false
+  try { await api(`/calls/${cur.value.id}`, { method: 'PATCH', body: { reviewed: true } }) } catch { if (cur.value) cur.value.unread = true }
+}
+
 onMounted(() => {
-  const t = setTimeout(() => { newCall.value = true }, 4500)
-  onBeforeUnmount(() => clearTimeout(t))
+  loadStats()
+  socket.on('call:new', onNewCall)
+})
+onBeforeUnmount(() => {
+  socket.off('call:new', onNewCall)
 })
 </script>
 
@@ -209,12 +289,16 @@ onMounted(() => {
       <div>
         <div class="flex items-center gap-3">
           <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">AI Receptionist</h1>
-          <span class="inline-flex items-center gap-1.5 rounded-full bg-success/10 py-1 pl-2.5 pr-3 text-[12.5px] font-semibold text-success">
-            <span class="size-[7px] animate-pulse rounded-full bg-success" />Online
+          <span
+            class="inline-flex items-center gap-1.5 rounded-full py-1 pl-2.5 pr-3 text-[12.5px] font-semibold"
+            :class="online ? 'bg-success/10 text-success' : 'bg-muted text-muted'"
+          >
+            <span class="size-[7px] rounded-full" :class="online ? 'animate-pulse bg-success' : 'bg-muted'" />{{ online ? 'Online' : 'Offline' }}
           </span>
         </div>
         <p class="mt-1.5 inline-flex items-center gap-1.5 text-sm text-muted">
-          <UIcon name="i-lucide-phone" class="size-3.5" />Answering <span class="font-medium text-default tabular-nums">(415) 555-0100</span>
+          <UIcon name="i-lucide-phone" class="size-3.5" />Answering
+          <span class="font-medium text-default tabular-nums">{{ phoneNumber ? formatPhone(phoneNumber) : 'Not configured' }}</span>
         </p>
       </div>
       <UButton icon="i-lucide-settings" color="neutral" variant="outline" class="rounded-full">Configure</UButton>
@@ -345,17 +429,28 @@ onMounted(() => {
           </div>
 
           <div class="min-h-0 flex-1 overflow-y-auto px-[26px] pb-[26px] pt-[22px]">
-            <div class="mb-[22px] flex items-center gap-3.5 rounded-xl bg-default p-4 ring ring-default">
-              <UButton :icon="playing ? 'i-lucide-pause' : 'i-lucide-play'" color="primary" :ui="{ base: 'rounded-full size-11 justify-center' }" aria-label="Play recording" @click="playing = !playing" />
+            <div v-if="cur.recordingUrl" class="mb-[22px] flex items-center gap-3.5 rounded-xl bg-default p-4 ring ring-default">
+              <audio
+                ref="audioEl"
+                :src="cur.recordingUrl"
+                class="hidden"
+                preload="metadata"
+                @loadedmetadata="onLoadedMeta"
+                @timeupdate="onTimeUpdate"
+                @play="playing = true"
+                @pause="playing = false"
+                @ended="onEnded"
+              />
+              <UButton :icon="playing ? 'i-lucide-pause' : 'i-lucide-play'" color="primary" :ui="{ base: 'rounded-full size-11 justify-center' }" :aria-label="playing ? 'Pause recording' : 'Play recording'" @click="togglePlay" />
               <div class="min-w-0 flex-1">
                 <div class="flex h-[26px] items-center gap-px">
                   <span v-for="(b, i) in waveform" :key="i" class="flex-1 rounded-full" :class="b.played ? 'bg-teal-600' : 'bg-accented'" :style="{ height: b.h + 'px' }" />
                 </div>
                 <div class="mt-1.5 flex justify-between text-[11.5px] text-muted tabular-nums">
-                  <span>{{ playing ? '1:12' : '0:00' }}</span><span>{{ cur.duration }}</span>
+                  <span>{{ durationMMSS(Math.floor(currentTime)) }}</span><span>{{ cur.duration }}</span>
                 </div>
               </div>
-              <UButton icon="i-lucide-download" color="neutral" variant="outline" square size="sm" aria-label="Download recording" />
+              <UButton :to="cur.recordingUrl" external target="_blank" icon="i-lucide-download" color="neutral" variant="outline" square size="sm" aria-label="Download recording" />
             </div>
 
             <div class="mb-2 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">Summary</div>
@@ -393,7 +488,7 @@ onMounted(() => {
             </NuxtLink>
             <div class="flex-1" />
             <UButton :color="curReviewed ? 'success' : 'neutral'" :variant="curReviewed ? 'soft' : 'outline'" icon="i-lucide-check" class="rounded-full" @click="toggleReviewed">{{ curReviewed ? 'Reviewed' : 'Mark Reviewed' }}</UButton>
-            <UButton icon="i-lucide-archive" color="neutral" variant="outline" class="rounded-full">Ignore</UButton>
+            <UButton icon="i-lucide-archive" color="neutral" variant="outline" class="rounded-full" :disabled="curReviewed" @click="archiveCurrent">Archive</UButton>
           </div>
         </template>
 
@@ -407,9 +502,10 @@ onMounted(() => {
       <div v-if="anySelected" class="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-inverted py-2 pl-4 pr-2 shadow-lg">
         <span class="whitespace-nowrap text-[13px] font-semibold text-white">{{ selCount }} selected</span>
         <span class="mx-1 h-5 w-px bg-white/20" />
-        <button class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/10" @click="selected = {}"><UIcon name="i-lucide-check" class="size-[15px]" />Mark Reviewed</button>
-        <button class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/10" @click="selected = {}"><UIcon name="i-lucide-tag" class="size-[15px]" />Reclassify</button>
-        <button class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-error transition-colors hover:bg-white/10" @click="selected = {}"><UIcon name="i-lucide-trash-2" class="size-[15px]" />Delete</button>
+        <button class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/10" @click="bulkMarkReviewed"><UIcon name="i-lucide-check" class="size-[15px]" />Mark Reviewed</button>
+        <UDropdownMenu :items="bulkReclassItems">
+          <button class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/10"><UIcon name="i-lucide-tag" class="size-[15px]" />Reclassify<UIcon name="i-lucide-chevron-down" class="size-3 opacity-60" /></button>
+        </UDropdownMenu>
         <button class="inline-flex size-8 flex-none items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20" aria-label="Clear selection" @click="selected = {}"><UIcon name="i-lucide-x" class="size-[15px]" /></button>
       </div>
     </div>

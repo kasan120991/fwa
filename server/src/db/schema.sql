@@ -161,6 +161,10 @@ CREATE TABLE IF NOT EXISTS calls (
   lead_id            BIGINT UNSIGNED NULL,
   client_id          BIGINT UNSIGNED NULL,
 
+  -- Vapi's call id — dedupes retried end-of-call-report webhooks. NULL for
+  -- seeded/manual rows (MySQL allows multiple NULLs under a UNIQUE key).
+  vapi_call_id       VARCHAR(64) NULL,
+
   classification     ENUM('inquiry', 'client', 'spam', 'wrong_number', 'other') NOT NULL,
 
   caller_number      VARCHAR(32)  NOT NULL,
@@ -186,6 +190,8 @@ CREATE TABLE IF NOT EXISTS calls (
   KEY idx_calls_classification (classification),
   -- Receptionist inbox is ordered by recency.
   KEY idx_calls_occurred_at (occurred_at),
+  -- Idempotent Vapi ingestion — one call row per Vapi call id.
+  UNIQUE KEY uq_calls_vapi (vapi_call_id),
 
   -- Deleting a lead/client must NOT delete its call history — keep the event log.
   CONSTRAINT fk_calls_lead FOREIGN KEY (lead_id)

@@ -137,6 +137,13 @@ export function emitCallChanged() {
   io?.to('role:admin').emit('call:changed')
 }
 
+// Fired when a brand-new call is ingested from Vapi. Payload is the full mapped
+// row so the receptionist inbox can prepend it in place; the sidebar badge and
+// dashboard "Needs Attention" listen too (refetch their counts).
+export function emitCallCreated(call) {
+  io?.to('role:admin').emit('call:new', call)
+}
+
 // --- websites --------------------------------------------------------------
 // Fired when a site, its analytics sync, or an uptime check changes, so the
 // Websites dashboard / detail / client tab refresh live.

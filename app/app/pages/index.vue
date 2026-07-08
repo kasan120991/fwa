@@ -85,6 +85,7 @@ const SOCKET_EVENTS: [string, (...args: unknown[]) => void][] = [
   ['task:updated', onTask],
   ['task:deleted', onTask],
   ['call:changed', onCall],
+  ['call:new', onCall],
   ['project:created', onProject],
   ['project:updated', onProject],
   ['project:deleted', onProject],

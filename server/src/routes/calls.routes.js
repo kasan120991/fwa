@@ -1,5 +1,6 @@
 import { Router } from 'express'
-import { listCalls, getCall, updateCall, unreviewedCount, CLASSIFICATIONS } from '../repositories/calls.repo.js'
+import { config } from '../config/env.js'
+import { listCalls, getCall, updateCall, unreviewedCount, callStats, CLASSIFICATIONS } from '../repositories/calls.repo.js'
 import { createLead } from '../repositories/leads.repo.js'
 import { emitCallChanged } from '../realtime/io.js'
 
@@ -30,9 +31,16 @@ callsRouter.get('/', async (req, res) => {
   const bad = classifications?.find(c => !CLASSIFICATIONS.has(c))
   if (bad) throw badRequest(`Unknown classification: ${bad}`)
 
+  let client_id
+  if (req.query.client_id !== undefined) {
+    client_id = Number(req.query.client_id)
+    if (!Number.isInteger(client_id) || client_id <= 0) throw badRequest('Invalid client_id')
+  }
+
   const result = await listCalls({
     classifications,
     q: typeof req.query.q === 'string' ? req.query.q.trim() : undefined,
+    client_id,
     limit: req.query.limit,
     offset: req.query.offset
   })
@@ -42,6 +50,18 @@ callsRouter.get('/', async (req, res) => {
 // GET /api/calls/unreviewed-count — count of new (unreviewed) calls for the nav badge.
 callsRouter.get('/unreviewed-count', async (req, res) => {
   res.json({ data: { count: await unreviewedCount() } })
+})
+
+// GET /api/calls/stats — receptionist header + stat strip (7-day metrics + line status).
+callsRouter.get('/stats', async (req, res) => {
+  const stats = await callStats()
+  res.json({
+    data: {
+      ...stats,
+      phone_number: config.vapi.phoneNumber || null,
+      online: !!config.vapi.webhookSecret
+    }
+  })
 })
 
 // GET /api/calls/:id

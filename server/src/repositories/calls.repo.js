@@ -14,7 +14,7 @@ function mapRow(row) {
 const CLASSIFICATIONS = new Set(['inquiry', 'client', 'spam', 'wrong_number', 'other'])
 
 export async function listCalls(opts = {}) {
-  const { classifications, q } = opts
+  const { classifications, q, client_id } = opts
   const limit = Math.min(Math.max(Number(opts.limit) || 100, 1), 300)
   const offset = Math.max(Number(opts.offset) || 0, 0)
 
@@ -23,6 +23,10 @@ export async function listCalls(opts = {}) {
   if (classifications?.length) {
     where.push(`classification IN (${classifications.map((_, i) => `:c${i}`).join(', ')})`)
     classifications.forEach((c, i) => { params[`c${i}`] = c })
+  }
+  if (client_id) {
+    where.push('client_id = :client_id')
+    params.client_id = client_id
   }
   if (q) {
     where.push('(caller_name LIKE :q OR caller_number LIKE :q OR summary LIKE :q)')
@@ -43,16 +47,45 @@ export async function getCall(id) {
   return mapRow(rows[0] ?? null)
 }
 
+/** Look up a call by its Vapi call id — the idempotency key for webhook ingestion. */
+export async function getCallByVapiId(vapiCallId) {
+  if (!vapiCallId) return null
+  const rows = await query('SELECT * FROM calls WHERE vapi_call_id = :v LIMIT 1', { v: vapiCallId })
+  return mapRow(rows[0] ?? null)
+}
+
 /** Count of new (unreviewed) calls — powers the AI Receptionist nav badge. */
 export async function unreviewedCount() {
   const [{ n }] = await query('SELECT COUNT(*) AS n FROM calls WHERE reviewed_at IS NULL')
   return Number(n)
 }
 
+/** Rolling 7-day receptionist metrics for the header stat strip. */
+export async function callStats() {
+  const [row] = await query(`
+    SELECT
+      COUNT(*)                                            AS calls_week,
+      SUM(classification = 'inquiry')                     AS inquiries,
+      SUM(HOUR(occurred_at) < 9 OR HOUR(occurred_at) >= 17) AS after_hours,
+      ROUND(AVG(duration_seconds))                        AS avg_duration,
+      SUM(lead_id IS NOT NULL)                            AS converted
+    FROM calls
+    WHERE occurred_at >= (NOW() - INTERVAL 7 DAY)
+  `)
+  return {
+    calls_week: Number(row.calls_week) || 0,
+    inquiries: Number(row.inquiries) || 0,
+    after_hours: Number(row.after_hours) || 0,
+    avg_duration: Number(row.avg_duration) || 0,
+    converted: Number(row.converted) || 0
+  }
+}
+
 export async function createCall(data) {
   const payload = {
     lead_id: data.lead_id ?? null,
     client_id: data.client_id ?? null,
+    vapi_call_id: data.vapi_call_id ?? null,
     classification: data.classification,
     caller_number: data.caller_number,
     caller_name: data.caller_name ?? null,

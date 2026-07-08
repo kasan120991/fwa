@@ -20,7 +20,8 @@ const schema = await readFile(path.join(dir, 'schema.sql'), 'utf8')
 // never list a table that isn't in schema.sql.
 const ADDITIVE_COLUMNS = {
   calls: [
-    ['reviewed_at', 'DATETIME NULL AFTER extracted']
+    ['reviewed_at', 'DATETIME NULL AFTER extracted'],
+    ['vapi_call_id', 'VARCHAR(64) NULL AFTER client_id']
   ],
   // Soft project back-links (no FK — projects is created after these tables in
   // schema.sql, and a trailing ADD CONSTRAINT wouldn't be idempotent).
@@ -51,6 +52,32 @@ async function ensureColumns(conn, database) {
   }
 }
 
+// Indexes that must be added to already-existing tables. Like ADDITIVE_COLUMNS,
+// CREATE TABLE IF NOT EXISTS won't add these to a live table and MySQL has no
+// ADD INDEX IF NOT EXISTS, so we check information_schema.STATISTICS and add only
+// what's missing. Runs AFTER ensureColumns so a new index's column already exists.
+const ADDITIVE_INDEXES = {
+  calls: [
+    ['uq_calls_vapi', 'ADD UNIQUE KEY uq_calls_vapi (vapi_call_id)']
+  ]
+}
+
+async function ensureIndexes(conn, database) {
+  for (const [table, indexes] of Object.entries(ADDITIVE_INDEXES)) {
+    const [rows] = await conn.query(
+      'SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?',
+      [database, table]
+    )
+    const existing = new Set(rows.map(r => r.INDEX_NAME))
+    for (const [name, ddl] of indexes) {
+      if (!existing.has(name)) {
+        await conn.query(`ALTER TABLE \`${table}\` ${ddl}`)
+        console.log(`  + ${table} index ${name}`)
+      }
+    }
+  }
+}
+
 // Connect without selecting a database so we can create it first.
 const conn = await mysql.createConnection({
   host: config.db.host,
@@ -68,6 +95,7 @@ try {
   await conn.query(`USE \`${config.db.database}\``)
   await conn.query(schema)
   await ensureColumns(conn, config.db.database)
+  await ensureIndexes(conn, config.db.database)
   console.log(`✔ Schema applied to \`${config.db.database}\` at ${config.db.host}:${config.db.port}`)
 } finally {
   await conn.end()

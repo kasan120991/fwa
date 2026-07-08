@@ -18,7 +18,7 @@ const roleLabel = computed(() => {
 })
 
 // New (unreviewed) call count shown against AI Receptionist. Live via the
-// call:changed socket event (emitted when calls are reviewed / converted).
+// call:changed socket event (reviewed / converted) and call:new (fresh ingest).
 const api = useApi()
 const socket = useSocket()
 const newCalls = ref(0)
@@ -34,8 +34,12 @@ function itemBadge(to: string) {
 onMounted(() => {
   loadNewCalls()
   socket.on('call:changed', loadNewCalls)
+  socket.on('call:new', loadNewCalls)
 })
-onBeforeUnmount(() => socket.off('call:changed', loadNewCalls))
+onBeforeUnmount(() => {
+  socket.off('call:changed', loadNewCalls)
+  socket.off('call:new', loadNewCalls)
+})
 
 // Nav follows CLAUDE.md (source of truth), which includes Leads and AI Receptionist
 // that the original dashboard prototype omitted. ✓ items are in scope this phase;

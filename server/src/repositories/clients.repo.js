@@ -1,4 +1,5 @@
 import { query } from '../db/pool.js'
+import { last10 } from '../utils/phone.js'
 
 // Writable columns (id/created_at/updated_at are managed by the DB).
 export const WRITABLE = [
@@ -58,6 +59,21 @@ export async function getClient(id) {
 
 export async function getClientByStripeCustomerId(customerId) {
   const rows = await query('SELECT * FROM clients WHERE stripe_customer_id = :cid LIMIT 1', { cid: customerId })
+  return rows[0] ?? null
+}
+
+// Resolve an inbound caller number to a client by matching the trailing 10
+// digits (E.164 +1… vs. either raw-digit or human-formatted storage — seed rows
+// keep "(415) 555-0132", API writes strip to digits). REGEXP_REPLACE normalizes
+// the stored side (MySQL 8+). The idx_clients_phone index can't serve this, but
+// the clients table is small (solo agency), so the scan is fine.
+export async function getClientByPhone(phone) {
+  const digits = last10(phone)
+  if (digits.length < 10) return null
+  const rows = await query(
+    "SELECT * FROM clients WHERE phone <> '' AND RIGHT(REGEXP_REPLACE(phone, '[^0-9]', ''), 10) = :d LIMIT 1",
+    { d: digits }
+  )
   return rows[0] ?? null
 }
 

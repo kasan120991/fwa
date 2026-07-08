@@ -3,11 +3,13 @@ import { Router } from 'express'
 import { config } from '../config/env.js'
 import { constructWebhookEvent, createStripeCustomer, mapStripeInvoice } from '../services/stripe.js'
 import { verifyWebhookSignature, pandadocEnabled, createDocumentFromTemplate, sendDocument } from '../services/pandadoc.js'
-import { getClient, getClientByStripeCustomerId, updateClient } from '../repositories/clients.repo.js'
+import { getClient, getClientByStripeCustomerId, getClientByPhone, updateClient } from '../repositories/clients.repo.js'
 import { createLead, getRecentWebsiteLeadByEmail } from '../repositories/leads.repo.js'
 import { getInvoice, getInvoiceByStripeId, updateInvoice, upsertFromStripe } from '../repositories/invoices.repo.js'
 import { createPayment, getPaymentByIntentId } from '../repositories/payments.repo.js'
-import { emitInvoiceChanged, emitPaymentCreated } from '../realtime/io.js'
+import { createCall, getCallByVapiId } from '../repositories/calls.repo.js'
+import { listTickets, ticketCode } from '../repositories/tickets.repo.js'
+import { emitInvoiceChanged, emitPaymentCreated, emitCallCreated } from '../realtime/io.js'
 import { getProposalByDocumentId, updateProposal } from '../repositories/proposals.repo.js'
 import {
   getContractByDocumentId, getContractByProposalId, generateContractFromProposal, updateContract
@@ -359,5 +361,175 @@ webhooksRouter.post('/pandadoc', async (req, res) => {
     return res.status(500).json({ error: { message: 'Webhook handler error' } })
   }
 
+  res.json({ received: true })
+})
+
+// ---------------------------------------------------------------------------
+// Vapi — the AI receptionist. The assistant and its phone number both point
+// their server URL here, so this one endpoint multiplexes on message.type:
+//   • assistant-request  — inbound call; respond with the receptionist assistant
+//                          plus per-caller context (client match, open tickets).
+//   • end-of-call-report — finished call; ingest it into the receptionist inbox.
+// Authenticated by a shared X-Vapi-Secret header (not the session cookie), so
+// it's mounted outside requireAuth.
+// ---------------------------------------------------------------------------
+
+// Constant-time compare of the X-Vapi-Secret header against the configured secret.
+function vapiSecretValid(header) {
+  const secret = config.vapi.webhookSecret
+  if (!secret) return false
+  const a = Buffer.from(String(header || ''))
+  const b = Buffer.from(secret)
+  return a.length === b.length && crypto.timingSafeEqual(a, b)
+}
+
+const CALL_CLASSIFICATIONS = new Set(['inquiry', 'client', 'spam', 'wrong_number', 'other'])
+
+// Build the variableValues injected into the assistant for the whole call. Never
+// throws — on any lookup failure it returns the "unknown caller" shape so a DB
+// hiccup can't block a live inbound call from being answered.
+async function buildCallerContext(number) {
+  const empty = {
+    is_client: 'no', client_name: '', primary_contact_first_name: '',
+    company: '', open_ticket_count: '0', open_ticket_summary: 'none'
+  }
+  try {
+    const client = number ? await getClientByPhone(number) : null
+    if (!client) return empty
+
+    let openTickets = []
+    try {
+      const { rows } = await listTickets({ client_id: client.id, open: true, limit: 5 })
+      openTickets = rows
+    } catch (err) {
+      console.error('Vapi caller ticket lookup failed:', err.message)
+    }
+    const summary = openTickets.length
+      ? openTickets.slice(0, 2).map(t => `${ticketCode(t.id)}: ${t.subject}`).join('; ')
+      : 'none'
+
+    return {
+      is_client: 'yes',
+      client_name: client.name || '',
+      primary_contact_first_name: (client.name || '').trim().split(/\s+/)[0] || '',
+      company: client.company || '',
+      open_ticket_count: String(openTickets.length),
+      open_ticket_summary: summary
+    }
+  } catch (err) {
+    console.error('Vapi caller lookup failed:', err.message)
+    return empty
+  }
+}
+
+// Map a Vapi end-of-call-report into a calls row (idempotent — skips a retry).
+async function ingestEndOfCall(message) {
+  const vapiCallId = message.call?.id ?? null
+  if (vapiCallId && await getCallByVapiId(vapiCallId)) return // already ingested
+
+  const structured = message.analysis?.structuredData ?? {}
+  const number = message.customer?.number
+    ?? message.call?.customer?.number
+    ?? structured.callback_number
+    ?? ''
+
+  // Re-resolve the client so the finished call links (client_id) and classifies.
+  const client = number ? await getClientByPhone(number).catch(() => null) : null
+
+  // Trust the assistant's structured classification; else 'client' for a known
+  // caller, otherwise 'other'.
+  let classification = String(structured.classification || '').toLowerCase()
+  if (!CALL_CLASSIFICATIONS.has(classification)) classification = client ? 'client' : 'other'
+
+  // Vapi's artifact.messages -> [{ r, t }] turns (receptionist = r:true).
+  const turns = Array.isArray(message.artifact?.messages)
+    ? message.artifact.messages
+        .filter(m => m.role === 'assistant' || m.role === 'bot' || m.role === 'user')
+        .map(m => ({ r: m.role === 'assistant' || m.role === 'bot', t: String(m.message ?? m.content ?? '').trim() }))
+        .filter(m => m.t)
+    : null
+
+  // Duration: reported value, else derived from the timestamps.
+  let duration = message.durationSeconds ?? message.call?.durationSeconds ?? null
+  if (duration == null && message.startedAt && message.endedAt) {
+    duration = Math.max(0, Math.round((new Date(message.endedAt) - new Date(message.startedAt)) / 1000))
+  }
+
+  // Captured-details table the inbox renders (label/value pairs, non-empty only).
+  const captured = [
+    ['Intent', structured.intent],
+    ['Budget', structured.budget],
+    ['Timeline', structured.timeline],
+    ['Callback #', structured.callback_number],
+    ['Notes', structured.notes]
+  ].filter(([, v]) => v != null && String(v).trim() !== '').map(([k, v]) => [k, String(v).trim()])
+
+  const call = await createCall({
+    vapi_call_id: vapiCallId,
+    client_id: client?.id ?? null,
+    classification,
+    caller_number: number || '',
+    caller_name: client?.name ?? structured.caller_name ?? null,
+    summary: message.analysis?.summary ?? null,
+    transcript: turns,
+    recording_url: message.artifact?.recordingUrl ?? message.recordingUrl ?? null,
+    duration_seconds: duration,
+    extracted: { business: client?.company || structured.business || null, captured },
+    occurred_at: message.startedAt ? new Date(message.startedAt) : new Date()
+  })
+
+  // Live inbox update + a bell alert for inquiries (mirrors the contact-form flow).
+  emitCallCreated(call)
+  if (classification === 'inquiry') {
+    try {
+      await notify({
+        category: 'call', tone: 'brand', icon: 'i-lucide-phone-incoming',
+        title: 'New receptionist call',
+        body: `${call.caller_name || call.caller_number || 'A caller'} — ${call.summary || 'inquiry received'}.`,
+        link: '/receptionist'
+      })
+    } catch (err) {
+      console.error('Vapi call notification failed:', err.message)
+    }
+  }
+}
+
+// POST /api/webhooks/vapi
+webhooksRouter.post('/vapi', async (req, res) => {
+  if (!config.vapi.webhookSecret) {
+    return res.status(503).json({ error: { message: 'Vapi webhook is not configured' } })
+  }
+  if (!vapiSecretValid(req.headers['x-vapi-secret'])) {
+    return res.status(401).json({ error: { message: 'Invalid Vapi secret' } })
+  }
+
+  const message = req.body?.message ?? {}
+
+  // Inbound call — answer fast with the assistant + per-caller context.
+  if (message.type === 'assistant-request') {
+    const number = message.call?.customer?.number
+      ?? req.body.call?.customer?.number
+      ?? req.body.call?.from?.phoneNumber
+      ?? message.customer?.number
+    const variableValues = await buildCallerContext(number)
+    return res.json({
+      assistantId: config.vapi.assistantId,
+      assistantOverrides: { variableValues }
+    })
+  }
+
+  // Finished call — ingest into the inbox.
+  if (message.type === 'end-of-call-report') {
+    try {
+      await ingestEndOfCall(message)
+    } catch (err) {
+      // 500 so Vapi retries; safe because ingestion dedupes on vapi_call_id.
+      console.error('Error handling Vapi end-of-call-report:', err.message)
+      return res.status(500).json({ error: { message: 'Webhook handler error' } })
+    }
+    return res.json({ received: true })
+  }
+
+  // Any other server message (status-update, etc.) — acknowledge, no retry.
   res.json({ received: true })
 })
