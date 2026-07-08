@@ -68,13 +68,15 @@ export async function fetchSiteAnalytics(site, days = 30) {
     date: r.date, visitors: r.visitors, pageviews: r.pageviews, conversions: convByDate.get(r.date) ?? 0
   }))
 
+  // Row limiting is a nested `pagination` object in Stats API v2 — a top-level
+  // `limit` is rejected (#/limit: Schema does not allow additional properties).
   const topPages = mapRows(
-    await queryPlausible({ site_id, metrics: ['pageviews'], date_range: '30d', dimensions: ['event:page'], limit: 5 }),
+    await queryPlausible({ site_id, metrics: ['pageviews'], date_range: '30d', dimensions: ['event:page'], pagination: { limit: 5 } }),
     ['page'], ['pageviews']
   ).map(r => ({ path: r.page || '/', views: r.pageviews }))
 
   const topSources = mapRows(
-    await queryPlausible({ site_id, metrics: ['visitors'], date_range: '30d', dimensions: ['visit:source'], limit: 5 }),
+    await queryPlausible({ site_id, metrics: ['visitors'], date_range: '30d', dimensions: ['visit:source'], pagination: { limit: 5 } }),
     ['source'], ['visitors']
   ).map(r => ({ source: r.source || 'Direct', visits: r.visitors }))
 
