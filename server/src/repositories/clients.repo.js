@@ -42,7 +42,9 @@ export async function listClients(opts = {}) {
   const whereSql = where.length ? ` WHERE ${where.join(' AND ')}` : ''
 
   const rows = await query(
-    `SELECT * FROM clients${whereSql} ORDER BY ${sort} ${dir} LIMIT ${limit} OFFSET ${offset}`,
+    `SELECT clients.*,
+       (SELECT COUNT(*) FROM projects p WHERE p.client_id = clients.id AND p.status <> 'completed') AS active_projects
+     FROM clients${whereSql} ORDER BY ${sort} ${dir} LIMIT ${limit} OFFSET ${offset}`,
     params
   )
   const [{ total }] = await query(`SELECT COUNT(*) AS total FROM clients${whereSql}`, params)

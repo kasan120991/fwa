@@ -2,8 +2,8 @@
 useHead({ title: 'Clients · Francis Web Agency' })
 
 // Clients = the clients table (status active/past), from GET /api/clients.
-// Projects/outstanding are aggregates from tables that don't exist yet, so
-// they show placeholders ("—").
+// `projects` is the count of the client's active (non-completed) projects,
+// returned by the list endpoint. `outstanding` is still a placeholder ("—").
 type Stage = 'active' | 'past'
 interface Client {
   id: number
@@ -32,6 +32,7 @@ interface ApiClient {
   status: string
   updated_at: string
   last_contacted_at: string | null
+  active_projects: number
 }
 
 const api = useApi()
@@ -50,7 +51,7 @@ function mapClient(c: ApiClient, i: number): Client {
     stage: c.status === 'past' ? 'past' : 'active',
     contact: c.name,
     email: c.email || '',
-    projects: 0,
+    projects: Number(c.active_projects) || 0,
     outstanding: 0,
     overdue: false,
     activity: timeAgo(activityAt) || '—',
