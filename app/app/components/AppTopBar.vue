@@ -51,22 +51,18 @@ const accountItems = computed(() => [
   ]
 ])
 
-// --- Quick create (top-bar Create menu) -----------------------------------
-// Leads/clients have dedicated /new pages; projects/tickets/invoices use their
-// self-contained modal forms, mounted here so Create works from any page.
-const projectFormOpen = ref(false)
-const ticketFormOpen = ref(false)
-const invoiceFormOpen = ref(false)
-const expenseFormOpen = ref(false)
-
-const createItems = [[
-  { label: 'New Lead', icon: 'i-lucide-user-plus', onSelect: () => navigateTo('/leads/new') },
-  { label: 'New Client', icon: 'i-lucide-building-2', onSelect: () => navigateTo('/clients/new') },
-  { label: 'New Project', icon: 'i-lucide-folder-plus', onSelect: () => { projectFormOpen.value = true } },
-  { label: 'New Ticket', icon: 'i-lucide-life-buoy', onSelect: () => { ticketFormOpen.value = true } },
-  { label: 'New Invoice', icon: 'i-lucide-receipt-text', onSelect: () => { invoiceFormOpen.value = true } },
-  { label: 'New Expense', icon: 'i-lucide-wallet', onSelect: () => { expenseFormOpen.value = true } }
-]]
+// --- Quick create -----------------------------------------------------------
+// The modal forms (project/ticket/invoice/expense) are mounted once here so
+// they're available app-wide; the Create trigger now lives on the dashboard.
+// Shared open-state via useQuickCreate lets both that button and the ⌘K palette
+// open them. Leads/clients use dedicated /new pages instead of modals.
+const {
+  project: projectFormOpen,
+  ticket: ticketFormOpen,
+  invoice: invoiceFormOpen,
+  expense: expenseFormOpen,
+  open: openQuickCreate
+} = useQuickCreate()
 
 // --- Global search (⌘K command palette) -----------------------------------
 const searchOpen = ref(false)
@@ -74,10 +70,7 @@ defineShortcuts({
   meta_k: () => { searchOpen.value = !searchOpen.value }
 })
 function onSearchAction(key: string) {
-  if (key === 'project') projectFormOpen.value = true
-  else if (key === 'ticket') ticketFormOpen.value = true
-  else if (key === 'invoice') invoiceFormOpen.value = true
-  else if (key === 'expense') expenseFormOpen.value = true
+  if (key === 'project' || key === 'ticket' || key === 'invoice' || key === 'expense') openQuickCreate(key)
 }
 
 function onProjectCreated(p: { id: number }) {
@@ -315,21 +308,6 @@ function onNotifOpen(n: Notification) {
         <span class="flex-1 text-sm text-muted">Search clients, projects…</span>
         <span class="rounded-md border border-default bg-default px-1.5 py-px font-mono text-[11px] text-muted">⌘K</span>
       </button>
-
-      <UDropdownMenu
-        :items="createItems"
-        :content="{ align: 'end' }"
-        :ui="{ content: 'w-48' }"
-      >
-        <UButton
-          icon="i-lucide-plus"
-          color="primary"
-          trailing-icon="i-lucide-chevron-down"
-          class="whitespace-nowrap"
-        >
-          Create
-        </UButton>
-      </UDropdownMenu>
 
       <button
         :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
@@ -620,7 +598,8 @@ function onNotifOpen(n: Notification) {
       </UDropdownMenu>
     </div>
 
-    <!-- Quick-create forms (portal to body; opened from the Create menu) -->
+    <!-- Quick-create forms (portal to body; opened from the dashboard Create
+         menu or the ⌘K palette via the shared useQuickCreate state) -->
     <ProjectForm
       v-model:open="projectFormOpen"
       mode="create"

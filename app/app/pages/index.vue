@@ -48,6 +48,39 @@ const revenueMax = computed(() => Math.max(1, ...(revenue.value?.months.map(m =>
 const compactMoney = (n: number) => (n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : formatMoney(n))
 const clientName = (p: ApiProject) => p.client_company || p.client_name || 'Unknown'
 
+// ---- greeting header ----
+const { user } = useAuth()
+const { open: openQuickCreate } = useQuickCreate()
+
+// Four periods, incl. a late-night branch (12am–5am).
+const period = computed<'night' | 'morning' | 'afternoon' | 'evening'>(() => {
+  const h = new Date().getHours()
+  return h < 5 ? 'night' : h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening'
+})
+const greeting = computed(() => ({ night: 'Working late', morning: 'Good morning', afternoon: 'Good afternoon', evening: 'Good evening' }[period.value]))
+const timeIcon = computed(() => ({ night: 'i-lucide-moon', morning: 'i-lucide-sunrise', afternoon: 'i-lucide-sun', evening: 'i-lucide-sunset' }[period.value]))
+const firstName = computed(() => user.value?.name?.trim().split(/\s+/)[0] || '')
+const dateLine = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+
+// Live status from data the dashboard already loads.
+const statusLine = computed(() => {
+  const parts: string[] = []
+  const a = attentionTotal.value
+  const t = summary.value?.tasks_due_today ?? 0
+  if (a) parts.push(`${a} item${a === 1 ? '' : 's'} need${a === 1 ? 's' : ''} your attention`)
+  if (t) parts.push(`${t} task${t === 1 ? '' : 's'} due today`)
+  return parts.length ? parts.join(' · ') : 'You’re all caught up'
+})
+
+const createItems = [[
+  { label: 'New Lead', icon: 'i-lucide-user-plus', onSelect: () => navigateTo('/leads/new') },
+  { label: 'New Client', icon: 'i-lucide-building-2', onSelect: () => navigateTo('/clients/new') },
+  { label: 'New Project', icon: 'i-lucide-folder-plus', onSelect: () => openQuickCreate('project') },
+  { label: 'New Ticket', icon: 'i-lucide-life-buoy', onSelect: () => openQuickCreate('ticket') },
+  { label: 'New Invoice', icon: 'i-lucide-receipt-text', onSelect: () => openQuickCreate('invoice') },
+  { label: 'New Expense', icon: 'i-lucide-wallet', onSelect: () => openQuickCreate('expense') }
+]]
+
 async function loadSummary() {
   const { data } = await api<{ data: Summary }>('/dashboard/summary')
   summary.value = data
@@ -136,6 +169,40 @@ const attentionTone: Record<string, string> = {
 
 <template>
   <div class="flex flex-col gap-5">
+    <!-- greeting -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3.5">
+        <span class="inline-flex size-11 flex-none items-center justify-center rounded-[13px] bg-mist text-primary">
+          <UIcon
+            :name="timeIcon"
+            class="size-[22px]"
+          />
+        </span>
+        <div class="min-w-0">
+          <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
+            {{ greeting }}{{ firstName ? `, ${firstName}` : '' }}
+          </h1>
+          <p class="mt-1.5 text-sm text-muted">
+            {{ dateLine }} · {{ statusLine }}
+          </p>
+        </div>
+      </div>
+      <UDropdownMenu
+        :items="createItems"
+        :content="{ align: 'end' }"
+        :ui="{ content: 'w-48' }"
+      >
+        <UButton
+          icon="i-lucide-plus"
+          color="primary"
+          trailing-icon="i-lucide-chevron-down"
+          class="whitespace-nowrap"
+        >
+          Create
+        </UButton>
+      </UDropdownMenu>
+    </div>
+
     <!-- KPI row -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard
