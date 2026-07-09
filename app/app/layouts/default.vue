@@ -3,7 +3,9 @@ const mobileOpen = useSidebarMobileOpen()
 </script>
 
 <template>
-  <div class="flex min-h-screen w-full overflow-x-hidden bg-muted">
+  <!-- overflow-x-clip (not hidden) guards against horizontal scroll without
+       creating a scroll container, which would break the top bar's position: sticky. -->
+  <div class="flex min-h-screen w-full overflow-x-clip bg-muted">
     <!-- mobile drawer backdrop -->
     <div
       v-if="mobileOpen"
