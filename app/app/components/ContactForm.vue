@@ -344,7 +344,9 @@ const subtitle = computed(() => {
 </script>
 
 <template>
-  <div>
+  <!-- -mb cancels the layout main's p-[26px] bottom so the sticky action bar sits
+       flush against the viewport bottom (no gap) at the end of the page. -->
+  <div class="-mb-[26px]">
     <!-- loading (edit) -->
     <div v-if="!loaded" class="mx-auto max-w-[720px] py-24 text-center text-sm text-muted">Loading {{ noun }}…</div>
 
