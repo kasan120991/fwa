@@ -220,21 +220,19 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
 
 <template>
   <!-- header -->
-  <div class="flex items-center justify-between gap-4">
-    <div>
-      <div class="flex items-center gap-3">
-        <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">Leads</h1>
-        <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ headerCount }}</span>
-      </div>
-      <p class="mt-1.5 text-sm text-muted">Everyone in the pipeline before they become a client — inbound inquiries and outreach prospects.</p>
-    </div>
-    <div class="flex flex-none items-center gap-2.5">
+  <PageHeader
+    icon="i-lucide-user-plus"
+    title="Leads"
+    :count="headerCount"
+    subtitle="Everyone in the pipeline before they become a client — inbound inquiries and outreach prospects."
+  >
+    <template #actions>
       <UDropdownMenu :items="overflowItems">
         <UButton icon="i-lucide-ellipsis" color="neutral" variant="outline" square aria-label="More actions" />
       </UDropdownMenu>
       <UButton to="/leads/new" icon="i-lucide-plus" color="primary">Add Lead</UButton>
-    </div>
-  </div>
+    </template>
+  </PageHeader>
 
   <!-- section switch -->
   <div class="inline-flex items-center gap-0.5 self-start rounded-[10px] border border-default bg-muted p-0.5">

@@ -285,24 +285,28 @@ onBeforeUnmount(() => {
 <template>
   <div class="flex flex-col gap-4">
     <!-- header -->
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <div class="flex items-center gap-3">
-          <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">AI Receptionist</h1>
-          <span
-            class="inline-flex items-center gap-1.5 rounded-full py-1 pl-2.5 pr-3 text-[12.5px] font-semibold"
-            :class="online ? 'bg-success/10 text-success' : 'bg-muted text-muted'"
-          >
-            <span class="size-[7px] rounded-full" :class="online ? 'animate-pulse bg-success' : 'bg-muted'" />{{ online ? 'Online' : 'Offline' }}
-          </span>
-        </div>
+    <PageHeader
+      icon="i-lucide-phone-call"
+      title="AI Receptionist"
+    >
+      <template #badge>
+        <span
+          class="inline-flex items-center gap-1.5 rounded-full py-1 pl-2.5 pr-3 text-[12.5px] font-semibold"
+          :class="online ? 'bg-success/10 text-success' : 'bg-muted text-muted'"
+        >
+          <span class="size-[7px] rounded-full" :class="online ? 'animate-pulse bg-success' : 'bg-muted'" />{{ online ? 'Online' : 'Offline' }}
+        </span>
+      </template>
+      <template #subtitle>
         <p class="mt-1.5 inline-flex items-center gap-1.5 text-sm text-muted">
           <UIcon name="i-lucide-phone" class="size-3.5" />Answering
           <span class="font-medium text-default tabular-nums">{{ phoneNumber ? formatPhone(phoneNumber) : 'Not configured' }}</span>
         </p>
-      </div>
-      <UButton icon="i-lucide-settings" color="neutral" variant="outline" class="rounded-full">Configure</UButton>
-    </div>
+      </template>
+      <template #actions>
+        <UButton icon="i-lucide-settings" color="neutral" variant="outline" class="rounded-full">Configure</UButton>
+      </template>
+    </PageHeader>
 
     <!-- stat strip -->
     <div class="-mx-1 overflow-x-auto px-1">

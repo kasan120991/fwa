@@ -69,19 +69,12 @@ const tiles = computed(() => [
 <template>
   <div class="flex flex-col gap-5">
     <!-- header -->
-    <div class="flex items-center justify-between gap-4">
-      <div>
-        <div class="flex items-center gap-3">
-          <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
-            Payments
-          </h1>
-          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ payments.length }}</span>
-        </div>
-        <p class="mt-1.5 text-sm text-muted">
-          Payments received against your invoices — Stripe charges and offline payments you've recorded.
-        </p>
-      </div>
-    </div>
+    <PageHeader
+      icon="i-lucide-credit-card"
+      title="Payments"
+      :count="payments.length"
+      subtitle="Payments received against your invoices — Stripe charges and offline payments you've recorded."
+    />
 
     <!-- tiles -->
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:max-w-md">

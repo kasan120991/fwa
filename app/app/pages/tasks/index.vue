@@ -151,19 +151,12 @@ function taskOverdue(t: Task) {
 <template>
   <div class="flex flex-col gap-5">
     <!-- header -->
-    <div class="flex items-center justify-between gap-4">
-      <div>
-        <div class="flex items-center gap-3">
-          <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
-            Tasks
-          </h1>
-          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ counts.open }}</span>
-        </div>
-        <p class="mt-1.5 text-sm text-muted">
-          Everything on your plate — across projects and standalone.
-        </p>
-      </div>
-    </div>
+    <PageHeader
+      icon="i-lucide-list-checks"
+      title="Tasks"
+      :count="counts.open"
+      subtitle="Everything on your plate — across projects and standalone."
+    />
 
     <!-- add row -->
     <div class="flex flex-wrap items-center gap-2.5 rounded-card bg-default p-3 ring ring-default">

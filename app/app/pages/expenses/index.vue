@@ -111,27 +111,22 @@ function openEdit(e: Expense) {
 <template>
   <div class="flex flex-col gap-5">
     <!-- header -->
-    <div class="flex items-center justify-between gap-4">
-      <div>
-        <div class="flex items-center gap-3">
-          <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
-            Expenses
-          </h1>
-          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ counts.all }}</span>
-        </div>
-        <p class="mt-1.5 text-sm text-muted">
-          What the agency spends — client costs, overhead, and third-party subscriptions.
-        </p>
-      </div>
-      <UButton
-        icon="i-lucide-plus"
-        color="primary"
-        class="flex-none"
-        @click="openNew"
-      >
-        New Expense
-      </UButton>
-    </div>
+    <PageHeader
+      icon="i-lucide-wallet"
+      title="Expenses"
+      :count="counts.all"
+      subtitle="What the agency spends — client costs, overhead, and third-party subscriptions."
+    >
+      <template #actions>
+        <UButton
+          icon="i-lucide-plus"
+          color="primary"
+          @click="openNew"
+        >
+          New Expense
+        </UButton>
+      </template>
+    </PageHeader>
 
     <!-- tiles -->
     <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">

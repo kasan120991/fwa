@@ -116,27 +116,22 @@ function onCreated() {
 <template>
   <div class="flex flex-col gap-5">
     <!-- header -->
-    <div class="flex items-center justify-between gap-4">
-      <div>
-        <div class="flex items-center gap-3">
-          <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
-            Invoices
-          </h1>
-          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ counts.all }}</span>
-        </div>
-        <p class="mt-1.5 text-sm text-muted">
-          Bills sent to clients, synced with Stripe. Create, send, and reconcile payments.
-        </p>
-      </div>
-      <UButton
-        icon="i-lucide-plus"
-        color="primary"
-        class="flex-none"
-        @click="() => { formOpen = true }"
-      >
-        New Invoice
-      </UButton>
-    </div>
+    <PageHeader
+      icon="i-lucide-receipt-text"
+      title="Invoices"
+      :count="counts.all"
+      subtitle="Bills sent to clients, synced with Stripe. Create, send, and reconcile payments."
+    >
+      <template #actions>
+        <UButton
+          icon="i-lucide-plus"
+          color="primary"
+          @click="() => { formOpen = true }"
+        >
+          New Invoice
+        </UButton>
+      </template>
+    </PageHeader>
 
     <!-- tiles -->
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">

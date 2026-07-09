@@ -200,21 +200,19 @@ function openClient(id: number) {
 
 <template>
   <!-- page header -->
-  <div class="flex items-center justify-between gap-4">
-    <div>
-      <div class="flex items-center gap-3">
-        <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">Clients</h1>
-        <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ counts.all }}</span>
-      </div>
-      <p class="mt-1.5 text-sm text-muted">Active and past client relationships.</p>
-    </div>
-    <div class="flex flex-none items-center gap-2.5">
+  <PageHeader
+    icon="i-lucide-users"
+    title="Clients"
+    :count="counts.all"
+    subtitle="Active and past client relationships."
+  >
+    <template #actions>
       <UDropdownMenu :items="overflowItems">
         <UButton icon="i-lucide-ellipsis" color="neutral" variant="outline" square aria-label="More actions" />
       </UDropdownMenu>
       <UButton to="/clients/new" icon="i-lucide-plus" color="primary">Add Client</UButton>
-    </div>
-  </div>
+    </template>
+  </PageHeader>
 
   <!-- controls -->
   <div class="flex flex-wrap items-center justify-between gap-4">

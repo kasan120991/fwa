@@ -413,19 +413,13 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
 <template>
   <div class="flex flex-col gap-5">
     <!-- header -->
-    <div class="flex items-center justify-between gap-4">
-      <div>
-        <div class="flex items-center gap-3">
-          <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
-            Agreements
-          </h1>
-          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ agreements.length }}</span>
-        </div>
-        <p class="mt-1.5 text-sm text-muted">
-          Every proposal and contract across all clients, generated and signed through PandaDoc.
-        </p>
-      </div>
-      <div class="flex flex-none items-center gap-2.5">
+    <PageHeader
+      icon="i-lucide-file-signature"
+      title="Agreements"
+      :count="agreements.length"
+      subtitle="Every proposal and contract across all clients, generated and signed through PandaDoc."
+    >
+      <template #actions>
         <UButton
           icon="i-lucide-file-check-2"
           color="neutral"
@@ -439,8 +433,8 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
         >
           New Proposal
         </UButton>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- summary tiles -->
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
