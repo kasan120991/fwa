@@ -50,13 +50,14 @@ async function createProposalDocument(proposal, client) {
   return proposal
 }
 
-// GET /api/proposals  ?client_id=  ?status=a,b  ?limit=  ?offset=
+// GET /api/proposals  ?client_id=  ?project_id=  ?status=a,b  ?limit=  ?offset=
 proposalsRouter.get('/', async (req, res) => {
   const statuses = csv(req.query.status)
   const bad = statuses?.find(s => !PROPOSAL_STATUSES.has(s))
   if (bad) throw badRequest(`Unknown status: ${bad}`)
   const result = await listProposals({
     client_id: req.query.client_id ? Number(req.query.client_id) : undefined,
+    project_id: req.query.project_id ? Number(req.query.project_id) : undefined,
     statuses,
     limit: req.query.limit,
     offset: req.query.offset

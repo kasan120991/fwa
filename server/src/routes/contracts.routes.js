@@ -55,7 +55,7 @@ async function createContractDocument(contract, client, purpose) {
   return contract
 }
 
-// GET /api/contracts  ?client_id=  ?type=  ?status=a,b
+// GET /api/contracts  ?client_id=  ?project_id=  ?type=  ?status=a,b
 contractsRouter.get('/', async (req, res) => {
   const statuses = csv(req.query.status)
   const bad = statuses?.find(s => !CONTRACT_STATUSES.has(s))
@@ -64,6 +64,7 @@ contractsRouter.get('/', async (req, res) => {
   if (type && !CONTRACT_TYPES.has(type)) throw badRequest(`Unknown type: ${type}`)
   const result = await listContracts({
     client_id: req.query.client_id ? Number(req.query.client_id) : undefined,
+    project_id: req.query.project_id ? Number(req.query.project_id) : undefined,
     type,
     statuses,
     limit: req.query.limit,
