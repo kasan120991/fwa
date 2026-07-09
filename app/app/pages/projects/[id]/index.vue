@@ -915,56 +915,58 @@ const scopeFields = computed(() => project.value
           v-else-if="activeTab === 'contracts'"
           class="flex flex-col gap-4"
         >
-          <div class="flex items-center justify-between">
-            <p class="text-sm text-muted">
-              Contracts generated from this project's scope.
-            </p>
-            <UButton
-              icon="i-lucide-file-signature"
-              color="primary"
-              size="sm"
-              class="rounded-full"
-              :disabled="!canGenerate"
-              @click="openContractModal"
-            >
-              New Contract
-            </UButton>
-          </div>
-          <div
-            v-if="!contracts.length"
-            class="flex flex-col items-center rounded-card bg-default px-6 py-16 text-center ring ring-default"
-          >
-            <span class="mb-4 inline-flex size-12 items-center justify-center rounded-[12px] bg-muted text-muted"><UIcon
-              name="i-lucide-file-text"
-              class="size-6"
-            /></span>
-            <h3 class="font-display text-lg font-medium text-highlighted">
-              No Contracts Yet
-            </h3>
-            <p class="mt-1.5 max-w-xs text-sm text-muted">
-              Generate the Website Design &amp; Development Agreement from this project's scope.
-            </p>
-          </div>
-          <div
-            v-else
-            class="overflow-hidden rounded-card bg-default ring ring-default"
-          >
-            <NuxtLink
-              v-for="d in contracts"
-              :key="d.id"
-              :to="`/contracts/${d.id}`"
-              class="flex items-center gap-3 border-b border-default px-5 py-3.5 last:border-b-0 hover:bg-muted"
-            >
-              <UIcon
+          <!-- no contract yet: generate CTA + empty state -->
+          <template v-if="!contracts.length">
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-muted">
+                Generate the agreement from this project's scope.
+              </p>
+              <UButton
+                icon="i-lucide-file-signature"
+                color="primary"
+                size="sm"
+                class="rounded-full"
+                :disabled="!canGenerate"
+                @click="openContractModal"
+              >
+                New Contract
+              </UButton>
+            </div>
+            <div class="flex flex-col items-center rounded-card bg-default px-6 py-16 text-center ring ring-default">
+              <span class="mb-4 inline-flex size-12 items-center justify-center rounded-[12px] bg-muted text-muted"><UIcon
                 name="i-lucide-file-text"
-                class="size-4 flex-none text-muted"
-              />
-              <span class="min-w-0 flex-1 truncate text-[13.5px] font-medium text-highlighted">{{ d.title }}</span>
-              <span class="text-[13px] text-muted tabular-nums">{{ money(d.total) }}</span>
-              <StatusChip :status="DOC_STATUS[d.status] || 'neutral'">{{ d.status }}</StatusChip>
-              <span class="hidden text-[12.5px] text-muted tabular-nums sm:inline">{{ shortDate(d.created_at) }}</span>
-            </NuxtLink>
-          </div>
+                class="size-6"
+              /></span>
+              <h3 class="font-display text-lg font-medium text-highlighted">
+                No Contracts Yet
+              </h3>
+              <p class="mt-1.5 max-w-xs text-sm text-muted">
+                Generate the Website Design &amp; Development Agreement from this project's scope.
+              </p>
+            </div>
+          </template>
+
+          <!-- one contract: embed the document -->
+          <template v-else>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex min-w-0 items-center gap-2.5">
+                <span class="truncate text-sm font-semibold text-highlighted">{{ contracts[0].title }}</span>
+                <StatusChip :status="DOC_STATUS[contracts[0].status] || 'neutral'">
+                  {{ contracts[0].status }}
+                </StatusChip>
+              </div>
+              <NuxtLink
+                :to="`/contracts/${contracts[0].id}`"
+                class="inline-flex flex-none items-center gap-1.5 text-[13px] font-semibold text-primary transition-opacity hover:opacity-80"
+              >
+                Open full contract <UIcon
+                  name="i-lucide-arrow-up-right"
+                  class="size-3.5"
+                />
+              </NuxtLink>
+            </div>
+            <ContractEmbed :contract-id="contracts[0].id" />
+          </template>
         </div>
 
         <!-- PROPOSALS -->
