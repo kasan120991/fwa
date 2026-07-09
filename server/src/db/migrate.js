@@ -78,6 +78,33 @@ async function ensureIndexes(conn, database) {
   }
 }
 
+// ENUM columns that gained values on an already-existing table. CREATE TABLE IF
+// NOT EXISTS won't widen an ENUM, so we check information_schema.COLUMN_TYPE and
+// MODIFY only when a required value is missing (keep the full DDL in sync with
+// schema.sql). Each entry: [column, requiredValue, fullColumnDdl].
+const ENUM_COLUMNS = {
+  projects: [
+    ['status', 'awaiting_signature',
+      "ENUM('planning','awaiting_signature','awaiting_deposit','in_progress','in_review','awaiting_final','on_hold','completed') NOT NULL DEFAULT 'planning'"]
+  ]
+}
+
+async function ensureEnums(conn, database) {
+  for (const [table, columns] of Object.entries(ENUM_COLUMNS)) {
+    for (const [column, requiredValue, ddl] of columns) {
+      const [rows] = await conn.query(
+        'SELECT COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+        [database, table, column]
+      )
+      const type = rows[0]?.COLUMN_TYPE || ''
+      if (!type.includes(`'${requiredValue}'`)) {
+        await conn.query(`ALTER TABLE \`${table}\` MODIFY COLUMN \`${column}\` ${ddl}`)
+        console.log(`  ~ ${table}.${column} enum widened`)
+      }
+    }
+  }
+}
+
 // Connect without selecting a database so we can create it first.
 const conn = await mysql.createConnection({
   host: config.db.host,
@@ -96,6 +123,7 @@ try {
   await conn.query(schema)
   await ensureColumns(conn, config.db.database)
   await ensureIndexes(conn, config.db.database)
+  await ensureEnums(conn, config.db.database)
   console.log(`✔ Schema applied to \`${config.db.database}\` at ${config.db.host}:${config.db.port}`)
 } finally {
   await conn.end()

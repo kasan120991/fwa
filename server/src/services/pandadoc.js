@@ -64,17 +64,24 @@ function pricingTable(items, tableName = 'Pricing') {
  * typically `document.uploaded`; the doc must reach `document.draft` before it
  * can be sent (see sendDocument).
  */
-export async function createDocumentFromTemplate({ templateUuid, name, client, tokens = [], items = [], metadata = {} }) {
+export async function createDocumentFromTemplate({ templateUuid, name, client, tokens = [], items = [], metadata = {}, owner = null }) {
   if (!pandadocEnabled()) return null
   const recipientEmail = client.billing_email || client.email
+  const recipients = []
+  // Role names must match the template exactly (PandaDoc matches by name).
+  if (recipientEmail) recipients.push({ role: config.pandadoc.clientRole, email: recipientEmail, ...splitName(client.name) })
+  // Optional agency/owner signer for in-app countersign — only added when an
+  // owner role is configured (PANDADOC_OWNER_ROLE) AND the template declares it.
+  // Left off by default so document creation is unchanged without the config.
+  if (owner?.email && owner?.role) {
+    recipients.push({ role: owner.role, email: owner.email, ...splitName(owner.name) })
+  }
   const doc = await pandadocFetch('/documents', {
     method: 'POST',
     body: {
       template_uuid: templateUuid,
       name,
-      recipients: recipientEmail
-        ? [{ role: 'client', email: recipientEmail, ...splitName(client.name) }]
-        : [],
+      recipients,
       tokens,
       pricing_tables: items.length ? [pricingTable(items)] : undefined,
       metadata,
@@ -89,6 +96,22 @@ export async function getDocumentStatus(documentId) {
   if (!pandadocEnabled()) return null
   const doc = await pandadocFetch(`/documents/${documentId}`)
   return doc.status
+}
+
+/**
+ * Create a short-lived signing/viewing session for one recipient of a document,
+ * used to embed the document in-app (iframe src `https://app.pandadoc.com/s/{id}/`).
+ * The recipient email must be a recipient on the document, and the document must
+ * have reached `document.draft` (or later). Returns { id, expiresAt } or null when
+ * disabled. `lifetime` is in seconds (PandaDoc default 900 / 15 min).
+ */
+export async function createDocumentSession(documentId, { recipient, lifetime = 900 } = {}) {
+  if (!pandadocEnabled()) return null
+  const data = await pandadocFetch(`/documents/${documentId}/session`, {
+    method: 'POST',
+    body: { recipient, lifetime }
+  })
+  return { id: data.id, expiresAt: data.expires_at }
 }
 
 /**

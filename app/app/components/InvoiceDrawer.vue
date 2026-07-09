@@ -47,7 +47,7 @@ function chip(inv: { status: Status, is_overdue: boolean }) {
   if (inv.is_overdue) return { label: 'Overdue', status: 'warning' as const }
   return STATUS_META[inv.status]
 }
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-teal-700', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 const clientName = (i: { client_company: string | null, client_name: string | null }) => i.client_company || i.client_name || 'Unknown'
 
 const detail = ref<InvoiceDetail | null>(null)
@@ -153,7 +153,7 @@ async function submitPay() {
                   class="inline-flex size-[22px] flex-none items-center justify-center rounded-md text-[9.5px] font-semibold"
                   :class="AVATAR[detail.client_id % AVATAR.length]"
                 >{{ initials(clientName(detail)) }}</span>
-                <span class="text-[13px] font-medium text-teal-700">{{ clientName(detail) }}</span>
+                <span class="text-[13px] font-medium text-primary">{{ clientName(detail) }}</span>
               </NuxtLink>
             </div>
             <UButton

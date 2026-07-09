@@ -167,7 +167,7 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
     <!-- identity header -->
     <div class="mt-4 flex flex-wrap items-start justify-between gap-5">
       <div class="flex min-w-0 items-center gap-4">
-        <span class="inline-flex size-[52px] flex-none items-center justify-center rounded-[14px] bg-mist text-teal-700"><UIcon name="i-lucide-globe" class="size-7" /></span>
+        <span class="inline-flex size-[52px] flex-none items-center justify-center rounded-[14px] bg-mist text-primary"><UIcon name="i-lucide-globe" class="size-7" /></span>
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-3">
             <h1 class="font-display text-[28px] font-medium tracking-tight text-highlighted">
@@ -342,7 +342,7 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
             <div class="flex justify-between gap-3">
               <dt class="text-muted">Built under</dt>
               <dd>
-                <NuxtLink v-if="site.project_id" :to="`/projects/${site.project_id}`" class="font-medium text-teal-700 hover:opacity-80">{{ site.project_name }}</NuxtLink>
+                <NuxtLink v-if="site.project_id" :to="`/projects/${site.project_id}`" class="font-medium text-primary hover:opacity-80">{{ site.project_name }}</NuxtLink>
                 <span v-else class="text-muted">—</span>
               </dd>
             </div>

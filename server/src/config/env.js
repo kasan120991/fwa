@@ -27,7 +27,16 @@ export const config = {
     apiKey: process.env.PANDADOC_API_KEY || '',
     // Shared key used to verify incoming webhook signatures (HMAC-SHA256 of the
     // raw body, delivered in the ?signature query param).
-    webhookKey: process.env.PANDADOC_WEBHOOK_KEY || ''
+    webhookKey: process.env.PANDADOC_WEBHOOK_KEY || '',
+    // Signer role name for the agency/owner on the contract template, enabling
+    // in-app countersign via an embedded session. Empty = owner is NOT added as a
+    // recipient (document creation unchanged); set this to match the template's
+    // agency signer role (the FWA template's role is "Francis Web Agency").
+    ownerRole: process.env.PANDADOC_OWNER_ROLE || '',
+    // Signer role name for the client recipient — must match the template's role
+    // exactly (PandaDoc matches recipients to roles by name). The FWA template
+    // names it "Client".
+    clientRole: process.env.PANDADOC_CLIENT_ROLE || 'Client'
   },
   contactForm: {
     // Shared secret the marketing site sends (Authorization: Bearer …) with each

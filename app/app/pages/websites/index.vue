@@ -156,7 +156,7 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
           <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
             Websites
           </h1>
-          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-teal-700 tabular-nums">{{ websites.length }}</span>
+          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ websites.length }}</span>
         </div>
         <p class="mt-1.5 text-sm text-muted">
           Analytics across every site you build and maintain — traffic, conversions, and health in one place.
@@ -181,7 +181,7 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
       >
         <div class="flex items-center justify-between gap-2.5">
           <span class="font-mono text-[10.5px] uppercase tracking-[0.05em] text-muted">{{ t.label }}</span>
-          <span class="inline-flex size-7 items-center justify-center rounded-lg bg-mist text-teal-700"><UIcon
+          <span class="inline-flex size-7 items-center justify-center rounded-lg bg-mist text-primary"><UIcon
             :name="t.icon"
             class="size-[15px]"
           /></span>
@@ -251,13 +251,13 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
           v-for="t in envTabs"
           :key="t.key"
           class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
-          :class="envFilter === t.key ? 'border-teal-600 bg-mist font-semibold text-teal-700' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
+          :class="envFilter === t.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
           @click="envFilter = t.key"
         >
           {{ t.label }}
           <span
             class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
-            :class="envFilter === t.key ? 'bg-default text-teal-700' : 'bg-muted text-muted'"
+            :class="envFilter === t.key ? 'bg-default text-primary' : 'bg-muted text-muted'"
           >{{ t.count }}</span>
         </button>
       </div>
@@ -310,7 +310,7 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
               >
                 <td class="px-4 py-3.5">
                   <div class="flex items-center gap-2.5">
-                    <span class="inline-flex size-8 flex-none items-center justify-center rounded-[9px] bg-mist text-teal-700"><UIcon name="i-lucide-globe" class="size-[17px]" /></span>
+                    <span class="inline-flex size-8 flex-none items-center justify-center rounded-[9px] bg-mist text-primary"><UIcon name="i-lucide-globe" class="size-[17px]" /></span>
                     <div class="min-w-0">
                       <div class="flex items-center gap-2">
                         <span class="whitespace-nowrap text-sm font-semibold text-highlighted">{{ w.name }}</span>

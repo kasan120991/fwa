@@ -157,7 +157,7 @@ function taskOverdue(t: Task) {
           <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
             Tasks
           </h1>
-          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-teal-700 tabular-nums">{{ counts.open }}</span>
+          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ counts.open }}</span>
         </div>
         <p class="mt-1.5 text-sm text-muted">
           Everything on your plate — across projects and standalone.
@@ -199,13 +199,13 @@ function taskOverdue(t: Task) {
           v-for="t in statusTabs"
           :key="t.key"
           class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
-          :class="statusTab === t.key ? 'border-teal-600 bg-mist font-semibold text-teal-700' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
+          :class="statusTab === t.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
           @click="statusTab = t.key"
         >
           {{ t.label }}
           <span
             class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
-            :class="statusTab === t.key ? 'bg-default text-teal-700' : 'bg-muted text-muted'"
+            :class="statusTab === t.key ? 'bg-default text-primary' : 'bg-muted text-muted'"
           >{{ t.count }}</span>
         </button>
       </div>
@@ -258,7 +258,7 @@ function taskOverdue(t: Task) {
           <NuxtLink
             v-if="t.project_id"
             :to="`/projects/${t.project_id}`"
-            class="hidden max-w-[180px] truncate text-[12.5px] font-medium text-teal-700 hover:opacity-80 sm:inline"
+            class="hidden max-w-[180px] truncate text-[12.5px] font-medium text-primary hover:opacity-80 sm:inline"
             @click.stop
           >{{ t.project_name }}</NuxtLink>
           <span

@@ -126,6 +126,12 @@ export function emitTicketDeleted(id, client_id = null) {
 export function emitInvoiceChanged(id) {
   io?.to('role:admin').emit('invoice:changed', { id })
 }
+
+// Fired when a contract's status changes (generated, sent, or a PandaDoc webhook
+// state change) so the Agreements list and a contract viewer refresh live.
+export function emitContractChanged(id) {
+  io?.to('role:admin').emit('contract:changed', { id })
+}
 export function emitPaymentCreated(id) {
   io?.to('role:admin').emit('payment:created', { id })
 }

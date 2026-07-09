@@ -14,7 +14,7 @@ interface Summary {
   outstanding: number
   unpaid_count: number
 }
-type PStatus = 'planning' | 'in_progress' | 'in_review' | 'on_hold' | 'completed'
+type PStatus = 'planning' | 'awaiting_signature' | 'awaiting_deposit' | 'in_progress' | 'in_review' | 'awaiting_final' | 'on_hold' | 'completed'
 interface ApiProject { id: number, name: string, status: PStatus, project_fee: number | null, client_company: string | null, client_name: string | null }
 interface DueTask { id: number, title: string, status: string, project_id: number | null, project_name: string | null }
 interface RevenueMonth { label: string, ym: string, total: number, current: boolean }
@@ -25,8 +25,11 @@ interface Attention { items: AttnItem[], total: number }
 
 const PROJECT_META: Record<PStatus, { label: string, status: 'neutral' | 'info' | 'warning' | 'success' }> = {
   planning: { label: 'Planning', status: 'neutral' },
+  awaiting_signature: { label: 'Awaiting Signature', status: 'info' },
+  awaiting_deposit: { label: 'Awaiting Deposit', status: 'warning' },
   in_progress: { label: 'In Progress', status: 'info' },
   in_review: { label: 'In Review', status: 'info' },
+  awaiting_final: { label: 'Awaiting Final Payment', status: 'warning' },
   on_hold: { label: 'On Hold', status: 'warning' },
   completed: { label: 'Completed', status: 'success' }
 }
@@ -196,7 +199,7 @@ const attentionTone: Record<string, string> = {
               <!-- hover tooltip -->
               <div
                 v-show="hoverIdx === i"
-                class="pointer-events-none absolute left-1/2 top-0 z-10 -mt-1 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-inverted px-2.5 py-1.5 text-center shadow-lg"
+                class="pointer-events-none absolute left-1/2 top-0 z-10 -mt-1 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-ink-900 px-2.5 py-1.5 text-center shadow-lg dark:bg-ink-700"
               >
                 <div class="text-[13px] font-semibold text-white tabular-nums">
                   {{ formatMoney(bar.total) }}
@@ -297,7 +300,7 @@ const attentionTone: Record<string, string> = {
             </h2>
             <span
               class="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-[7px] text-xs font-bold tabular-nums"
-              :class="attentionTotal > 0 ? 'bg-error/10 text-error' : 'bg-mist text-teal-700'"
+              :class="attentionTotal > 0 ? 'bg-error/10 text-error' : 'bg-mist text-primary'"
             >{{ attentionTotal }}</span>
           </div>
           <div
@@ -353,7 +356,7 @@ const attentionTone: Record<string, string> = {
             <h2 class="text-base font-semibold text-highlighted">
               Due Today
             </h2>
-            <span class="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-mist px-[7px] text-xs font-bold text-teal-700 tabular-nums">{{ dueToday.length }}</span>
+            <span class="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-mist px-[7px] text-xs font-bold text-primary tabular-nums">{{ dueToday.length }}</span>
           </div>
           <div
             v-if="dueToday.length"
@@ -378,7 +381,7 @@ const attentionTone: Record<string, string> = {
                 <NuxtLink
                   v-if="t.project_id"
                   :to="`/projects/${t.project_id}`"
-                  class="text-[12.5px] font-medium text-teal-700 hover:opacity-80"
+                  class="text-[12.5px] font-medium text-primary hover:opacity-80"
                 >{{ t.project_name }}</NuxtLink>
                 <span
                   v-else
@@ -391,7 +394,7 @@ const attentionTone: Record<string, string> = {
             v-else
             class="flex flex-col items-center px-5 py-10 text-center"
           >
-            <span class="mb-2.5 inline-flex size-10 items-center justify-center rounded-[11px] bg-mist text-teal-700"><UIcon
+            <span class="mb-2.5 inline-flex size-10 items-center justify-center rounded-[11px] bg-mist text-primary"><UIcon
               name="i-lucide-check-check"
               class="size-5"
             /></span>

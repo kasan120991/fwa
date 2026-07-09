@@ -6,7 +6,7 @@ const api = useApi()
 const socket = useSocket()
 const toast = useToast()
 
-type Status = 'planning' | 'in_progress' | 'in_review' | 'on_hold' | 'completed'
+type Status = 'planning' | 'awaiting_signature' | 'awaiting_deposit' | 'in_progress' | 'in_review' | 'awaiting_final' | 'on_hold' | 'completed'
 type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'done'
 
 interface ApiProject {
@@ -60,8 +60,11 @@ interface ProjectInvoice { id: number, kind: 'deposit' | 'balance' | 'custom', s
 
 const STATUS_META: Record<Status, { label: string, status: 'neutral' | 'info' | 'warning' | 'success' }> = {
   planning: { label: 'Planning', status: 'neutral' },
+  awaiting_signature: { label: 'Awaiting Signature', status: 'info' },
+  awaiting_deposit: { label: 'Awaiting Deposit', status: 'warning' },
   in_progress: { label: 'In Progress', status: 'info' },
   in_review: { label: 'In Review', status: 'info' },
+  awaiting_final: { label: 'Awaiting Final Payment', status: 'warning' },
   on_hold: { label: 'On Hold', status: 'warning' },
   completed: { label: 'Completed', status: 'success' }
 }
@@ -91,7 +94,7 @@ const INV_STATUS: Record<InvStatus, { label: string, status: ChipStatus }> = {
 function invChip(i: ProjectInvoice): { label: string, status: ChipStatus } {
   return i.is_overdue ? { label: 'Overdue', status: 'warning' } : INV_STATUS[i.status]
 }
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-teal-700', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 
 const project = ref<ApiProject | null>(null)
 const tasks = ref<Task[]>([])
@@ -153,6 +156,14 @@ function onTaskEvent() {
 function onProjectEvent() {
   loadProject()
 }
+// Contract/invoice changes drive the lifecycle (auto-transitions + auto deposit
+// invoice), so refresh the Contracts tab + billing panel when they fire.
+function onContractEvent() {
+  loadDocs()
+}
+function onInvoiceEvent() {
+  loadInvoices()
+}
 
 onMounted(async () => {
   await loadProject()
@@ -163,16 +174,20 @@ onMounted(async () => {
   socket.on('task:updated', onTaskEvent)
   socket.on('task:deleted', onTaskEvent)
   socket.on('project:updated', onProjectEvent)
+  socket.on('contract:changed', onContractEvent)
+  socket.on('invoice:changed', onInvoiceEvent)
 })
 onBeforeUnmount(() => {
   socket.off('task:created', onTaskEvent)
   socket.off('task:updated', onTaskEvent)
   socket.off('task:deleted', onTaskEvent)
   socket.off('project:updated', onProjectEvent)
+  socket.off('contract:changed', onContractEvent)
+  socket.off('invoice:changed', onInvoiceEvent)
 })
 
 // ---- quick status change (header chip dropdown) ----
-const STATUS_ORDER: Status[] = ['planning', 'in_progress', 'in_review', 'on_hold', 'completed']
+const STATUS_ORDER: Status[] = ['planning', 'awaiting_signature', 'awaiting_deposit', 'in_progress', 'in_review', 'awaiting_final', 'on_hold', 'completed']
 const statusItems = computed(() => [STATUS_ORDER.map(s => ({
   label: STATUS_META[s].label,
   icon: project.value?.status === s ? 'i-lucide-check' : undefined,
@@ -325,26 +340,13 @@ async function removeChecklistItem(taskId: number, item: ChecklistItem) {
 }
 
 // ---- generate contract ----
-const generating = ref(false)
+// Opens the confirm modal (GenerateContractModal), which POSTs the contract and
+// routes to the viewer. Needs a name + fee before it's worth generating.
+const contractModalOpen = ref(false)
 const canGenerate = computed(() => !!project.value?.name && project.value?.project_fee != null)
-async function generateContract() {
-  if (!canGenerate.value || generating.value) return
-  generating.value = true
-  try {
-    const { data } = await api<{ data: Doc & { pandadoc_document_id: string | null } }>(`/projects/${route.params.id}/contract`, { method: 'POST' })
-    await loadDocs()
-    activeTab.value = 'contracts'
-    toast.add({
-      title: 'Contract created',
-      description: data.pandadoc_document_id ? 'Draft created in PandaDoc from the project scope.' : 'Draft created. Connect PandaDoc to send it for signature.',
-      color: 'success'
-    })
-  } catch (err: unknown) {
-    const e = err as { data?: { error?: { message?: string } } }
-    toast.add({ title: 'Could not generate contract', description: e?.data?.error?.message || 'Add a project fee first.', color: 'error' })
-  } finally {
-    generating.value = false
-  }
+function openContractModal() {
+  if (!canGenerate.value) return
+  contractModalOpen.value = true
 }
 
 // ---- request deposit (Stripe) ----
@@ -403,7 +405,7 @@ const billingAction = computed(() => {
 
 const headerMenu = computed(() => [[
   { label: 'Edit Scope', icon: 'i-lucide-pencil', onSelect: openEdit },
-  { label: 'Generate Contract', icon: 'i-lucide-file-signature', onSelect: generateContract, disabled: !canGenerate.value }
+  { label: 'Generate Contract', icon: 'i-lucide-file-signature', onSelect: openContractModal, disabled: !canGenerate.value }
 ]])
 
 const money = (n: number | null | undefined) => (n == null ? '—' : `$${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`)
@@ -520,7 +522,7 @@ const scopeFields = computed(() => project.value
                   class="inline-flex size-[22px] flex-none items-center justify-center rounded-md text-[10px] font-semibold"
                   :class="AVATAR[project.client_id % AVATAR.length]"
                 >{{ initials(clientLabel) }}</span>
-                <span class="text-[13px] font-medium text-teal-700">{{ clientLabel }}</span>
+                <span class="text-[13px] font-medium text-primary">{{ clientLabel }}</span>
               </NuxtLink>
               <span
                 v-if="project.type_name"
@@ -579,7 +581,7 @@ const scopeFields = computed(() => project.value
             <span
               v-if="t.badge != null"
               class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums"
-              :class="activeTab === t.key ? 'bg-mist text-teal-700' : 'bg-muted text-muted'"
+              :class="activeTab === t.key ? 'bg-mist text-primary' : 'bg-muted text-muted'"
             >{{ t.badge }}</span>
           </button>
         </div>
@@ -591,7 +593,7 @@ const scopeFields = computed(() => project.value
         >
           <div class="rounded-card bg-default ring ring-default">
             <div class="flex items-center justify-between border-b border-default px-5 py-4">
-              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-teal-700">
+              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
                 Statement of work
               </div>
               <UButton
@@ -922,9 +924,8 @@ const scopeFields = computed(() => project.value
               color="primary"
               size="sm"
               class="rounded-full"
-              :loading="generating"
               :disabled="!canGenerate"
-              @click="generateContract"
+              @click="openContractModal"
             >
               New Contract
             </UButton>
@@ -951,7 +952,7 @@ const scopeFields = computed(() => project.value
             <NuxtLink
               v-for="d in contracts"
               :key="d.id"
-              to="/agreements"
+              :to="`/contracts/${d.id}`"
               class="flex items-center gap-3 border-b border-default px-5 py-3.5 last:border-b-0 hover:bg-muted"
             >
               <UIcon
@@ -1033,6 +1034,12 @@ const scopeFields = computed(() => project.value
         mode="edit"
         :project="project"
         @saved="onSaved"
+      />
+
+      <GenerateContractModal
+        v-model:open="contractModalOpen"
+        :project="project"
+        @created="loadDocs"
       />
     </template>
   </div>

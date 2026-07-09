@@ -67,12 +67,12 @@ interface Agreement {
   producedProject?: boolean
 }
 
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-teal-700', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 
 const STATUS_META: Record<Status, { label: string, chip: string, dot: string }> = {
   draft: { label: 'Draft', chip: 'bg-muted text-default', dot: 'bg-ink-400' },
   sent: { label: 'Sent', chip: 'bg-info/10 text-info', dot: 'bg-info' },
-  viewed: { label: 'Viewed', chip: 'bg-mist text-teal-700', dot: 'bg-teal-600' },
+  viewed: { label: 'Viewed', chip: 'bg-mist text-primary', dot: 'bg-teal-600' },
   accepted: { label: 'Accepted', chip: 'bg-success/10 text-success', dot: 'bg-success' },
   signed: { label: 'Signed', chip: 'bg-success/10 text-success', dot: 'bg-success' },
   declined: { label: 'Declined', chip: 'bg-error/10 text-error', dot: 'bg-error' },
@@ -170,7 +170,15 @@ async function load() {
     pending.value = false
   }
 }
-onMounted(load)
+const socket = useSocket()
+function onContractChanged() {
+  load()
+}
+onMounted(() => {
+  load()
+  socket.on('contract:changed', onContractChanged)
+})
+onBeforeUnmount(() => socket.off('contract:changed', onContractChanged))
 
 const byId = (id?: string | null) => agreements.value.find(a => a.id === id) || null
 
@@ -179,10 +187,10 @@ const kindLabel = (k: Kind) => (k === 'proposal' ? 'Proposal' : 'Contract')
 const kindChip = (k: Kind) => (k === 'proposal'
   ? 'bg-default text-highlighted ring-1 ring-accented'
   : 'bg-teal-800 text-white')
-const kindIconWrap = (k: Kind) => (k === 'proposal' ? 'bg-muted text-muted' : 'bg-mist text-teal-700')
+const kindIconWrap = (k: Kind) => (k === 'proposal' ? 'bg-muted text-muted' : 'bg-mist text-primary')
 const kindIcon = (k: Kind) => (k === 'proposal' ? 'i-lucide-file-text' : 'i-lucide-file-check-2')
 const subtypeLabel = (ct?: Ctype) => (ct === 'care_plan' ? 'Care Plan' : 'Project')
-const subtypeChip = (ct?: Ctype) => (ct === 'care_plan' ? 'bg-mist text-teal-700' : 'bg-muted text-default')
+const subtypeChip = (ct?: Ctype) => (ct === 'care_plan' ? 'bg-mist text-primary' : 'bg-muted text-default')
 const subtypeIcon = (ct?: Ctype) => (ct === 'care_plan' ? 'i-lucide-repeat' : 'i-lucide-zap')
 const dateClass = (k: Agreement['dateKind']) => {
   if (k === 'bad') return 'font-semibold text-error'
@@ -202,6 +210,15 @@ const search = ref('')
 const openId = ref<string | null>(null)
 function openAgreement(id: string) {
   openId.value = id
+}
+// Row click: contracts get a dedicated viewer page (embedded PandaDoc + send/sign);
+// proposals still open the quick-peek drawer.
+function openRow(a: Agreement) {
+  if (a.kind === 'contract') {
+    navigateTo(`/contracts/${a.numId}`)
+    return
+  }
+  openId.value = a.id
 }
 
 const segCounts = computed(() => ({
@@ -402,7 +419,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
           <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
             Agreements
           </h1>
-          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-teal-700 tabular-nums">{{ agreements.length }}</span>
+          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ agreements.length }}</span>
         </div>
         <p class="mt-1.5 text-sm text-muted">
           Every proposal and contract across all clients, generated and signed through PandaDoc.
@@ -431,12 +448,12 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
         v-for="t in tiles"
         :key="t.key"
         class="rounded-[14px] border p-4 text-left transition-colors"
-        :class="t.on ? 'border-teal-600 bg-mist' : 'border-default bg-default hover:border-accented'"
+        :class="t.on ? 'border-primary bg-mist' : 'border-default bg-default hover:border-accented'"
         @click="t.apply"
       >
         <div class="flex items-center justify-between gap-2.5">
           <span class="font-mono text-[10.5px] uppercase tracking-[0.05em] text-muted">{{ t.label }}</span>
-          <span class="inline-flex size-7 items-center justify-center rounded-lg bg-mist text-teal-700"><UIcon
+          <span class="inline-flex size-7 items-center justify-center rounded-lg bg-mist text-primary"><UIcon
             :name="t.icon"
             class="size-[15px]"
           /></span>
@@ -461,7 +478,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
           {{ s.label }}
           <span
             class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums"
-            :class="seg === s.key ? 'bg-mist text-teal-700' : 'bg-elevated text-muted'"
+            :class="seg === s.key ? 'bg-mist text-primary' : 'bg-elevated text-muted'"
           >{{ s.count }}</span>
         </button>
       </div>
@@ -561,7 +578,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
                 v-for="a in filtered"
                 :key="a.id"
                 class="cursor-pointer border-b border-default transition-colors last:border-b-0 hover:bg-muted"
-                @click="openId = a.id"
+                @click="openRow(a)"
               >
                 <td class="max-w-[280px] px-4 py-3.5">
                   <div class="flex items-center gap-2.5">
@@ -731,7 +748,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
               v-for="a in col.cards"
               :key="a.id"
               class="cursor-pointer rounded-xl border border-default bg-default p-3.5 transition-colors hover:border-accented"
-              @click="openId = a.id"
+              @click="openRow(a)"
             >
               <div class="mb-2.5 flex items-center gap-1.5">
                 <span
@@ -836,7 +853,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
                       class="inline-flex size-[22px] flex-none items-center justify-center rounded-md text-[9.5px] font-semibold"
                       :class="AVATAR[detail.ci]"
                     >{{ initials(detail.client) }}</span>
-                    <span class="text-[13px] font-medium text-teal-700">{{ detail.client }}</span>
+                    <span class="text-[13px] font-medium text-primary">{{ detail.client }}</span>
                   </NuxtLink>
                 </div>
               </div>
@@ -910,7 +927,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
                     >Custom</span>
                     <span
                       v-else
-                      class="rounded bg-mist px-1.5 py-px text-[10px] font-semibold text-teal-700"
+                      class="rounded bg-mist px-1.5 py-px text-[10px] font-semibold text-primary"
                     >Service</span>
                   </div>
                   <div class="mt-0.5 text-xs text-muted tabular-nums">
@@ -1004,37 +1021,49 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
 
           <!-- footer -->
           <div class="flex flex-none items-center gap-2.5 border-t border-default px-6 py-3.5">
+            <!-- Contracts open the dedicated viewer (embedded PandaDoc + send/sign). -->
             <UButton
-              icon="i-lucide-external-link"
+              v-if="detail.kind === 'contract'"
+              icon="i-lucide-file-signature"
               color="primary"
               class="flex-1 justify-center"
+              :to="`/contracts/${detail.numId}`"
             >
-              Open In PandaDoc
+              Open Contract
             </UButton>
-            <UButton
-              icon="i-lucide-download"
-              color="neutral"
-              variant="outline"
-              square
-              size="lg"
-              aria-label="Download PDF"
-            />
-            <UButton
-              icon="i-lucide-rotate-cw"
-              color="neutral"
-              variant="outline"
-              square
-              size="lg"
-              aria-label="Resend"
-            />
-            <UButton
-              icon="i-lucide-ban"
-              color="error"
-              variant="outline"
-              square
-              size="lg"
-              aria-label="Void"
-            />
+            <template v-else>
+              <UButton
+                icon="i-lucide-external-link"
+                color="primary"
+                class="flex-1 justify-center"
+              >
+                Open In PandaDoc
+              </UButton>
+              <UButton
+                icon="i-lucide-download"
+                color="neutral"
+                variant="outline"
+                square
+                size="lg"
+                aria-label="Download PDF"
+              />
+              <UButton
+                icon="i-lucide-rotate-cw"
+                color="neutral"
+                variant="outline"
+                square
+                size="lg"
+                aria-label="Resend"
+              />
+              <UButton
+                icon="i-lucide-ban"
+                color="error"
+                variant="outline"
+                square
+                size="lg"
+                aria-label="Void"
+              />
+            </template>
           </div>
         </div>
       </template>

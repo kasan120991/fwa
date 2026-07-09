@@ -9,7 +9,10 @@ import { getInvoice, getInvoiceByStripeId, updateInvoice, upsertFromStripe } fro
 import { createPayment, getPaymentByIntentId } from '../repositories/payments.repo.js'
 import { createCall, getCallByVapiId } from '../repositories/calls.repo.js'
 import { listTickets, ticketCode } from '../repositories/tickets.repo.js'
-import { emitInvoiceChanged, emitPaymentCreated, emitCallCreated } from '../realtime/io.js'
+import { emitInvoiceChanged, emitPaymentCreated, emitCallCreated, emitContractChanged } from '../realtime/io.js'
+import { advanceProject } from '../services/projects.service.js'
+import { getProject } from '../repositories/projects.repo.js'
+import { issueDeposit } from '../services/projectBilling.js'
 import { getProposalByDocumentId, updateProposal } from '../repositories/proposals.repo.js'
 import {
   getContractByDocumentId, getContractByProposalId, generateContractFromProposal, updateContract
@@ -170,6 +173,11 @@ webhooksRouter.post('/stripe', async (req, res) => {
         } catch (err) {
           console.error('invoice.paid notification failed:', err.message)
         }
+        // Advance the project lifecycle: deposit paid -> in progress; final paid -> completed.
+        if (local?.project_id) {
+          if (local.kind === 'deposit') await advanceProject(local.project_id, 'in_progress')
+          else if (local.kind === 'balance') await advanceProject(local.project_id, 'completed')
+        }
         break
       }
       case 'invoice.payment_failed': {
@@ -280,14 +288,17 @@ async function generateProjectContract(proposal) {
 // (The project already exists — it's the SOW hub that originated this contract.)
 async function markClientWon(contract) {
   const client = await getClient(contract.client_id)
-  if (!client || client.status === 'active') return
-  const patch = { status: 'active' }
-  if (!client.client_since) patch.client_since = new Date().toISOString().slice(0, 10)
-  let updated = await updateClient(client.id, patch)
-  console.log(`Contract ${contract.id} signed -> client ${client.id} won (status=active)`)
+  if (!client) return null
+  let updated = client
+  if (client.status !== 'active') {
+    const patch = { status: 'active' }
+    if (!client.client_since) patch.client_since = new Date().toISOString().slice(0, 10)
+    updated = await updateClient(client.id, patch)
+    console.log(`Contract ${contract.id} signed -> client ${client.id} won (status=active)`)
+  }
 
-  // An active client provisions a Stripe customer (best-effort). Skipped if one
-  // already exists or Stripe is disabled.
+  // An active client provisions a Stripe customer (best-effort) so the deposit
+  // invoice can be issued. Skipped if one already exists or Stripe is disabled.
   if (!updated.stripe_customer_id) {
     try {
       const customerId = await createStripeCustomer(updated)
@@ -296,6 +307,7 @@ async function markClientWon(contract) {
       console.error(`Stripe customer creation failed for client ${updated.id}:`, err.message)
     }
   }
+  return updated
 }
 
 // Apply a single document event to its proposal or contract.
@@ -325,7 +337,28 @@ async function handleDocumentEvent(doc) {
       if (STATUS_STAMP[internal]) patch[STATUS_STAMP[internal]] = new Date()
     }
     await updateContract(contract.id, patch)
-    if (internal === 'signed' && contract.type === 'project') await markClientWon(contract)
+    emitContractChanged(contract.id)
+
+    // Drive the project lifecycle off the contract's signature state.
+    if (contract.type === 'project') {
+      if (internal === 'sent' && contract.project_id) {
+        await advanceProject(contract.project_id, 'awaiting_signature')
+      } else if (internal === 'signed') {
+        const client = await markClientWon(contract)
+        if (contract.project_id) {
+          // Auto-issue the deposit invoice, then advance to "awaiting deposit".
+          const project = await getProject(contract.project_id)
+          if (project && client) {
+            try {
+              await issueDeposit(project, client, { actorUserId: null })
+            } catch (err) {
+              console.error(`Auto deposit-invoice failed for project ${project.id}:`, err.message)
+            }
+          }
+          await advanceProject(contract.project_id, 'awaiting_deposit')
+        }
+      }
+    }
     return
   }
 

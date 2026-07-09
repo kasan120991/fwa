@@ -531,7 +531,8 @@ CREATE TABLE IF NOT EXISTS projects (
   project_type_id      BIGINT UNSIGNED NOT NULL,
   code                 VARCHAR(50)     NULL,              -- 'WEB-0007', assigned on create
   name                 VARCHAR(255)    NOT NULL,
-  status               ENUM('planning', 'in_progress', 'in_review', 'on_hold', 'completed')
+  status               ENUM('planning', 'awaiting_signature', 'awaiting_deposit', 'in_progress',
+                            'in_review', 'awaiting_final', 'on_hold', 'completed')
                                        NOT NULL DEFAULT 'planning',
 
   -- Statement of Work (Exhibit A)

@@ -48,8 +48,11 @@ const toast = useToast()
 
 const STATUS_ITEMS = [
   { label: 'Planning', value: 'planning' },
+  { label: 'Awaiting Signature', value: 'awaiting_signature' },
+  { label: 'Awaiting Deposit', value: 'awaiting_deposit' },
   { label: 'In Progress', value: 'in_progress' },
   { label: 'In Review', value: 'in_review' },
+  { label: 'Awaiting Final Payment', value: 'awaiting_final' },
   { label: 'On Hold', value: 'on_hold' },
   { label: 'Completed', value: 'completed' }
 ]
@@ -235,7 +238,7 @@ const lockedContactLabel = computed(() => props.contactLabel || props.project?.c
         <div class="flex-none border-b border-default px-6 py-5">
           <div class="flex items-start justify-between gap-3">
             <div>
-              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-teal-700">
+              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
                 Statement of work
               </div>
               <h2 class="mt-1 font-display text-[22px] font-medium tracking-tight text-highlighted">

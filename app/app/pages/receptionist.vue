@@ -81,7 +81,7 @@ onMounted(load)
 
 const TYPE_LABEL: Record<Classification, string> = { inquiry: 'Inquiry', client: 'Client', spam: 'Spam', wrong_number: 'Wrong Number', other: 'Other' }
 const TYPE_CHIP: Record<Classification, string> = {
-  inquiry: 'bg-mist text-teal-700', client: 'bg-info/10 text-info', spam: 'bg-error/10 text-error', wrong_number: 'bg-muted text-default', other: 'bg-muted text-default'
+  inquiry: 'bg-mist text-primary', client: 'bg-info/10 text-info', spam: 'bg-error/10 text-error', wrong_number: 'bg-muted text-default', other: 'bg-muted text-default'
 }
 const RECLASS_ORDER: Classification[] = ['inquiry', 'client', 'spam', 'wrong_number', 'other']
 
@@ -328,7 +328,7 @@ onBeforeUnmount(() => {
           @click="activeTab = t.key"
         >
           {{ t.label }}
-          <span class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums" :class="activeTab === t.key ? 'bg-mist text-teal-700' : 'bg-elevated text-muted'">{{ t.count }}</span>
+          <span class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums" :class="activeTab === t.key ? 'bg-mist text-primary' : 'bg-elevated text-muted'">{{ t.count }}</span>
         </button>
       </div>
       <UInput v-model="search" icon="i-lucide-search" placeholder="Search caller, number, transcript…" class="w-[260px]" :ui="{ base: 'rounded-full' }" />
@@ -350,7 +350,7 @@ onBeforeUnmount(() => {
 
         <button
           v-if="newCall"
-          class="flex flex-none items-center gap-2.5 border-b border-teal-100 bg-mist px-4 py-2.5 text-left text-[13px] font-semibold text-teal-800 transition-colors hover:bg-teal-50"
+          class="flex flex-none items-center gap-2.5 border-b border-primary/20 bg-mist px-4 py-2.5 text-left text-[13px] font-semibold text-primary transition-colors hover:bg-mist"
           @click="newCall = false; load()"
         >
           <span class="size-2 flex-none animate-pulse rounded-full bg-teal-500" />New call just came in — tap to load
@@ -363,7 +363,7 @@ onBeforeUnmount(() => {
               v-for="c in visibleCalls"
               :key="c.id"
               class="flex cursor-pointer gap-3 border-b border-l-[3px] border-default px-4 py-3.5 transition-colors"
-              :class="selectedId === c.id ? 'border-l-teal-500 bg-mist' : (selected[c.id] ? 'border-l-transparent bg-teal-50' : 'border-l-transparent hover:bg-muted')"
+              :class="selectedId === c.id ? 'border-l-teal-500 bg-mist' : (selected[c.id] ? 'border-l-transparent bg-mist' : 'border-l-transparent hover:bg-muted')"
               @click="selectCall(c)"
             >
               <div class="flex w-[22px] flex-none items-start justify-center pt-0.5" @click.stop>
@@ -409,7 +409,7 @@ onBeforeUnmount(() => {
           <div class="flex-none border-b border-default bg-default px-[26px] py-[22px]">
             <div class="flex items-start justify-between gap-3.5">
               <div class="flex min-w-0 items-center gap-3">
-                <span class="inline-flex size-[46px] flex-none items-center justify-center rounded-xl bg-mist text-[15px] font-semibold text-teal-700">{{ initialsOf(cur) }}</span>
+                <span class="inline-flex size-[46px] flex-none items-center justify-center rounded-xl bg-mist text-[15px] font-semibold text-primary">{{ initialsOf(cur) }}</span>
                 <div class="min-w-0">
                   <div class="truncate text-lg font-semibold text-highlighted">{{ cur.name || formatPhone(cur.number) }}</div>
                   <div class="truncate text-[13px] text-muted tabular-nums">{{ (cur.business ? cur.business + ' · ' : '') + formatPhone(cur.number) }}</div>
@@ -481,7 +481,7 @@ onBeforeUnmount(() => {
             <NuxtLink
               v-else-if="curLink"
               :to="curLink.href"
-              class="inline-flex items-center gap-2 rounded-full border border-teal-100 bg-mist px-4 py-2 text-sm font-semibold text-teal-800 transition-colors hover:bg-teal-50"
+              class="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-mist px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-mist"
             >
               <span class="size-[7px] flex-none rounded-full" :class="curLink.kind === 'client' ? 'bg-info' : 'bg-teal-600'" />{{ curLink.label }}
               <UIcon name="i-lucide-arrow-up-right" class="size-3.5 opacity-60" />
@@ -499,7 +499,7 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- bulk toolbar -->
-      <div v-if="anySelected" class="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-inverted py-2 pl-4 pr-2 shadow-lg">
+      <div v-if="anySelected" class="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-ink-900 py-2 pl-4 pr-2 shadow-lg dark:bg-ink-700">
         <span class="whitespace-nowrap text-[13px] font-semibold text-white">{{ selCount }} selected</span>
         <span class="mx-1 h-5 w-px bg-white/20" />
         <button class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/10" @click="bulkMarkReviewed"><UIcon name="i-lucide-check" class="size-[15px]" />Mark Reviewed</button>
@@ -513,7 +513,7 @@ onBeforeUnmount(() => {
     <!-- convert-to-lead modal -->
     <UModal :open="!!convertTarget" title="Convert To Lead" @update:open="v => { if (!v) convertTarget = null }">
       <template #body>
-        <span class="mb-4 inline-flex size-[46px] items-center justify-center rounded-xl bg-mist text-teal-700"><UIcon name="i-lucide-arrow-down-to-line" class="size-5" /></span>
+        <span class="mb-4 inline-flex size-[46px] items-center justify-center rounded-xl bg-mist text-primary"><UIcon name="i-lucide-arrow-down-to-line" class="size-5" /></span>
         <p class="text-[14.5px] leading-relaxed text-default">
           Create a lead for <strong class="text-highlighted">{{ convertTarget?.name || formatPhone(convertTarget?.number) }}</strong>.
           They'll appear in <strong class="text-highlighted">Leads → Outreach</strong> at the New stage, and this call will be linked to the new lead.

@@ -79,7 +79,7 @@ const STAGE_META: Record<Stage, { status: 'success' | 'neutral', label: string }
 // Avatar tint pairs (mist/sand/info/cloud/warning) from the design system.
 const AVATAR = [
   'bg-teal-800 text-white',
-  'bg-mist text-teal-700',
+  'bg-mist text-primary',
   'bg-sand text-highlighted',
   'bg-info/10 text-info',
   'bg-muted text-default'
@@ -204,7 +204,7 @@ function openClient(id: number) {
     <div>
       <div class="flex items-center gap-3">
         <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">Clients</h1>
-        <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-teal-700 tabular-nums">{{ counts.all }}</span>
+        <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ counts.all }}</span>
       </div>
       <p class="mt-1.5 text-sm text-muted">Active and past client relationships.</p>
     </div>
@@ -224,13 +224,13 @@ function openClient(id: number) {
         v-for="t in tabs"
         :key="t.key"
         class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
-        :class="tab === t.key ? 'border-teal-600 bg-mist font-semibold text-teal-700' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
+        :class="tab === t.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
         @click="tab = t.key"
       >
         {{ t.label }}
         <span
           class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
-          :class="tab === t.key ? 'bg-default text-teal-700' : 'bg-muted text-muted'"
+          :class="tab === t.key ? 'bg-default text-primary' : 'bg-muted text-muted'"
         >{{ t.count }}</span>
       </button>
     </div>
@@ -257,7 +257,7 @@ function openClient(id: number) {
     <!-- bulk toolbar -->
     <div
       v-if="selCount > 0"
-      class="flex items-center justify-between gap-4 border-b border-teal-100 bg-mist px-[18px] py-3"
+      class="flex items-center justify-between gap-4 border-b border-primary/20 bg-mist px-[18px] py-3"
     >
       <div class="flex items-center gap-3">
         <UButton
@@ -268,7 +268,7 @@ function openClient(id: number) {
           aria-label="Clear selection"
           @click="clearSelection"
         />
-        <span class="text-sm font-semibold text-teal-800">{{ selCount }} selected</span>
+        <span class="text-sm font-semibold text-primary">{{ selCount }} selected</span>
       </div>
       <div class="flex items-center gap-2">
         <UButton icon="i-lucide-archive" color="neutral" variant="outline" size="xs" class="rounded-full">Archive</UButton>

@@ -6,7 +6,15 @@ import {
 import { getClient } from '../repositories/clients.repo.js'
 import { getActiveTemplate } from '../repositories/documentTemplates.repo.js'
 import { resolveLineItems } from '../services/lineItems.js'
-import { pandadocEnabled, createDocumentFromTemplate, sendDocument } from '../services/pandadoc.js'
+import { pandadocEnabled, createDocumentFromTemplate, sendDocument, getDocumentStatus, createDocumentSession } from '../services/pandadoc.js'
+import { advanceProject } from '../services/projects.service.js'
+import { emitContractChanged } from '../realtime/io.js'
+
+// PandaDoc statuses at which an embedded signing session can be created. NB:
+// PandaDoc rejects sessions for `document.draft` — a document must be sent first.
+const EMBEDDABLE_STATUSES = new Set([
+  'document.sent', 'document.viewed', 'document.completed', 'document.paid'
+])
 
 export const contractsRouter = Router()
 
@@ -71,6 +79,51 @@ contractsRouter.get('/:id', async (req, res) => {
   res.json({ data: contract })
 })
 
+// GET /api/contracts/:id/session — mint a short-lived embedded PandaDoc session
+// for in-app preview/sign. Never hard-fails the viewer: returns { ready:false, reason }
+// for the degraded cases so the page can show a local summary / poll / fall back.
+//   reason: no_document (PandaDoc off or not created) | processing (not yet draft)
+//           | session_error (recipient not on doc, etc. — see message)
+// ?recipient= overrides the signer email (defaults to the owner, for countersign;
+// the future client portal will pass the client's email).
+contractsRouter.get('/:id/session', async (req, res) => {
+  const contract = await getContract(parseId(req))
+  if (!contract) return res.status(404).json({ error: { message: 'Contract not found' } })
+  if (!pandadocEnabled() || !contract.pandadoc_document_id) {
+    return res.json({ data: { ready: false, reason: 'no_document' } })
+  }
+
+  let status
+  try {
+    status = await getDocumentStatus(contract.pandadoc_document_id)
+  } catch (err) {
+    return res.status(502).json({ error: { message: `PandaDoc status check failed: ${err.message}` } })
+  }
+  // A draft can't be embedded (PandaDoc requires a sent document) — the owner
+  // sends it (or previews in PandaDoc) first. Distinguish that from a doc that's
+  // still being generated (uploaded), which the page polls on.
+  if (status === 'document.draft') {
+    return res.json({ data: { ready: false, reason: 'draft', status } })
+  }
+  if (!EMBEDDABLE_STATUSES.has(status)) {
+    return res.json({ data: { ready: false, reason: 'processing', status } })
+  }
+
+  const recipient = (typeof req.query.recipient === 'string' && req.query.recipient) || req.user.email
+  try {
+    const session = await createDocumentSession(contract.pandadoc_document_id, { recipient })
+    if (!session) return res.json({ data: { ready: false, reason: 'no_document' } })
+    return res.json({
+      data: { ready: true, embedUrl: `https://app.pandadoc.com/s/${session.id}/`, expiresAt: session.expiresAt, status }
+    })
+  } catch (err) {
+    // Most commonly the recipient isn't on the document (owner signer role not on
+    // the template). Degrade to preview rather than break the page.
+    console.error(`PandaDoc session failed for contract ${contract.id} (recipient ${recipient}):`, err.message)
+    return res.json({ data: { ready: false, reason: 'session_error', status, message: err.message } })
+  }
+})
+
 // POST /api/contracts — create a standalone contract (e.g. a Website Care Plan).
 // Project contracts are NOT created here; they're generated from an accepted
 // proposal by the PandaDoc webhook (Model B).
@@ -114,6 +167,20 @@ contractsRouter.post('/:id/send', async (req, res) => {
     }
   }
   const updated = await updateContract(id, { status: 'sent', sent_at: new Date() })
+  emitContractChanged(id)
+  // Sending a project contract moves its project to "awaiting signature".
+  if (contract.type === 'project' && contract.project_id) await advanceProject(contract.project_id, 'awaiting_signature')
+  res.json({ data: updated })
+})
+
+// POST /api/contracts/:id/void — mark a contract voided (best-effort PandaDoc void).
+contractsRouter.post('/:id/void', async (req, res) => {
+  const id = parseId(req)
+  const contract = await getContract(id)
+  if (!contract) return res.status(404).json({ error: { message: 'Contract not found' } })
+  if (contract.status === 'signed') return res.status(409).json({ error: { message: 'A signed contract cannot be voided' } })
+  const updated = await updateContract(id, { status: 'voided' })
+  emitContractChanged(id)
   res.json({ data: updated })
 })
 

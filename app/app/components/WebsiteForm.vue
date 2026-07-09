@@ -165,7 +165,7 @@ const lockedClientLabel = computed(() => props.contactLabel || 'Selected client'
         <div class="flex-none border-b border-default px-6 py-5">
           <div class="flex items-start justify-between gap-3">
             <div>
-              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-teal-700">
+              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
                 Website
               </div>
               <h2 class="mt-1 font-display text-[22px] font-medium tracking-tight text-highlighted">

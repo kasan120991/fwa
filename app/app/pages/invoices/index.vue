@@ -39,7 +39,7 @@ function chip(inv: { status: Status, is_overdue: boolean }) {
   if (inv.is_overdue) return { label: 'Overdue', status: 'warning' as const }
   return STATUS_META[inv.status]
 }
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-teal-700', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 const clientName = (i: { client_company: string | null, client_name: string | null }) => i.client_company || i.client_name || 'Unknown'
 
 const invoices = ref<Invoice[]>([])
@@ -122,7 +122,7 @@ function onCreated() {
           <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
             Invoices
           </h1>
-          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-teal-700 tabular-nums">{{ counts.all }}</span>
+          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ counts.all }}</span>
         </div>
         <p class="mt-1.5 text-sm text-muted">
           Bills sent to clients, synced with Stripe. Create, send, and reconcile payments.
@@ -148,7 +148,7 @@ function onCreated() {
       >
         <div class="flex items-center justify-between gap-2.5">
           <span class="font-mono text-[10.5px] uppercase tracking-[0.05em] text-muted">{{ t.label }}</span>
-          <span class="inline-flex size-7 items-center justify-center rounded-lg bg-mist text-teal-700"><UIcon
+          <span class="inline-flex size-7 items-center justify-center rounded-lg bg-mist text-primary"><UIcon
             :name="t.icon"
             class="size-[15px]"
           /></span>
@@ -166,13 +166,13 @@ function onCreated() {
         v-for="t in tabs"
         :key="t.key"
         class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
-        :class="tab === t.key ? 'border-teal-600 bg-mist font-semibold text-teal-700' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
+        :class="tab === t.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
         @click="tab = t.key"
       >
         {{ t.label }}
         <span
           class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
-          :class="tab === t.key ? 'bg-default text-teal-700' : 'bg-muted text-muted'"
+          :class="tab === t.key ? 'bg-default text-primary' : 'bg-muted text-muted'"
         >{{ t.count }}</span>
       </button>
     </div>

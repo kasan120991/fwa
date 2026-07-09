@@ -4,7 +4,7 @@ useHead({ title: 'Projects · Francis Web Agency' })
 // Projects — every project across the agency. Each belongs to a client and holds
 // its Statement of Work (the project is the hub that originates its contract).
 // Backed by the /projects API; each row rolls up its tasks for progress.
-type Status = 'planning' | 'in_progress' | 'in_review' | 'on_hold' | 'completed'
+type Status = 'planning' | 'awaiting_signature' | 'awaiting_deposit' | 'in_progress' | 'in_review' | 'awaiting_final' | 'on_hold' | 'completed'
 
 // The list endpoint returns full project rows (SELECT p.*); this declares the
 // display fields plus the SOW fields the edit form needs.
@@ -56,16 +56,19 @@ interface Project {
   raw: ApiProject
 }
 
-const STATUS_ORDER: Status[] = ['planning', 'in_progress', 'in_review', 'on_hold', 'completed']
+const STATUS_ORDER: Status[] = ['planning', 'awaiting_signature', 'awaiting_deposit', 'in_progress', 'in_review', 'awaiting_final', 'on_hold', 'completed']
 const STATUS: Record<Status, { label: string, chip: string, dot: string, bar: string }> = {
   planning: { label: 'Planning', chip: 'bg-muted text-default', dot: 'bg-ink-400', bar: 'bg-ink-400' },
+  awaiting_signature: { label: 'Awaiting Signature', chip: 'bg-info/10 text-info', dot: 'bg-info', bar: 'bg-info' },
+  awaiting_deposit: { label: 'Awaiting Deposit', chip: 'bg-warning/10 text-warning', dot: 'bg-warning', bar: 'bg-warning' },
   in_progress: { label: 'In Progress', chip: 'bg-info/10 text-info', dot: 'bg-info', bar: 'bg-teal-500' },
-  in_review: { label: 'In Review', chip: 'bg-mist text-teal-700', dot: 'bg-teal-600', bar: 'bg-teal-500' },
+  in_review: { label: 'In Review', chip: 'bg-mist text-primary', dot: 'bg-teal-600', bar: 'bg-teal-500' },
+  awaiting_final: { label: 'Awaiting Final Payment', chip: 'bg-warning/10 text-warning', dot: 'bg-warning', bar: 'bg-warning' },
   on_hold: { label: 'On Hold', chip: 'bg-warning/10 text-warning', dot: 'bg-warning', bar: 'bg-warning' },
   completed: { label: 'Completed', chip: 'bg-success/10 text-success', dot: 'bg-success', bar: 'bg-success' }
 }
 // Avatar tints, mirroring the design system palette.
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-teal-700', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 
 const api = useApi()
 const socket = useSocket()
@@ -264,7 +267,7 @@ async function onDrop(status: Status) {
           <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
             Projects
           </h1>
-          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-teal-700 tabular-nums">{{ projects.length }}</span>
+          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ projects.length }}</span>
         </div>
         <p class="mt-1.5 text-sm text-muted">
           Every project across the agency. Each one belongs to an active client and rolls up its tasks.
@@ -287,13 +290,13 @@ async function onDrop(status: Status) {
           v-for="t in statusTabs"
           :key="t.key"
           class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
-          :class="statusTab === t.key ? 'border-teal-600 bg-mist font-semibold text-teal-700' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
+          :class="statusTab === t.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
           @click="statusTab = t.key"
         >
           {{ t.label }}
           <span
             class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
-            :class="statusTab === t.key ? 'bg-default text-teal-700' : 'bg-muted text-muted'"
+            :class="statusTab === t.key ? 'bg-default text-primary' : 'bg-muted text-muted'"
           >{{ t.count }}</span>
         </button>
       </div>

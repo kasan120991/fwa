@@ -385,7 +385,7 @@ const subtitle = computed(() => {
           <!-- ===== Company ===== -->
           <section class="rounded-card bg-default p-6 ring ring-default">
             <div class="mb-5">
-              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-teal-700">Company</div>
+              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">Company</div>
               <p class="mt-1.5 text-[13.5px] text-muted">The business you're working with and how it shows up across the app.</p>
             </div>
 
@@ -404,7 +404,7 @@ const subtitle = computed(() => {
                 <button
                   v-else
                   type="button"
-                  class="flex size-14 flex-none items-center justify-center rounded-[12px] border-[1.5px] border-dashed border-accented bg-muted text-muted transition-colors hover:border-primary hover:bg-mist hover:text-teal-700"
+                  class="flex size-14 flex-none items-center justify-center rounded-[12px] border-[1.5px] border-dashed border-accented bg-muted text-muted transition-colors hover:border-primary hover:bg-mist hover:text-primary"
                   aria-label="Upload logo"
                   @click="pickLogo"
                 >
@@ -446,7 +446,7 @@ const subtitle = computed(() => {
           <!-- ===== Primary contact ===== -->
           <section class="rounded-card bg-default p-6 ring ring-default">
             <div class="mb-5">
-              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-teal-700">Primary contact</div>
+              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">Primary contact</div>
               <p class="mt-1.5 text-[13.5px] text-muted">Your main point of contact for this account.</p>
             </div>
 
@@ -472,7 +472,7 @@ const subtitle = computed(() => {
           <!-- ===== Billing (clients only) ===== -->
           <section v-if="kind === 'client'" class="rounded-card bg-default p-6 ring ring-default">
             <div class="mb-5">
-              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-teal-700">Billing</div>
+              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">Billing</div>
               <p class="mt-1.5 text-[13.5px] text-muted">Where invoices are addressed. Leave the billing email blank to use the contact email.</p>
             </div>
 
@@ -505,7 +505,7 @@ const subtitle = computed(() => {
           <!-- ===== Internal ===== -->
           <section class="rounded-card bg-default p-6 ring ring-default">
             <div class="mb-5">
-              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-teal-700">Internal</div>
+              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">Internal</div>
               <p class="mt-1.5 text-[13.5px] text-muted">Only your team sees this. Notes never appear on invoices or the client portal.</p>
             </div>
 

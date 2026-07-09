@@ -105,7 +105,7 @@ function itemClass(to: string) {
 
 <template>
   <aside
-    class="sticky top-0 flex h-screen flex-none flex-col overflow-hidden bg-inverted text-white transition-[width,padding] duration-200"
+    class="sticky top-0 flex h-screen flex-none flex-col overflow-hidden bg-ink-900 text-white transition-[width,padding] duration-200 dark:bg-ink-950"
     :class="collapsed ? 'w-[74px] px-3 py-[18px]' : 'w-[260px] px-4 py-5'"
   >
     <!-- logo -->
@@ -163,7 +163,7 @@ function itemClass(to: string) {
               >{{ itemBadge(item.to) }}</span>
               <span
                 v-if="collapsed && itemBadge(item.to) > 0"
-                class="absolute right-1.5 top-1.5 size-2 rounded-full bg-teal-400 ring-2 ring-inverted"
+                class="absolute right-1.5 top-1.5 size-2 rounded-full bg-teal-400 ring-2 ring-ink-900 dark:ring-ink-950"
               />
             </NuxtLink>
           </div>

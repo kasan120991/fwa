@@ -87,7 +87,7 @@ const marker = computed(() => {
       />
       <!-- tooltip -->
       <div
-        class="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-inverted px-2.5 py-1.5 text-center shadow-lg"
+        class="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-ink-900 px-2.5 py-1.5 text-center shadow-lg dark:bg-ink-700"
         :style="{ left: marker.xPct + '%', top: 'calc(' + marker.yPct + '% - 8px)' }"
       >
         <div class="text-[13px] font-semibold text-white tabular-nums">

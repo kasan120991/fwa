@@ -28,13 +28,18 @@
   --spacing-section: 6rem;     /* py-section = 96px marketing rhythm */
   --radius-pill: 9999px;       /* rounded-pill */
   --radius-card: 1rem;         /* rounded-card = 16px */
+}
 
-  /* Marketing surface tokens (single-value, available as bg-sand / bg-mist / bg-deep) */
-  --color-canvas: #FFFFFF;
-  --color-sand: #F1EEE7;
-  --color-mist: #ECFBF7;
-  --color-cloud: #F5F7F6;
-  --color-deep: #073A34;       /* deep teal band */
+/* ---- Surface tokens (dark-aware) ---------------------------------- *
+ * Raw values live on :root / .dark below and are wired into Tailwind
+ * via `@theme inline` so bg-canvas / bg-sand / bg-mist / bg-cloud /
+ * bg-deep resolve to a var() and flip with the color mode. */
+@theme inline {
+  --color-canvas: var(--surface-canvas);
+  --color-sand:   var(--surface-sand);
+  --color-mist:   var(--surface-mist);
+  --color-cloud:  var(--surface-cloud);
+  --color-deep:   var(--surface-deep);
 }
 
 /* ---- Color ramps (full 50–950 — required by Nuxt UI) -------------- */
@@ -126,11 +131,25 @@
 
   /* Container max-width matches our 1200px marketing container */
   --ui-container: 75rem;
+
+  /* Surface tokens — light (the brand's white-canvas defaults) */
+  --surface-canvas: #FFFFFF;
+  --surface-sand:   #F1EEE7;   /* warm neutral block */
+  --surface-mist:   #ECFBF7;   /* pale teal wash */
+  --surface-cloud:  #F5F7F6;   /* cool neutral app background */
+  --surface-deep:   #073A34;   /* deep teal band */
 }
 
 .dark {
   /* On dark surfaces, step the brand up to the brighter teal-400 */
   --ui-primary: var(--ui-color-primary-400);
+
+  /* Surface tokens — dark (soft warm ink; the deep teal band stays deep) */
+  --surface-canvas: #1C2422;   /* raised surface (ink-soft) */
+  --surface-sand:   #222A28;   /* warm elevated block */
+  --surface-mist:   #0C2E29;   /* dark teal wash */
+  --surface-cloud:  #121817;   /* base page (ink-900) */
+  --surface-deep:   #073A34;   /* deep teal band — dark in both modes */
 }
 
 /* ---- Base layer --------------------------------------------------- */
@@ -150,5 +169,5 @@
   font-size: var(--text-eyebrow);
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--ui-color-primary-600);
+  color: var(--ui-primary); /* teal-600 light / teal-400 dark */
 }

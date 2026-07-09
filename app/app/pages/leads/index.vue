@@ -52,9 +52,9 @@ function stageChipClass(k: Stage) {
   if (k === 'new' || k === 'to_contact') return 'bg-muted text-default'
   if (k === 'qualifying' || k === 'contacted' || k === 'engaged') return 'bg-info/10 text-info'
   if (k === 'qualified') return 'bg-success/10 text-success'
-  return 'bg-mist text-teal-700'
+  return 'bg-mist text-primary'
 }
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-teal-700', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 
 function mapLead(c: ApiLead, index: number): Lead {
   const isManual = c.source === 'manual'
@@ -224,7 +224,7 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
     <div>
       <div class="flex items-center gap-3">
         <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">Leads</h1>
-        <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-teal-700 tabular-nums">{{ headerCount }}</span>
+        <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ headerCount }}</span>
       </div>
       <p class="mt-1.5 text-sm text-muted">Everyone in the pipeline before they become a client — inbound inquiries and outreach prospects.</p>
     </div>
@@ -248,7 +248,7 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
       <UIcon v-if="s === 'inbound'" name="i-lucide-arrow-down-to-line" class="size-4" />
       <UIcon v-else-if="s === 'outreach'" name="i-lucide-arrow-up-from-line" class="size-4" />
       {{ s === 'all' ? 'All' : s }}
-      <span class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums" :class="section === s ? 'bg-mist text-teal-700' : 'bg-elevated text-muted'">{{ secCount[s] }}</span>
+      <span class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums" :class="section === s ? 'bg-mist text-primary' : 'bg-elevated text-muted'">{{ secCount[s] }}</span>
     </button>
   </div>
 
@@ -259,11 +259,11 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
         v-for="p in stagePills"
         :key="p.key"
         class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
-        :class="stageFilter === p.key ? 'border-teal-600 bg-mist font-semibold text-teal-700' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
+        :class="stageFilter === p.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
         @click="stageFilter = p.key"
       >
         {{ p.label }}
-        <span class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums" :class="stageFilter === p.key ? 'bg-default text-teal-700' : 'bg-muted text-muted'">{{ p.count }}</span>
+        <span class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums" :class="stageFilter === p.key ? 'bg-default text-primary' : 'bg-muted text-muted'">{{ p.count }}</span>
       </button>
     </div>
     <div class="flex items-center gap-2.5">
@@ -279,10 +279,10 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
 
   <!-- table card -->
   <div class="overflow-hidden rounded-card bg-default ring ring-default">
-    <div v-if="selCount > 0" class="flex items-center justify-between gap-4 border-b border-teal-100 bg-mist px-[18px] py-3">
+    <div v-if="selCount > 0" class="flex items-center justify-between gap-4 border-b border-primary/20 bg-mist px-[18px] py-3">
       <div class="flex items-center gap-3">
         <UButton icon="i-lucide-x" color="neutral" variant="ghost" size="xs" aria-label="Clear selection" @click="selected = {}" />
-        <span class="text-sm font-semibold text-teal-800">{{ selCount }} selected</span>
+        <span class="text-sm font-semibold text-primary">{{ selCount }} selected</span>
       </div>
       <div class="flex items-center gap-2">
         <UButton icon="i-lucide-arrow-down" color="neutral" variant="outline" size="xs" class="rounded-full">Change Stage</UButton>
@@ -424,7 +424,7 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
   <!-- convert-to-project modal -->
   <UModal :open="!!convertTarget" title="Convert To Project" @update:open="v => { if (!v) convertTarget = null }">
     <template #body>
-      <span class="mb-4 inline-flex size-[46px] items-center justify-center rounded-xl bg-mist text-teal-700"><UIcon name="i-lucide-folder-plus" class="size-5" /></span>
+      <span class="mb-4 inline-flex size-[46px] items-center justify-center rounded-xl bg-mist text-primary"><UIcon name="i-lucide-folder-plus" class="size-5" /></span>
       <p class="text-[14.5px] leading-relaxed text-default">
         Convert <strong class="text-highlighted">{{ convertTarget?.name }}</strong> into a client and start a project.
         This creates the client record and removes the lead.

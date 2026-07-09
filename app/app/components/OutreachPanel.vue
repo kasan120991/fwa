@@ -153,7 +153,7 @@ async function logTouch() {
         <div class="flex items-center gap-3">
           <span
             class="inline-flex size-11 flex-none items-center justify-center rounded-[12px]"
-            :class="nextAction.overdue ? 'bg-warning/10 text-warning' : 'bg-mist text-teal-700'"
+            :class="nextAction.overdue ? 'bg-warning/10 text-warning' : 'bg-mist text-primary'"
           >
             <UIcon
               :name="nextAction.overdue ? 'i-lucide-triangle-alert' : 'i-lucide-calendar-clock'"
@@ -208,7 +208,7 @@ async function logTouch() {
           <button
             class="inline-flex items-center gap-1.5 rounded-full py-1 pl-2.5 pr-3 text-xs font-semibold transition-colors"
             :class="i === stageIndex ? 'bg-teal-800 text-white'
-              : (i < stageIndex ? 'bg-mist text-teal-700 hover:bg-mist/80' : 'bg-muted text-muted hover:text-highlighted')"
+              : (i < stageIndex ? 'bg-mist text-primary hover:bg-mist/80' : 'bg-muted text-muted hover:text-highlighted')"
             @click="setStage(s)"
           >
             <UIcon
@@ -284,7 +284,7 @@ async function logTouch() {
 
           <!-- synthetic origin entry -->
           <div class="relative flex gap-3.5">
-            <span class="inline-flex size-8 flex-none items-center justify-center rounded-[9px] bg-mist text-teal-700">
+            <span class="inline-flex size-8 flex-none items-center justify-center rounded-[9px] bg-mist text-primary">
               <UIcon
                 name="i-lucide-user-plus"
                 class="size-4"
@@ -328,7 +328,7 @@ async function logTouch() {
                 v-for="c in CHANNELS"
                 :key="c.key"
                 class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
-                :class="form.channel === c.key ? 'border-teal-600 bg-mist font-semibold text-teal-700' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
+                :class="form.channel === c.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
                 @click="form.channel = c.key"
               >
                 <UIcon
@@ -358,7 +358,7 @@ async function logTouch() {
                 v-for="f in FOLLOWUPS"
                 :key="f.label"
                 class="inline-flex items-center rounded-full border px-3 py-1.5 text-[13px] transition-colors"
-                :class="form.followUp === f.days ? 'border-teal-600 bg-mist font-semibold text-teal-700' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
+                :class="form.followUp === f.days ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
                 @click="form.followUp = f.days"
               >
                 {{ f.label }}

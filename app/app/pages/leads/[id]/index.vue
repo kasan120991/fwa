@@ -37,9 +37,9 @@ function stageChipClass(k: Stage) {
   if (k === 'new' || k === 'to_contact') return 'bg-muted text-default'
   if (k === 'qualifying' || k === 'contacted' || k === 'engaged') return 'bg-info/10 text-info'
   if (k === 'qualified') return 'bg-success/10 text-success'
-  return 'bg-mist text-teal-700'
+  return 'bg-mist text-primary'
 }
-const AVATAR = ['bg-mist text-teal-700', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default', 'bg-warning/10 text-warning']
+const AVATAR = ['bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default', 'bg-warning/10 text-warning']
 
 const SOURCE_META: Record<Source, { label: string, icon: string }> = {
   website: { label: 'Website Form', icon: 'i-lucide-layout-panel-top' },
@@ -398,7 +398,7 @@ async function confirmConvert() {
       title="Convert To Project"
     >
       <template #body>
-        <span class="mb-4 inline-flex size-[46px] items-center justify-center rounded-xl bg-mist text-teal-700"><UIcon
+        <span class="mb-4 inline-flex size-[46px] items-center justify-center rounded-xl bg-mist text-primary"><UIcon
           name="i-lucide-folder-plus"
           class="size-5"
         /></span>

@@ -3,6 +3,15 @@ const collapsed = useSidebarCollapsed()
 const route = useRoute()
 const { user, logout } = useAuth()
 
+// --- Color mode -----------------------------------------------------------
+// Follows the OS by default (nuxt.config `preference: 'system'`); toggling here
+// pins a manual override that @nuxtjs/color-mode persists across sessions.
+const colorMode = useColorMode()
+const isDark = computed(() => colorMode.value === 'dark')
+function toggleColorMode() {
+  colorMode.preference = isDark.value ? 'light' : 'dark'
+}
+
 const displayName = computed(() => user.value?.name || 'Account')
 const initials = computed(() => {
   const parts = (user.value?.name || '').trim().split(/\s+/).filter(Boolean)
@@ -193,7 +202,7 @@ const visibleNotifications = computed(() =>
 
 // Icon tint per tone — reuses the semantic ramps from the design system.
 const toneClass: Record<NotifTone, string> = {
-  brand: 'bg-teal-50 text-primary',
+  brand: 'bg-mist text-primary',
   success: 'bg-success-50 text-success',
   warning: 'bg-warning-50 text-warning',
   info: 'bg-info-50 text-info',
@@ -307,6 +316,26 @@ function onNotifOpen(n: Notification) {
         </UButton>
       </UDropdownMenu>
 
+      <button
+        :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+        :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+        class="inline-flex size-10 flex-none items-center justify-center rounded-[10px] border border-default bg-default text-highlighted transition-colors hover:bg-muted"
+        @click="toggleColorMode"
+      >
+        <ClientOnly>
+          <UIcon
+            :name="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
+            class="size-[18px]"
+          />
+          <template #fallback>
+            <UIcon
+              name="i-lucide-moon"
+              class="size-[18px]"
+            />
+          </template>
+        </ClientOnly>
+      </button>
+
       <UPopover
         v-model:open="notifPopoverOpen"
         :content="{ align: 'end', sideOffset: 8 }"
@@ -322,7 +351,7 @@ function onNotifOpen(n: Notification) {
           />
           <span
             v-if="unreadCount"
-            class="absolute right-2.5 top-2 size-[7px] rounded-full border-[1.5px] border-white bg-error"
+            class="absolute right-2.5 top-2 size-[7px] rounded-full border-[1.5px] border-[var(--ui-bg)] bg-error"
           />
         </button>
 
@@ -335,7 +364,7 @@ function onNotifOpen(n: Notification) {
               </h2>
               <span
                 v-if="unreadCount"
-                class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-teal-50 px-1.5 text-[11px] font-semibold text-primary"
+                class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-mist px-1.5 text-[11px] font-semibold text-primary"
               >{{ unreadCount }}</span>
             </div>
             <div class="flex items-center gap-3">
@@ -363,7 +392,7 @@ function onNotifOpen(n: Notification) {
               :key="n.id"
               :to="n.to"
               class="flex gap-3 px-4 py-3 transition-colors hover:bg-muted"
-              :class="!n.read && 'bg-teal-50/40'"
+              :class="!n.read && 'bg-mist/40'"
               @click="onNotifClick(n)"
             >
               <span
@@ -495,7 +524,7 @@ function onNotifOpen(n: Notification) {
                 :key="n.id"
                 :to="n.to"
                 class="flex gap-3.5 px-6 py-4 transition-colors hover:bg-muted"
-                :class="!n.read && 'bg-teal-50/40'"
+                :class="!n.read && 'bg-mist/40'"
                 @click="onNotifOpen(n)"
               >
                 <span
@@ -532,7 +561,7 @@ function onNotifOpen(n: Notification) {
                 v-if="!visibleNotifications.length"
                 class="flex flex-col items-center px-6 py-16 text-center"
               >
-                <span class="inline-flex size-12 items-center justify-center rounded-full bg-teal-50 text-primary">
+                <span class="inline-flex size-12 items-center justify-center rounded-full bg-mist text-primary">
                   <UIcon
                     name="i-lucide-check"
                     class="size-6"

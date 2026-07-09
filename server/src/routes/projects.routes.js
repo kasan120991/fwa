@@ -2,15 +2,18 @@ import { Router } from 'express'
 import {
   getProject, listProjects, PROJECT_STATUSES, CONTENT_BY
 } from '../repositories/projects.repo.js'
-import { createProject, updateProject, deleteProject } from '../services/projects.service.js'
+import { createProject, updateProject, deleteProject, advanceProject } from '../services/projects.service.js'
 import { listTasks } from '../repositories/tasks.repo.js'
 import { getClient, updateClient } from '../repositories/clients.repo.js'
 import { getProjectType, getProjectTypeByKey } from '../repositories/projectTypes.repo.js'
 import { generateProjectContract } from '../services/projectContract.js'
+import { issueDeposit } from '../services/projectBilling.js'
+import { listContracts } from '../repositories/contracts.repo.js'
+import { pandadocEnabled } from '../services/pandadoc.js'
 import { stripeEnabled, createStripeCustomer, sendDepositInvoice } from '../services/stripe.js'
 import { createInvoice, updateInvoice } from '../repositories/invoices.repo.js'
 import { notify } from '../services/notifications.service.js'
-import { emitInvoiceChanged } from '../realtime/io.js'
+import { emitInvoiceChanged, emitContractChanged } from '../realtime/io.js'
 
 export const projectsRouter = Router()
 
@@ -155,8 +158,11 @@ projectsRouter.patch('/:id', async (req, res) => {
 })
 
 // POST /api/projects/:id/contract — generate the project's contract from its SOW.
+// Body (all optional — the confirm-contract modal supplies them): title,
+// billing_interval, start_date, deposit_pct, special_terms, items[], recipient_email.
 projectsRouter.post('/:id/contract', async (req, res) => {
   const id = parseId(req)
+  const body = req.body ?? {}
   const project = await getProject(id)
   if (!project) return res.status(404).json({ error: { message: 'Project not found' } })
   if (!project.name || project.project_fee == null) {
@@ -164,7 +170,46 @@ projectsRouter.post('/:id/contract', async (req, res) => {
   }
   const client = await getClient(project.client_id)
   if (!client) return res.status(404).json({ error: { message: 'Project client not found' } })
-  const contract = await generateProjectContract(project, client)
+
+  // Don't silently create a duplicate: if a live (non-voided) contract already
+  // exists for this project, tell the caller to open it instead.
+  const existing = (await listContracts({ project_id: id })).rows.find(c => c.status !== 'voided')
+  if (existing) {
+    return res.status(409).json({ error: { message: `This project already has a ${existing.status} contract.`, contract_id: existing.id } })
+  }
+
+  const fields = {}
+  const overrides = {}
+  if (body.title !== undefined) overrides.title = String(body.title)
+  if (body.special_terms !== undefined) overrides.special_terms = body.special_terms == null ? null : String(body.special_terms)
+  if (body.billing_interval !== undefined) {
+    if (body.billing_interval !== 'one_time' && body.billing_interval !== 'monthly') fields.billing_interval = 'must be one_time or monthly'
+    else overrides.billing_interval = body.billing_interval
+  }
+  if (body.start_date != null && body.start_date !== '') {
+    if (typeof body.start_date !== 'string' || Number.isNaN(Date.parse(body.start_date))) fields.start_date = 'must be a valid date'
+    else overrides.start_date = body.start_date.slice(0, 10)
+  }
+  if (body.deposit_pct !== undefined) {
+    const n = Number(body.deposit_pct)
+    if (!Number.isFinite(n) || n <= 0 || n > 100) fields.deposit_pct = 'must be a number in (0, 100]'
+    else overrides.deposit_pct = n
+  }
+  if (Array.isArray(body.items) && body.items.length) overrides.items = body.items
+
+  // Recipient (PandaDoc signer) — required only when PandaDoc is configured, so
+  // local-only creation still works for a client without an email on file.
+  const recipientEmail = (typeof body.recipient_email === 'string' && body.recipient_email.trim())
+    || client.billing_email || client.email
+  if (pandadocEnabled() && !recipientEmail) fields.recipient_email = 'a recipient email is required (add one to the client or provide it here)'
+  if (Object.keys(fields).length) throw badRequest('Validation failed', fields)
+  if (body.recipient_email) overrides.recipient_email = String(body.recipient_email).trim()
+
+  overrides.ownerEmail = req.user.email
+  overrides.ownerName = req.user.name
+
+  const contract = await generateProjectContract(project, client, overrides)
+  emitContractChanged(contract.id)
   res.status(201).json({ data: contract })
 })
 
@@ -188,46 +233,8 @@ projectsRouter.post('/:id/deposit-invoice', async (req, res) => {
   }
   if (!client.stripe_customer_id) return res.status(409).json({ error: { message: 'Could not create a Stripe customer for this client' } })
 
-  const pct = project.deposit_pct ?? 50
-  const deposit = Math.round((project.project_fee * pct / 100) * 100) / 100
-  const clientName = client.company || client.name
-  const description = `Deposit (${pct}%) — ${project.name}`
-
-  // Local invoice first (draft), so the deposit shows on the Invoices page and
-  // its id can ride along in Stripe metadata (dodges the webhook create race).
-  let localInvoice = await createInvoice({
-    client_id: client.id, project_id: project.id, kind: 'deposit', description,
-    amount_due: deposit, status: 'draft',
-    items: [{ service_id: null, name_snapshot: description, description_snapshot: null, unit_price_snapshot: deposit, qty: 1, billing_interval_snapshot: 'one_time', sort_order: 0 }]
-  })
-
-  const stripeInvoice = await sendDepositInvoice(client, {
-    amountCents: Math.round(deposit * 100),
-    description,
-    metadata: { fwa_project_id: String(project.id), fwa_client_id: String(client.id), fwa_invoice_id: String(localInvoice.id), kind: 'deposit' }
-  })
-  if (stripeInvoice) {
-    localInvoice = await updateInvoice(localInvoice.id, {
-      stripe_invoice_id: stripeInvoice.id, number: stripeInvoice.number,
-      hosted_invoice_url: stripeInvoice.hosted_invoice_url, invoice_pdf: stripeInvoice.invoice_pdf,
-      status: 'open', finalized_at: new Date(), due_date: stripeInvoice.due_date
-    })
-  }
-  emitInvoiceChanged(localInvoice.id)
-
-  // Raise a live bell alert (best-effort — never fail the send over a notify hiccup).
-  try {
-    await notify({
-      category: 'invoice', tone: 'info', icon: 'i-lucide-receipt-text',
-      title: 'Deposit invoice sent',
-      body: `$${deposit.toLocaleString('en-US')} deposit sent to ${clientName}.`,
-      link: `/projects/${project.id}`
-    }, req.user.id)
-  } catch (err) {
-    console.error(`Deposit-invoice notification failed for project ${project.id}:`, err.message)
-  }
-
-  res.json({ data: { id: localInvoice.id, hosted_invoice_url: localInvoice.hosted_invoice_url, status: localInvoice.status, amount: deposit } })
+  const { invoice, amount } = await issueDeposit(project, client, { actorUserId: req.user.id })
+  res.json({ data: { id: invoice.id, hosted_invoice_url: invoice.hosted_invoice_url, status: invoice.status, amount } })
 })
 
 // POST /api/projects/:id/final-invoice — Stripe-send the client the final
@@ -287,6 +294,9 @@ projectsRouter.post('/:id/final-invoice', async (req, res) => {
   } catch (err) {
     console.error(`Final-invoice notification failed for project ${project.id}:`, err.message)
   }
+
+  // Sending the final invoice moves the project to "awaiting final payment".
+  await advanceProject(project.id, 'awaiting_final')
 
   res.json({ data: { id: localInvoice.id, hosted_invoice_url: localInvoice.hosted_invoice_url, status: localInvoice.status, amount: balance } })
 })

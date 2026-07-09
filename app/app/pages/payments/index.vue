@@ -24,11 +24,11 @@ const toast = useToast()
 
 const METHOD_META: Record<string, { label: string, class: string, icon: string }> = {
   card: { label: 'Card', class: 'bg-info/10 text-info', icon: 'i-lucide-credit-card' },
-  bank: { label: 'Bank', class: 'bg-mist text-teal-700', icon: 'i-lucide-landmark' },
+  bank: { label: 'Bank', class: 'bg-mist text-primary', icon: 'i-lucide-landmark' },
   manual: { label: 'Manual', class: 'bg-muted text-default', icon: 'i-lucide-hand-coins' },
   other: { label: 'Other', class: 'bg-muted text-muted', icon: 'i-lucide-circle-dollar-sign' }
 }
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-teal-700', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 const clientName = (p: Payment) => p.client_company || p.client_name || 'Unknown'
 
 const payments = ref<Payment[]>([])
@@ -75,7 +75,7 @@ const tiles = computed(() => [
           <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
             Payments
           </h1>
-          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-teal-700 tabular-nums">{{ payments.length }}</span>
+          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ payments.length }}</span>
         </div>
         <p class="mt-1.5 text-sm text-muted">
           Payments received against your invoices — Stripe charges and offline payments you've recorded.
@@ -92,7 +92,7 @@ const tiles = computed(() => [
       >
         <div class="flex items-center justify-between gap-2.5">
           <span class="font-mono text-[10.5px] uppercase tracking-[0.05em] text-muted">{{ t.label }}</span>
-          <span class="inline-flex size-7 items-center justify-center rounded-lg bg-mist text-teal-700"><UIcon
+          <span class="inline-flex size-7 items-center justify-center rounded-lg bg-mist text-primary"><UIcon
             :name="t.icon"
             class="size-[15px]"
           /></span>
@@ -168,7 +168,7 @@ const tiles = computed(() => [
                   <NuxtLink
                     v-if="p.invoice_number"
                     to="/invoices"
-                    class="text-[13.5px] font-medium text-teal-700 hover:opacity-80"
+                    class="text-[13.5px] font-medium text-primary hover:opacity-80"
                   >{{ p.invoice_number }}</NuxtLink>
                   <span
                     v-else

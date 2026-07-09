@@ -41,7 +41,7 @@ const PRIO: Record<Priority, { label: string, dot: string }> = {
 const TYPE_LABEL: Record<string, string> = {
   update: 'Site Update', issue: 'Site Issue', bug: 'Bug', question: 'Question', other: 'Other'
 }
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-teal-700', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 
 const api = useApi()
 const socket = useSocket()
@@ -121,7 +121,7 @@ const siteLabel = (t: ApiTicket) => t.website_name || t.website_domain || ''
           <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
             Support Tickets
           </h1>
-          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-teal-700 tabular-nums">{{ tickets.length }}</span>
+          <span class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums">{{ tickets.length }}</span>
         </div>
         <p class="mt-1.5 text-sm text-muted">
           Requests across every client — site updates, issues, and bugs. Each has a reply thread and attachments.
@@ -144,13 +144,13 @@ const siteLabel = (t: ApiTicket) => t.website_name || t.website_domain || ''
           v-for="t in statusTabs"
           :key="t.key"
           class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
-          :class="statusTab === t.key ? 'border-teal-600 bg-mist font-semibold text-teal-700' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
+          :class="statusTab === t.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
           @click="statusTab = t.key"
         >
           {{ t.label }}
           <span
             class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
-            :class="statusTab === t.key ? 'bg-default text-teal-700' : 'bg-muted text-muted'"
+            :class="statusTab === t.key ? 'bg-default text-primary' : 'bg-muted text-muted'"
           >{{ t.count }}</span>
         </button>
       </div>

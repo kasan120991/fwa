@@ -45,7 +45,7 @@ interface ApiContact {
   country: string | null
 }
 
-const AVATAR = ['bg-mist text-teal-700', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default', 'bg-warning/10 text-warning']
+const AVATAR = ['bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default', 'bg-warning/10 text-warning']
 const TAG_TONE: Record<string, 'primary' | 'neutral' | 'outline'> = { Retainer: 'primary', Priority: 'outline' }
 
 function buildClient(c: ApiContact): ClientIdentity {
@@ -142,7 +142,7 @@ function onProjectSaved() {
 }
 
 // ---------- projects (real, from /projects?client_id=) ----------
-type PStatus = 'planning' | 'in_progress' | 'in_review' | 'on_hold' | 'completed'
+type PStatus = 'planning' | 'awaiting_signature' | 'awaiting_deposit' | 'in_progress' | 'in_review' | 'awaiting_final' | 'on_hold' | 'completed'
 interface ApiProject {
   id: number
   name: string
@@ -154,8 +154,11 @@ interface ApiProject {
 }
 const PROJECT_META: Record<PStatus, { label: string, status: 'neutral' | 'info' | 'warning' | 'success', bar: string }> = {
   planning: { label: 'Planning', status: 'neutral', bar: 'bg-ink-400' },
+  awaiting_signature: { label: 'Awaiting Signature', status: 'info', bar: 'bg-info' },
+  awaiting_deposit: { label: 'Awaiting Deposit', status: 'warning', bar: 'bg-warning' },
   in_progress: { label: 'In Progress', status: 'info', bar: 'bg-info' },
   in_review: { label: 'In Review', status: 'info', bar: 'bg-teal-500' },
+  awaiting_final: { label: 'Awaiting Final Payment', status: 'warning', bar: 'bg-warning' },
   on_hold: { label: 'On Hold', status: 'warning', bar: 'bg-warning' },
   completed: { label: 'Completed', status: 'success', bar: 'bg-success' }
 }
@@ -744,7 +747,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
             <span
               v-if="t.badge != null"
               class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums"
-              :class="activeTab === t.key ? 'bg-mist text-teal-700' : 'bg-muted text-muted'"
+              :class="activeTab === t.key ? 'bg-mist text-primary' : 'bg-muted text-muted'"
             >{{ t.badge }}</span>
           </button>
         </div>
@@ -1328,7 +1331,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
               >
                 <span
                   class="inline-flex size-[38px] flex-none items-center justify-center rounded-[10px]"
-                  :class="c.type === 'Contract' ? 'bg-mist text-teal-700' : 'bg-muted text-muted'"
+                  :class="c.type === 'Contract' ? 'bg-mist text-primary' : 'bg-muted text-muted'"
                 >
                   <UIcon
                     :name="c.type === 'Contract' ? 'i-lucide-file-check-2' : 'i-lucide-file-text'"
@@ -1434,7 +1437,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
               {{ f.label }}
               <span
                 class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums"
-                :class="supportFilter === f.key ? 'bg-mist text-teal-700' : 'bg-elevated text-muted'"
+                :class="supportFilter === f.key ? 'bg-mist text-primary' : 'bg-elevated text-muted'"
               >{{ f.count }}</span>
             </button>
           </div>
@@ -1510,7 +1513,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
               class="flex gap-3.5 px-4 py-3.5"
               :class="i > 0 ? 'border-t border-default' : ''"
             >
-              <span class="inline-flex size-[38px] flex-none items-center justify-center rounded-full bg-mist text-teal-700">
+              <span class="inline-flex size-[38px] flex-none items-center justify-center rounded-full bg-mist text-primary">
                 <UIcon
                   name="i-lucide-phone"
                   class="size-[17px]"

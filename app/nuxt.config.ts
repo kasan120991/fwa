@@ -23,9 +23,9 @@ export default defineNuxtConfig({
     }
   },
 
-  // Light-first per the brand; flip `preference` to 'system' to enable auto dark.
+  // Follows the OS by default; the top-bar toggle persists a manual override.
   colorMode: {
-    preference: 'light',
+    preference: 'system',
     fallback: 'light'
   },
 

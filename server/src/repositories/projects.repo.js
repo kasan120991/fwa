@@ -1,6 +1,13 @@
 import { query, withTransaction } from '../db/pool.js'
 
-export const PROJECT_STATUSES = new Set(['planning', 'in_progress', 'in_review', 'on_hold', 'completed'])
+export const PROJECT_STATUSES = new Set([
+  'planning', 'awaiting_signature', 'awaiting_deposit', 'in_progress', 'in_review', 'awaiting_final', 'on_hold', 'completed'
+])
+// Forward pipeline order for automatic lifecycle transitions (see advanceProject).
+// `on_hold` is intentionally excluded — it's a manual pause that blocks auto-advance.
+export const PROJECT_LIFECYCLE_ORDER = [
+  'planning', 'awaiting_signature', 'awaiting_deposit', 'in_progress', 'in_review', 'awaiting_final', 'completed'
+]
 export const CONTENT_BY = new Set(['client', 'developer', 'mix'])
 
 // Business columns a create/update may set. client_id + project_type_id are set
