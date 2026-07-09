@@ -526,9 +526,10 @@ const subtitle = computed(() => {
       </div>
 
       <!-- ===== sticky action bar ===== -->
-      <!-- negative margins cancel the layout's responsive page padding so the bar
-           runs edge-to-edge (sidebar → viewport); px restores the inner inset. -->
-      <div class="sticky bottom-0 z-20 -mx-4 border-t border-default bg-default/95 px-4 shadow-[0_-1px_2px_rgba(18,24,23,0.04)] backdrop-blur sm:-mx-5 sm:px-5 lg:-mx-[26px] lg:px-[26px]">
+      <!-- The symmetric margin makes the bar span the full content column (100cqw
+           of the layout's size container) so it stays edge-to-edge whatever the
+           sidebar width / max-width cap; px restores the inner button inset. -->
+      <div class="sticky bottom-0 z-20 mx-[calc((100%_-_100cqw)/2)] border-t border-default bg-default/95 px-4 shadow-[0_-1px_2px_rgba(18,24,23,0.04)] backdrop-blur sm:px-5 lg:px-[26px]">
         <div class="flex w-full flex-wrap items-center gap-3 py-3.5">
           <span v-if="dirty" class="inline-flex items-center gap-2 text-[13px] text-muted">
             <span class="size-[7px] rounded-full bg-warning" />Unsaved changes

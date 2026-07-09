@@ -13,7 +13,9 @@ const mobileOpen = useSidebarMobileOpen()
       @click="mobileOpen = false"
     />
     <AppSidebar />
-    <div class="flex min-w-0 flex-1 flex-col">
+    <!-- size container so full-bleed children (e.g. the form action bar) can span
+         the content column edge-to-edge regardless of sidebar width via 100cqw. -->
+    <div class="flex min-w-0 flex-1 flex-col [container-type:inline-size]">
       <AppTopBar />
       <main class="flex-1 p-4 sm:p-5 lg:p-[26px]">
         <div class="mx-auto flex max-w-[1260px] flex-col gap-5">
