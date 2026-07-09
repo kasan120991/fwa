@@ -527,7 +527,7 @@ const subtitle = computed(() => {
 
       <!-- ===== sticky action bar ===== -->
       <div class="sticky bottom-0 z-20 border-t border-default bg-default/95 shadow-[0_-1px_2px_rgba(18,24,23,0.04)] backdrop-blur">
-        <div class="mx-auto flex max-w-[720px] flex-wrap items-center gap-3 py-3.5">
+        <div class="flex w-full flex-wrap items-center gap-3 py-3.5">
           <span v-if="dirty" class="inline-flex items-center gap-2 text-[13px] text-muted">
             <span class="size-[7px] rounded-full bg-warning" />Unsaved changes
           </span>
