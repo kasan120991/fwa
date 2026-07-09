@@ -527,17 +527,18 @@ const subtitle = computed(() => {
 
       <!-- ===== sticky action bar ===== -->
       <div class="sticky bottom-0 z-20 border-t border-default bg-default/95 shadow-[0_-1px_2px_rgba(18,24,23,0.04)] backdrop-blur">
-        <div class="mx-auto flex max-w-[720px] items-center gap-3 py-3.5">
+        <div class="mx-auto flex max-w-[720px] flex-wrap items-center gap-3 py-3.5">
           <span v-if="dirty" class="inline-flex items-center gap-2 text-[13px] text-muted">
             <span class="size-[7px] rounded-full bg-warning" />Unsaved changes
           </span>
           <span v-else-if="saved" class="inline-flex items-center gap-1.5 text-[13px] font-semibold text-success">
             <UIcon name="i-lucide-check" class="size-4" />{{ mode === 'edit' ? 'All changes saved' : `${nounCap} created` }}
           </span>
-          <div class="flex-1" />
-          <UButton color="neutral" variant="outline" class="rounded-full" @click="requestCancel">Cancel</UButton>
-          <UButton v-if="mode === 'create'" color="neutral" variant="outline" class="rounded-full" :disabled="saving" @click="save({ another: true })">Create &amp; Add Another</UButton>
-          <UButton color="primary" class="rounded-full" :disabled="primaryDisabled" :loading="saving" @click="save()">{{ primaryLabel }}</UButton>
+          <div class="ml-auto flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <UButton color="neutral" variant="outline" class="w-full justify-center rounded-full sm:w-auto" @click="requestCancel">Cancel</UButton>
+            <UButton v-if="mode === 'create'" color="neutral" variant="outline" class="w-full justify-center rounded-full sm:w-auto" :disabled="saving" @click="save({ another: true })">Create &amp; Add Another</UButton>
+            <UButton color="primary" class="w-full justify-center rounded-full sm:w-auto" :disabled="primaryDisabled" :loading="saving" @click="save()">{{ primaryLabel }}</UButton>
+          </div>
         </div>
       </div>
 

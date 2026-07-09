@@ -129,7 +129,7 @@ function openEdit(e: Expense) {
     </PageHeader>
 
     <!-- tiles -->
-    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
       <button
         v-for="t in tiles"
         :key="t.key"
@@ -176,7 +176,33 @@ function openEdit(e: Expense) {
         Loading expenses…
       </div>
       <template v-else-if="filtered.length > 0">
-        <div class="overflow-x-auto">
+        <!-- mobile cards -->
+        <ul class="divide-y divide-default sm:hidden">
+          <li
+            v-for="e in filtered"
+            :key="e.id"
+            class="flex items-center gap-3 px-4 py-3 transition-colors active:bg-muted"
+            :class="e.status === 'cancelled' ? 'opacity-60' : ''"
+            @click="openEdit(e)"
+          >
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5 text-sm font-semibold text-highlighted">
+                <span class="truncate">{{ e.vendor }}</span>
+                <UIcon v-if="e.receipt_url" name="i-lucide-paperclip" class="size-3.5 flex-none text-muted" />
+              </div>
+              <div class="truncate text-[12.5px] text-muted">{{ clientName(e) || e.description || '—' }}</div>
+            </div>
+            <div class="flex flex-none flex-col items-end gap-1">
+              <span class="text-sm font-semibold text-highlighted tabular-nums">
+                {{ formatMoney(e.amount, { cents: true }) }}<span v-if="e.category === 'subscription'" class="ml-0.5 text-[11px] font-normal text-muted">/{{ e.billing_interval === 'yearly' ? 'yr' : 'mo' }}</span>
+              </span>
+              <StatusChip :status="CATEGORY_META[e.category].status">{{ CATEGORY_META[e.category].label }}</StatusChip>
+            </div>
+          </li>
+        </ul>
+
+        <!-- table (sm+) -->
+        <div class="hidden overflow-x-auto sm:block">
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default">

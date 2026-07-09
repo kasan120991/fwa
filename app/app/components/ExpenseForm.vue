@@ -477,7 +477,7 @@ async function remove() {
         </div>
 
         <div class="flex-none border-t border-default px-6 py-4">
-          <div class="flex items-center justify-between gap-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2.5 gap-y-2">
             <div class="flex items-center gap-2">
               <UButton
                 v-if="isEdit"

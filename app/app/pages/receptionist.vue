@@ -177,8 +177,13 @@ function toggleAll() {
   selected.value = next
 }
 
+// On mobile the list + detail don't fit side-by-side, so tapping a call swaps
+// to a full-screen detail view (with a back button); lg+ keeps the split view.
+const mobileShowDetail = ref(false)
+
 async function selectCall(c: Call) {
   selectedId.value = c.id
+  mobileShowDetail.value = true
   playing.value = false
   currentTime.value = 0
   audioDuration.value = 0
@@ -335,13 +340,16 @@ onBeforeUnmount(() => {
           <span class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums" :class="activeTab === t.key ? 'bg-mist text-primary' : 'bg-elevated text-muted'">{{ t.count }}</span>
         </button>
       </div>
-      <UInput v-model="search" icon="i-lucide-search" placeholder="Search caller, number, transcript…" class="w-[260px]" :ui="{ base: 'rounded-full' }" />
+      <UInput v-model="search" icon="i-lucide-search" placeholder="Search caller, number, transcript…" class="w-full sm:w-[260px]" :ui="{ base: 'rounded-full' }" />
     </div>
 
     <!-- master-detail -->
     <div class="relative flex h-[calc(100dvh-17rem)] min-h-[560px] overflow-hidden rounded-card bg-default ring ring-default">
       <!-- LIST -->
-      <div class="flex w-full min-w-0 flex-col lg:w-96 lg:flex-none lg:border-r lg:border-default">
+      <div
+        class="w-full min-w-0 flex-col lg:flex lg:w-96 lg:flex-none lg:border-r lg:border-default"
+        :class="mobileShowDetail ? 'hidden lg:flex' : 'flex'"
+      >
         <div class="flex flex-none items-center justify-between border-b border-default px-4 py-3">
           <button class="inline-flex items-center gap-2.5 text-[13px] font-semibold text-muted transition-colors hover:text-highlighted" @click="toggleAll">
             <span class="inline-flex size-[18px] flex-none items-center justify-center rounded-[5px] border" :class="allChecked ? 'border-primary bg-primary' : 'border-accented bg-default'">
@@ -408,11 +416,21 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- DETAIL -->
-      <div class="hidden min-w-0 flex-1 flex-col bg-muted lg:flex">
+      <div
+        class="min-w-0 flex-1 flex-col bg-muted lg:flex"
+        :class="mobileShowDetail ? 'flex' : 'hidden lg:flex'"
+      >
         <template v-if="cur">
-          <div class="flex-none border-b border-default bg-default px-[26px] py-[22px]">
+          <div class="flex-none border-b border-default bg-default px-4 py-4 sm:px-[26px] sm:py-[22px]">
             <div class="flex items-start justify-between gap-3.5">
               <div class="flex min-w-0 items-center gap-3">
+                <button
+                  class="inline-flex size-9 flex-none items-center justify-center rounded-[10px] border border-default text-highlighted transition-colors hover:bg-muted lg:hidden"
+                  aria-label="Back to calls"
+                  @click="mobileShowDetail = false"
+                >
+                  <UIcon name="i-lucide-arrow-left" class="size-[18px]" />
+                </button>
                 <span class="inline-flex size-[46px] flex-none items-center justify-center rounded-xl bg-mist text-[15px] font-semibold text-primary">{{ initialsOf(cur) }}</span>
                 <div class="min-w-0">
                   <div class="truncate text-lg font-semibold text-highlighted">{{ cur.name || formatPhone(cur.number) }}</div>
@@ -503,7 +521,7 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- bulk toolbar -->
-      <div v-if="anySelected" class="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-ink-900 py-2 pl-4 pr-2 shadow-lg dark:bg-ink-700">
+      <div v-if="anySelected" class="absolute bottom-5 left-1/2 z-20 flex max-w-[calc(100vw-1.5rem)] flex-wrap items-center justify-center gap-2 rounded-[22px] bg-ink-900 px-3 py-2 shadow-lg dark:bg-ink-700 sm:flex-nowrap sm:rounded-full sm:pl-4 sm:pr-2">
         <span class="whitespace-nowrap text-[13px] font-semibold text-white">{{ selCount }} selected</span>
         <span class="mx-1 h-5 w-px bg-white/20" />
         <button class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/10" @click="bulkMarkReviewed"><UIcon name="i-lucide-check" class="size-[15px]" />Mark Reviewed</button>

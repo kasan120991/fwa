@@ -106,7 +106,26 @@ const tiles = computed(() => [
         Loading payments…
       </div>
       <template v-else-if="payments.length > 0">
-        <div class="overflow-x-auto">
+        <!-- mobile cards -->
+        <ul class="divide-y divide-default sm:hidden">
+          <li
+            v-for="p in payments"
+            :key="p.id"
+            class="flex items-center gap-3 px-4 py-3"
+          >
+            <NuxtLink :to="`/clients/${p.client_id}`" class="flex min-w-0 flex-1 items-center gap-3">
+              <span class="inline-flex size-9 flex-none items-center justify-center rounded-[8px] text-[12px] font-semibold" :class="AVATAR[p.client_id % AVATAR.length]">{{ initials(clientName(p)) }}</span>
+              <div class="min-w-0 flex-1">
+                <div class="truncate text-sm font-semibold text-highlighted">{{ clientName(p) }}</div>
+                <div class="truncate text-[12.5px] text-muted">{{ METHOD_META[p.method]?.label }} · {{ p.paid_at ? shortDate(p.paid_at) : '—' }}</div>
+              </div>
+            </NuxtLink>
+            <span class="flex-none text-sm font-semibold text-highlighted tabular-nums">{{ formatMoney(p.amount) }}</span>
+          </li>
+        </ul>
+
+        <!-- table (sm+) -->
+        <div class="hidden overflow-x-auto sm:block">
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default">

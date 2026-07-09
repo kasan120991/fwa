@@ -168,7 +168,7 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
     </PageHeader>
 
     <!-- KPI tiles -->
-    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
       <div
         v-for="t in tiles"
         :key="t.key"
@@ -256,12 +256,12 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
           >{{ t.count }}</span>
         </button>
       </div>
-      <div class="flex items-center gap-2.5">
+      <div class="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
         <UInput
           v-model="search"
           icon="i-lucide-search"
           placeholder="Search site, domain, client…"
-          class="w-[230px]"
+          class="w-full sm:w-[230px]"
           :ui="{ base: 'rounded-full' }"
         />
         <UDropdownMenu :items="clientItems" :ui="{ content: 'w-56' }">

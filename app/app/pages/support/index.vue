@@ -154,7 +154,7 @@ const siteLabel = (t: ApiTicket) => t.website_name || t.website_domain || ''
         v-model="search"
         icon="i-lucide-search"
         placeholder="Search subject or client…"
-        class="w-[240px]"
+        class="w-full sm:w-[240px]"
         :ui="{ base: 'rounded-full' }"
       />
     </div>
@@ -162,7 +162,25 @@ const siteLabel = (t: ApiTicket) => t.website_name || t.website_domain || ''
     <!-- table -->
     <div class="overflow-hidden rounded-card bg-default ring ring-default">
       <template v-if="filtered.length > 0">
-        <div class="overflow-x-auto">
+        <!-- mobile cards -->
+        <ul class="divide-y divide-default sm:hidden">
+          <li
+            v-for="t in filtered"
+            :key="t.id"
+            class="flex items-center gap-3 px-4 py-3 transition-colors active:bg-muted"
+            @click="navigateTo(`/support/${t.id}`)"
+          >
+            <span class="inline-flex size-9 flex-none items-center justify-center rounded-[8px] text-[12px] font-semibold" :class="AVATAR[t.client_id % AVATAR.length]">{{ initials(clientLabel(t)) }}</span>
+            <div class="min-w-0 flex-1">
+              <div class="truncate text-sm font-semibold text-highlighted">{{ t.subject }}</div>
+              <div class="truncate font-mono text-[11px] tracking-[0.03em] text-muted">{{ ticketCode(t.id) }} · {{ clientLabel(t) }}</div>
+            </div>
+            <StatusChip :status="STATUS[t.status].chip">{{ STATUS[t.status].label }}</StatusChip>
+          </li>
+        </ul>
+
+        <!-- table (sm+) -->
+        <div class="hidden overflow-x-auto sm:block">
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default">

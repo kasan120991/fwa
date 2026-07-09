@@ -966,6 +966,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
             </UButton>
           </div>
           <div class="overflow-hidden rounded-card bg-default ring ring-default">
+            <div class="overflow-x-auto">
             <table class="w-full border-collapse">
               <thead>
                 <tr class="border-b border-default bg-muted/40">
@@ -1035,6 +1036,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                 </tr>
               </tbody>
             </table>
+            </div>
             <div
               v-if="!projects.length"
               class="flex flex-col items-center px-6 py-12 text-center"
@@ -1216,10 +1218,11 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                 No invoices yet for this client.
               </p>
             </div>
-            <table
+            <div
               v-else
-              class="w-full border-collapse"
+              class="overflow-x-auto"
             >
+            <table class="w-full border-collapse">
               <thead>
                 <tr class="border-b border-default bg-muted/40">
                   <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
@@ -1278,6 +1281,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                 </tr>
               </tbody>
             </table>
+            </div>
           </div>
         </div>
 

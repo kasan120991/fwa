@@ -306,15 +306,35 @@ const attentionTone: Record<string, string> = {
               class="text-[13px] font-semibold text-primary"
             >View all</NuxtLink>
           </div>
-          <table
+          <!-- mobile cards -->
+          <ul
             v-if="activeProjects.length"
-            class="w-full border-collapse"
+            class="divide-y divide-default sm:hidden"
           >
-            <thead>
-              <tr>
-                <th class="px-[22px] py-[11px] text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
-                  Project
-                </th>
+            <li
+              v-for="row in activeProjects"
+              :key="row.id"
+              class="flex items-center gap-3 px-[18px] py-3 transition-colors active:bg-muted"
+              @click="navigateTo(`/projects/${row.id}`)"
+            >
+              <div class="min-w-0 flex-1">
+                <div class="truncate text-sm font-semibold text-highlighted">{{ row.name }}</div>
+                <div class="truncate text-[12.5px] text-muted">{{ clientName(row) }}</div>
+              </div>
+              <StatusChip :status="PROJECT_META[row.status].status">{{ PROJECT_META[row.status].label }}</StatusChip>
+            </li>
+          </ul>
+          <!-- table (sm+) -->
+          <div
+            v-if="activeProjects.length"
+            class="hidden overflow-x-auto sm:block"
+          >
+            <table class="w-full border-collapse">
+              <thead>
+                <tr>
+                  <th class="px-[22px] py-[11px] text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                    Project
+                  </th>
                 <th class="px-[22px] py-[11px] text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
                   Client
                 </th>
@@ -348,10 +368,11 @@ const attentionTone: Record<string, string> = {
                   {{ row.project_fee != null ? formatMoney(row.project_fee) : '—' }}
                 </td>
               </tr>
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
           <div
-            v-else
+            v-if="!activeProjects.length"
             class="px-[22px] py-12 text-center text-sm text-muted"
           >
             No active projects.

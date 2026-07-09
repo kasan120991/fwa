@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const collapsed = useSidebarCollapsed()
+const mobileOpen = useSidebarMobileOpen()
 const route = useRoute()
 const { user, logout } = useAuth()
 
@@ -268,12 +269,24 @@ function onNotifOpen(n: Notification) {
 </script>
 
 <template>
-  <header class="sticky top-0 z-20 flex h-16 flex-none items-center justify-between gap-4 border-b border-default bg-default px-[26px]">
+  <header class="sticky top-0 z-20 flex h-16 flex-none items-center justify-between gap-3 border-b border-default bg-default px-4 sm:gap-4 sm:px-5 lg:px-[26px]">
     <!-- left: toggle + title -->
-    <div class="flex min-w-0 items-center gap-3.5">
+    <div class="flex min-w-0 items-center gap-2.5 sm:gap-3.5">
+      <!-- mobile: open the drawer -->
+      <button
+        aria-label="Open menu"
+        class="inline-flex size-[38px] flex-none items-center justify-center rounded-[10px] border border-default bg-default text-highlighted transition-colors hover:bg-muted lg:hidden"
+        @click="mobileOpen = true"
+      >
+        <UIcon
+          name="i-lucide-menu"
+          class="size-[18px]"
+        />
+      </button>
+      <!-- desktop: collapse the rail -->
       <button
         aria-label="Toggle sidebar"
-        class="inline-flex size-[38px] flex-none items-center justify-center rounded-[10px] border border-default bg-default text-highlighted transition-colors hover:bg-muted"
+        class="hidden size-[38px] flex-none items-center justify-center rounded-[10px] border border-default bg-default text-highlighted transition-colors hover:bg-muted lg:inline-flex"
         @click="collapsed = !collapsed"
       >
         <UIcon
@@ -288,7 +301,7 @@ function onNotifOpen(n: Notification) {
         >
           {{ header.breadcrumb }}
         </div>
-        <h1 class="mt-px whitespace-nowrap font-display text-[22px] font-medium tracking-tight text-highlighted">
+        <h1 class="mt-px truncate font-display text-[19px] font-medium tracking-tight text-highlighted sm:text-[22px]">
           {{ header.title }}
         </h1>
       </div>

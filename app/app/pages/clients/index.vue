@@ -233,12 +233,12 @@ function openClient(id: number) {
       </button>
     </div>
 
-    <div class="flex items-center gap-2.5">
+    <div class="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
       <UInput
         v-model="search"
         icon="i-lucide-search"
         placeholder="Search name, contact, domain…"
-        class="w-[250px]"
+        class="w-full sm:w-[250px]"
         :ui="{ base: 'rounded-full' }"
       />
       <UDropdownMenu :items="filterItems">
@@ -279,7 +279,29 @@ function openClient(id: number) {
     <div v-if="pending" class="px-6 py-16 text-center text-sm text-muted">Loading clients…</div>
 
     <template v-else-if="visibleRows.length > 0">
-      <div class="overflow-x-auto">
+      <!-- mobile cards -->
+      <ul class="divide-y divide-default sm:hidden">
+        <li
+          v-for="row in visibleRows"
+          :key="row.id"
+          class="flex items-center gap-3 px-4 py-3 transition-colors active:bg-muted"
+          @click="openClient(row.id)"
+        >
+          <img v-if="row.logo" :src="resolveUrl(row.logo)" alt="" class="size-9 flex-none rounded-[9px] object-cover ring ring-default">
+          <span v-else class="inline-flex size-9 flex-none items-center justify-center rounded-[9px] text-[13px] font-semibold" :class="AVATAR[row.color]">{{ row.initials }}</span>
+          <div class="min-w-0 flex-1">
+            <div class="truncate text-sm font-semibold text-highlighted">{{ row.name }}</div>
+            <div class="truncate text-[13px] text-muted">{{ row.domain }}</div>
+          </div>
+          <div class="flex flex-none flex-col items-end gap-1">
+            <StatusChip :status="STAGE_META[row.stage].status">{{ STAGE_META[row.stage].label }}</StatusChip>
+            <span v-if="row.outstanding > 0" class="text-[13px] font-semibold tabular-nums" :class="row.overdue ? 'text-error' : 'text-highlighted'">{{ money(row.outstanding) }}</span>
+          </div>
+        </li>
+      </ul>
+
+      <!-- table (sm+) -->
+      <div class="hidden overflow-x-auto sm:block">
         <table class="w-full border-collapse">
           <thead>
             <tr class="border-b border-default">
@@ -358,7 +380,7 @@ function openClient(id: number) {
       </div>
 
       <!-- footer -->
-      <div class="flex items-center justify-between gap-4 border-t border-default px-5 py-3.5">
+      <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-default px-5 py-3.5">
         <span class="text-[13px] text-muted tabular-nums">Showing {{ visibleRows.length }} of {{ counts.all }} clients</span>
         <div class="flex items-center gap-1.5">
           <UButton color="neutral" variant="outline" size="xs" disabled>Prev</UButton>

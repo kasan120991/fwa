@@ -264,8 +264,8 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
         <span class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums" :class="stageFilter === p.key ? 'bg-default text-primary' : 'bg-muted text-muted'">{{ p.count }}</span>
       </button>
     </div>
-    <div class="flex items-center gap-2.5">
-      <UInput v-model="search" icon="i-lucide-search" placeholder="Search name, business, email…" class="w-[250px]" :ui="{ base: 'rounded-full' }" />
+    <div class="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
+      <UInput v-model="search" icon="i-lucide-search" placeholder="Search name, business, email…" class="w-full sm:w-[250px]" :ui="{ base: 'rounded-full' }" />
       <UDropdownMenu :items="filterItems">
         <UButton icon="i-lucide-filter" color="neutral" variant="outline" class="rounded-full">Filter</UButton>
       </UDropdownMenu>
@@ -292,7 +292,29 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
     <div v-if="pending" class="px-6 py-16 text-center text-sm text-muted">Loading leads…</div>
 
     <template v-else-if="visibleRows.length > 0">
-      <div class="overflow-x-auto">
+      <!-- mobile cards -->
+      <ul class="divide-y divide-default sm:hidden">
+        <li
+          v-for="row in visibleRows"
+          :key="row.id"
+          class="flex items-center gap-3 px-4 py-3 transition-colors active:bg-muted"
+          :class="row.unread ? 'bg-teal-600/[0.045]' : ''"
+          @click="navigateTo(`/leads/${row.id}`)"
+        >
+          <span class="inline-flex size-9 flex-none items-center justify-center rounded-[9px] text-[13px] font-semibold" :class="AVATAR[row.ci]">{{ row.initials }}</span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5">
+              <span v-if="row.unread" class="size-[7px] flex-none rounded-full bg-teal-500" />
+              <span class="truncate text-sm text-highlighted" :class="row.unread ? 'font-bold' : 'font-semibold'">{{ row.name }}</span>
+            </div>
+            <div class="truncate text-[12.5px] text-muted">{{ row.business }} · {{ secondaryOf(row) }}</div>
+          </div>
+          <span class="inline-flex flex-none items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="stageChipClass(row.stage)">{{ STAGE_LABEL[row.stage] }}</span>
+        </li>
+      </ul>
+
+      <!-- table (sm+) -->
+      <div class="hidden overflow-x-auto sm:block">
         <table class="w-full border-collapse">
           <thead>
             <tr class="border-b border-default">
@@ -401,7 +423,7 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
         </table>
       </div>
 
-      <div class="flex items-center justify-between gap-4 border-t border-default px-5 py-3.5">
+      <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-default px-5 py-3.5">
         <span class="text-[13px] text-muted tabular-nums">Showing {{ visibleRows.length }} of {{ base.length }} {{ section === 'all' ? 'leads' : section }}</span>
         <div class="flex items-center gap-1.5">
           <UButton color="neutral" variant="outline" size="xs" disabled>Prev</UButton>

@@ -181,7 +181,28 @@ function onCreated() {
         Loading invoices…
       </div>
       <template v-else-if="filtered.length > 0">
-        <div class="overflow-x-auto">
+        <!-- mobile cards -->
+        <ul class="divide-y divide-default sm:hidden">
+          <li
+            v-for="i in filtered"
+            :key="i.id"
+            class="flex items-center gap-3 px-4 py-3 transition-colors active:bg-muted"
+            @click="openId = i.id"
+          >
+            <span class="inline-flex size-9 flex-none items-center justify-center rounded-[8px] text-[12px] font-semibold" :class="AVATAR[i.client_id % AVATAR.length]">{{ initials(clientName(i)) }}</span>
+            <div class="min-w-0 flex-1">
+              <div class="truncate text-sm font-semibold text-highlighted">{{ i.number || 'Draft' }}</div>
+              <div class="truncate text-[12.5px] text-muted">{{ clientName(i) }}</div>
+            </div>
+            <div class="flex flex-none flex-col items-end gap-1">
+              <span class="text-sm font-semibold text-highlighted tabular-nums">{{ formatMoney(i.amount_due) }}</span>
+              <StatusChip :status="chip(i).status">{{ chip(i).label }}</StatusChip>
+            </div>
+          </li>
+        </ul>
+
+        <!-- table (sm+) -->
+        <div class="hidden overflow-x-auto sm:block">
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default">

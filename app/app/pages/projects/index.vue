@@ -296,12 +296,12 @@ async function onDrop(status: Status) {
         </button>
       </div>
 
-      <div class="flex items-center gap-2.5">
+      <div class="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
         <UInput
           v-model="search"
           icon="i-lucide-search"
           placeholder="Search project or client…"
-          class="w-[240px]"
+          class="w-full sm:w-[240px]"
           :ui="{ base: 'rounded-full' }"
         />
         <UDropdownMenu
@@ -355,7 +355,30 @@ async function onDrop(status: Status) {
       class="overflow-hidden rounded-card bg-default ring ring-default"
     >
       <template v-if="filtered.length > 0">
-        <div class="overflow-x-auto">
+        <!-- mobile cards -->
+        <ul class="divide-y divide-default sm:hidden">
+          <li
+            v-for="p in filtered"
+            :key="p.id"
+            class="flex items-center gap-3 px-4 py-3 transition-colors active:bg-muted"
+            @click="navigateTo(`/projects/${p.id}`)"
+          >
+            <span class="inline-flex size-9 flex-none items-center justify-center rounded-[9px] text-[12px] font-semibold" :class="AVATAR[p.ci]">{{ initials(p.client) }}</span>
+            <div class="min-w-0 flex-1">
+              <div class="truncate text-sm font-semibold text-highlighted">{{ p.name }}</div>
+              <div class="truncate text-[12.5px] text-muted">{{ p.client }}</div>
+            </div>
+            <div class="flex flex-none flex-col items-end gap-1">
+              <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold" :class="STATUS[eff(p)].chip">
+                <span class="size-1.5 rounded-full" :class="STATUS[eff(p)].dot" />{{ STATUS[eff(p)].label }}
+              </span>
+              <span class="text-[12px] tabular-nums" :class="isOverdue(p) ? 'font-semibold text-warning' : 'text-muted'">{{ shortDate(p.due) }}</span>
+            </div>
+          </li>
+        </ul>
+
+        <!-- table (sm+) -->
+        <div class="hidden overflow-x-auto sm:block">
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default">
@@ -478,7 +501,7 @@ async function onDrop(status: Status) {
             </tbody>
           </table>
         </div>
-        <div class="flex items-center justify-between gap-4 border-t border-default px-5 py-3.5">
+        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-default px-5 py-3.5">
           <span class="text-[13px] text-muted tabular-nums">Showing {{ filtered.length }} of {{ projects.length }} projects</span>
           <UButton
             icon="i-lucide-rotate-cw"

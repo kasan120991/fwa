@@ -3,8 +3,12 @@ interface NavItem { label: string, to: string, icon: string }
 interface NavGroup { label?: string, items: NavItem[] }
 
 const collapsed = useSidebarCollapsed()
+const mobileOpen = useSidebarMobileOpen()
 const route = useRoute()
 const { user } = useAuth()
+
+// Dismiss the mobile drawer whenever the route changes (e.g. tapping a nav link).
+watch(() => route.path, () => { mobileOpen.value = false })
 
 const displayName = computed(() => user.value?.name || 'Account')
 const initials = computed(() => {
@@ -106,8 +110,12 @@ function itemClass(to: string) {
 
 <template>
   <aside
-    class="sticky top-0 flex h-screen flex-none flex-col overflow-hidden bg-ink-900 text-white transition-[width,padding] duration-200 dark:bg-ink-950"
-    :class="collapsed ? 'w-[74px] px-3 py-[18px]' : 'w-[260px] px-4 py-5'"
+    class="fixed inset-y-0 left-0 z-50 flex h-screen flex-col overflow-hidden bg-ink-900 text-white transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:flex-none lg:transition-[width,padding] dark:bg-ink-950"
+    :class="[
+      mobileOpen ? 'translate-x-0' : '-translate-x-full',
+      'lg:translate-x-0 w-[264px] px-4 py-5',
+      collapsed ? 'lg:w-[74px] lg:px-3 lg:py-[18px]' : 'lg:w-[260px] lg:px-4 lg:py-5'
+    ]"
   >
     <!-- logo -->
     <div class="flex items-center gap-[11px] px-1.5 pb-5 pt-1">

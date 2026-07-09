@@ -477,12 +477,12 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
         </button>
       </div>
 
-      <div class="flex items-center gap-2.5">
+      <div class="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
         <UInput
           v-model="search"
           icon="i-lucide-search"
           placeholder="Search title or client…"
-          class="w-[230px]"
+          class="w-full sm:w-[230px]"
           :ui="{ base: 'rounded-full' }"
         />
         <UDropdownMenu
@@ -542,7 +542,27 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
         Loading agreements…
       </div>
       <template v-else-if="filtered.length > 0">
-        <div class="overflow-x-auto">
+        <!-- mobile cards -->
+        <ul class="divide-y divide-default sm:hidden">
+          <li
+            v-for="a in filtered"
+            :key="a.id"
+            class="flex items-center gap-3 px-4 py-3 transition-colors active:bg-muted"
+            @click="openRow(a)"
+          >
+            <span class="inline-flex size-9 flex-none items-center justify-center rounded-lg" :class="kindIconWrap(a.kind)"><UIcon :name="kindIcon(a.kind)" class="size-4" /></span>
+            <div class="min-w-0 flex-1">
+              <div class="truncate text-sm font-semibold text-highlighted">{{ a.title }}</div>
+              <div class="truncate text-[12.5px] text-muted">{{ kindLabel(a.kind) }} · {{ a.client }}</div>
+            </div>
+            <span class="inline-flex flex-none items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold" :class="STATUS_META[a.status].chip">
+              <span class="size-1.5 rounded-full" :class="STATUS_META[a.status].dot" />{{ STATUS_META[a.status].label }}
+            </span>
+          </li>
+        </ul>
+
+        <!-- table (sm+) -->
+        <div class="hidden overflow-x-auto sm:block">
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default">
@@ -679,7 +699,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
             </tbody>
           </table>
         </div>
-        <div class="flex items-center justify-between gap-4 border-t border-default px-5 py-3.5">
+        <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-default px-5 py-3.5">
           <span class="text-[13px] text-muted tabular-nums">Showing {{ filtered.length }} of {{ agreements.length }} agreements</span>
           <UButton
             icon="i-lucide-rotate-cw"
