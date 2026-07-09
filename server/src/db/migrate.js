@@ -86,6 +86,10 @@ const ENUM_COLUMNS = {
   projects: [
     ['status', 'awaiting_signature',
       "ENUM('planning','awaiting_signature','awaiting_deposit','in_progress','in_review','awaiting_final','on_hold','completed') NOT NULL DEFAULT 'planning'"]
+  ],
+  notifications: [
+    ['category', 'expense',
+      "ENUM('lead','call','proposal','contract','invoice','payment','task','ticket','expense','system') NOT NULL"]
   ]
 }
 

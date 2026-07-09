@@ -68,6 +68,14 @@ export const config = {
     // How often to pull analytics from the provider (when a key is set).
     syncIntervalMs: Number(process.env.WEBSITE_SYNC_INTERVAL_MS) || 60 * 60_000
   },
+  expenses: {
+    // Subscription renewal reminders: notify this many days before a renewal,
+    // rechecked on this interval. On by default; set the flag to 'false' to
+    // silence in dev. Interval in ms (default daily).
+    remindersEnabled: process.env.EXPENSE_REMINDERS_ENABLED !== 'false',
+    reminderDays: Number(process.env.EXPENSE_REMINDER_DAYS) || 7,
+    reminderIntervalMs: Number(process.env.EXPENSE_REMINDER_INTERVAL_MS) || 24 * 60 * 60_000
+  },
   db: {
     host: process.env.DB_HOST || '127.0.0.1',
     port: Number(process.env.DB_PORT) || 3306,

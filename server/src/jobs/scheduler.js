@@ -1,6 +1,7 @@
 import { config } from '../config/env.js'
 import { syncConfigured, syncAllWebsites } from '../services/websiteSync.js'
 import { checkAllWebsites } from '../services/websiteChecks.js'
+import { checkSubscriptionRenewals } from '../services/expenseReminders.js'
 
 let started = false
 
@@ -22,5 +23,13 @@ export function startScheduler() {
     const ms = config.websites.checkIntervalMs
     setInterval(() => { checkAllWebsites().catch(e => console.error('[scheduler] checks:', e.message)) }, ms).unref()
     console.log(`[scheduler] uptime checks every ${Math.round(ms / 60000)}m`)
+  }
+
+  if (config.expenses.remindersEnabled) {
+    const ms = config.expenses.reminderIntervalMs
+    const run = () => checkSubscriptionRenewals().catch(e => console.error('[scheduler] renewals:', e.message))
+    run() // once at boot so a due renewal doesn't wait a full interval
+    setInterval(run, ms).unref()
+    console.log(`[scheduler] subscription renewal reminders every ${Math.round(ms / 3_600_000)}h`)
   }
 }

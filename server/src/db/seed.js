@@ -185,6 +185,26 @@ const PAYMENTS = [
   { invoiceKey: 'inv-northwind-dep', company: 'Northwind Co.', amount: 9000, method: 'card', paid_at: daysAgo(5), note: null }
 ]
 
+// ---- expenses ---- (money out). `company` (optional) links to a client;
+// subscriptions carry billing_interval + next_renewal_at (some due soon so the
+// dashboard "Needs Attention" card + reminder job have something to surface).
+const EXPENSES = [
+  // client-related (billable = to rebill; one already reimbursed)
+  { category: 'client', company: 'Northwind Co.', projectKey: 'northwind-rebuild', vendor: 'Shutterstock', description: 'Stock photography for the rebuild', amount: 149, payment_method: 'card', billable: 1, expense_date: dateAgo(18), reimbursed_at: null },
+  { category: 'client', company: 'Mintleaf', projectKey: 'mintleaf-store', vendor: 'Stripe (test charges)', description: 'Sandbox transaction fees', amount: 32.5, payment_method: 'card', billable: 1, expense_date: dateAgo(9), reimbursed_at: null },
+  { category: 'client', company: 'Ridgeline', projectKey: null, vendor: 'Google Maps API', description: 'Store-locator map credits', amount: 88, payment_method: 'card', billable: 1, expense_date: dateAgo(40), reimbursed_at: daysAgo(30) },
+  // business overhead (no client)
+  { category: 'business', vendor: 'DigitalOcean', description: 'Droplet hosting — Ops app', amount: 24, payment_method: 'card', expense_date: dateAgo(6) },
+  { category: 'business', vendor: 'Namecheap', description: 'Domain renewals (batch)', amount: 63.4, payment_method: 'card', expense_date: dateAgo(15) },
+  { category: 'business', vendor: 'US Post Office', description: 'Client welcome gifts — postage', amount: 41.2, payment_method: 'cash', expense_date: dateAgo(22) },
+  // third-party subscriptions (recurring)
+  { category: 'subscription', vendor: 'Figma', description: 'Professional seat', amount: 15, payment_method: 'card', billing_interval: 'monthly', expense_date: dateAgo(24), next_renewal_at: dateAhead(4) },
+  { category: 'subscription', vendor: 'Adobe Creative Cloud', description: 'All apps plan', amount: 59.99, payment_method: 'card', billing_interval: 'monthly', expense_date: dateAgo(27), next_renewal_at: dateAhead(2) },
+  { category: 'subscription', vendor: 'GitHub', description: 'Team plan', amount: 44, payment_method: 'card', billing_interval: 'monthly', expense_date: dateAgo(12), next_renewal_at: dateAhead(18) },
+  { category: 'subscription', vendor: 'Google Workspace', description: 'Business Standard (annual)', amount: 144, payment_method: 'card', billing_interval: 'yearly', expense_date: dateAgo(120), next_renewal_at: dateAhead(45) },
+  { category: 'subscription', vendor: 'Zoom', description: 'Pro plan — cancelled', amount: 14.99, payment_method: 'card', billing_interval: 'monthly', status: 'cancelled', expense_date: dateAgo(60), next_renewal_at: dateAgo(2) }
+]
+
 function cols(obj) {
   const keys = Object.keys(obj)
   return { sql: `(${keys.join(', ')}) VALUES (${keys.map(k => `:${k}`).join(', ')})`, params: obj }
@@ -216,6 +236,7 @@ try {
     // before clients. Line-item tables cascade with their parent. calls SET NULL,
     // deleted explicitly. leads has no children.
     await pool.query('DELETE FROM payments')
+    await pool.query('DELETE FROM expenses') // client_id RESTRICT, must precede clients
     await pool.query('DELETE FROM websites') // cascades website_metrics
     await pool.query('DELETE FROM invoices') // cascades invoice_line_items
     await pool.query('DELETE FROM contracts') // cascades contract_line_items
@@ -333,6 +354,17 @@ try {
     await pool.query(`INSERT INTO payments ${sql}`, params)
   }
 
+  for (const e of EXPENSES) {
+    const { company, projectKey, ...rest } = e
+    const row = {
+      ...rest,
+      client_id: company ? companyToClientId[company] : null,
+      project_id: projectKey ? projectKeyToId[projectKey] : null
+    }
+    const { sql, params } = cols(row)
+    await pool.query(`INSERT INTO expenses ${sql}`, params)
+  }
+
   // websites + 90d of daily metrics (idempotent; links to the clients/projects above).
   const web = await seedWebsites()
 
@@ -345,7 +377,8 @@ try {
   const [[tc]] = await pool.query('SELECT COUNT(*) AS n FROM tasks')
   const [[ic]] = await pool.query('SELECT COUNT(*) AS n FROM invoices')
   const [[yc]] = await pool.query('SELECT COUNT(*) AS n FROM payments')
-  console.log(`✔ Seeded ${lc.n} leads (${lt.n} touches), ${cc.n} clients, ${kc.n} calls, ${nc.n} notifications, ${pc.n} projects, ${tc.n} tasks, ${ic.n} invoices, ${yc.n} payments, and ${web.created} websites (${web.metricsInserted} metric rows).`)
+  const [[ec]] = await pool.query('SELECT COUNT(*) AS n FROM expenses')
+  console.log(`✔ Seeded ${lc.n} leads (${lt.n} touches), ${cc.n} clients, ${kc.n} calls, ${nc.n} notifications, ${pc.n} projects, ${tc.n} tasks, ${ic.n} invoices, ${yc.n} payments, ${ec.n} expenses, and ${web.created} websites (${web.metricsInserted} metric rows).`)
 } finally {
   await closePool()
 }

@@ -135,6 +135,11 @@ export function emitContractChanged(id) {
 export function emitPaymentCreated(id) {
   io?.to('role:admin').emit('payment:created', { id })
 }
+// Fired on any expense create/update/delete/cancel so the Expenses page and the
+// dashboard's Needs Attention card refresh live.
+export function emitExpenseChanged(id = null) {
+  io?.to('role:admin').emit('expense:changed', { id })
+}
 
 // --- calls -----------------------------------------------------------------
 // Fired when a call's reviewed state or classification changes, so the AI

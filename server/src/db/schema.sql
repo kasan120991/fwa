@@ -462,7 +462,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   user_id     BIGINT UNSIGNED NULL,
 
   category    ENUM('lead', 'call', 'proposal', 'contract',
-                   'invoice', 'payment', 'task', 'ticket', 'system') NOT NULL,
+                   'invoice', 'payment', 'task', 'ticket', 'expense', 'system') NOT NULL,
   tone        ENUM('brand', 'success', 'warning', 'info', 'error')
                 NOT NULL DEFAULT 'brand',
   icon        VARCHAR(64)  NOT NULL,   -- lucide id, e.g. 'i-lucide-user-plus'
@@ -717,6 +717,53 @@ CREATE TABLE IF NOT EXISTS payments (
   CONSTRAINT fk_payments_invoice
     FOREIGN KEY (invoice_id) REFERENCES invoices (id)
     ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- expenses — money OUT. Three kinds via `category`:
+--   'client'       — a cost incurred for a specific client (client_id set;
+--                    `billable` marks pass-through costs to be rebilled).
+--   'business'     — general agency overhead, no client.
+--   'subscription' — a recurring third-party tool/service. Carries the
+--                    subscription-only fields (billing_interval, next_renewal_at,
+--                    status) and drives the recurring-spend rollup + renewal
+--                    reminders. One-off expenses leave those NULL / status='active'.
+-- client_id is nullable (LEFT JOIN in the repo); required only when category='client'.
+-- project_id is a soft link (no FK) like invoices/proposals.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS expenses (
+  id                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  category            ENUM('client', 'business', 'subscription') NOT NULL,
+  client_id           BIGINT UNSIGNED NULL,             -- required when category='client'
+  project_id          BIGINT UNSIGNED NULL,             -- soft link (no FK, see migrate.js)
+  vendor              VARCHAR(255)    NOT NULL,          -- payee / merchant / tool name
+  description         VARCHAR(500)    NULL,
+  amount              DECIMAL(10,2)   NOT NULL,
+  currency            CHAR(3)         NOT NULL DEFAULT 'USD',
+  expense_date        DATE            NOT NULL,          -- date incurred / last charge
+  payment_method      ENUM('card', 'bank', 'cash', 'other') NOT NULL DEFAULT 'card',
+  billable            TINYINT(1)      NOT NULL DEFAULT 0, -- client expenses: rebill to client
+  reimbursed_at       TIMESTAMP       NULL,              -- set when a billable expense is recovered
+  receipt_url         VARCHAR(512)    NULL,              -- uploaded receipt (see useUploads)
+  -- subscription-only fields (NULL for one-off expenses):
+  billing_interval    ENUM('monthly', 'yearly') NULL,
+  next_renewal_at     DATE            NULL,
+  renewal_reminded_on DATE            NULL,              -- idempotency for the reminder job
+  status              ENUM('active', 'cancelled') NOT NULL DEFAULT 'active',
+  notes               TEXT            NULL,
+  created_at          TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at          TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                      ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_expenses_category (category),
+  KEY idx_expenses_client   (client_id),
+  KEY idx_expenses_project  (project_id),
+  KEY idx_expenses_status   (status),
+  KEY idx_expenses_date     (expense_date),
+  KEY idx_expenses_renewal  (next_renewal_at),
+  CONSTRAINT fk_expenses_client
+    FOREIGN KEY (client_id) REFERENCES clients (id)
+    ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- websites — one row per site FWA builds/maintains, under a client. Daily traffic

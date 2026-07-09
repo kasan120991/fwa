@@ -13,6 +13,7 @@ import { tasksRouter } from './tasks.routes.js'
 import { projectTypesRouter } from './projectTypes.routes.js'
 import { invoicesRouter } from './invoices.routes.js'
 import { paymentsRouter } from './payments.routes.js'
+import { expensesRouter } from './expenses.routes.js'
 import { dashboardRouter } from './dashboard.routes.js'
 import { websitesRouter } from './websites.routes.js'
 import { ticketsRouter } from './tickets.routes.js'
@@ -41,6 +42,7 @@ apiRouter.use('/tasks', requireAuth, tasksRouter) // Tasks
 apiRouter.use('/project-types', requireAuth, projectTypesRouter) // Project type catalog
 apiRouter.use('/invoices', requireAuth, invoicesRouter) // Billing — invoices
 apiRouter.use('/payments', requireAuth, paymentsRouter) // Billing — payments
+apiRouter.use('/expenses', requireAuth, expensesRouter) // Billing — expenses (money out)
 apiRouter.use('/dashboard', requireAuth, dashboardRouter) // Dashboard KPIs
 apiRouter.use('/websites', requireAuth, websitesRouter) // Websites (cross-client analytics)
 apiRouter.use('/tickets', requireAuth, ticketsRouter) // Support tickets

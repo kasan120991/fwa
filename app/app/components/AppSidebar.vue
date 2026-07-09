@@ -68,7 +68,8 @@ const groups: NavGroup[] = [
     label: 'Billing',
     items: [
       { label: 'Invoices', to: '/invoices', icon: 'i-lucide-receipt-text' },
-      { label: 'Payments', to: '/payments', icon: 'i-lucide-credit-card' }
+      { label: 'Payments', to: '/payments', icon: 'i-lucide-credit-card' },
+      { label: 'Expenses', to: '/expenses', icon: 'i-lucide-wallet' }
     ]
   },
   {

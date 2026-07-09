@@ -250,6 +250,48 @@ export async function dashboardAttention() {
     })
   }
 
+  // 7) Subscriptions renewing soon — recurring spend about to hit again.
+  const [{ n: renN }] = await query(
+    `SELECT COUNT(*) AS n FROM expenses
+      WHERE category = 'subscription' AND status = 'active'
+        AND next_renewal_at IS NOT NULL AND next_renewal_at <= (CURDATE() + INTERVAL 7 DAY)`
+  )
+  total += Number(renN)
+  const renewals = await query(
+    `SELECT id, vendor, amount, billing_interval, DATEDIFF(next_renewal_at, CURDATE()) AS days_until
+       FROM expenses
+      WHERE category = 'subscription' AND status = 'active'
+        AND next_renewal_at IS NOT NULL AND next_renewal_at <= (CURDATE() + INTERVAL 7 DAY)
+      ORDER BY next_renewal_at ASC LIMIT 2`
+  )
+  for (const r of renewals) {
+    const d = Number(r.days_until)
+    const when = d < 0 ? `${plural(-d, 'day')} overdue` : d === 0 ? 'renews today' : `in ${plural(d, 'day')}`
+    items.push({
+      id: `subscription-${r.id}`,
+      title: `${r.vendor} renews soon`,
+      meta: `${money(r.amount)} · ${r.billing_interval} · ${when}`,
+      icon: 'i-lucide-calendar-clock', tone: 'warning', chip: 'warning', chipText: 'Renewing',
+      to: '/expenses', priority: 4200 - Math.min(Math.max(7 - d, 0), 30)
+    })
+  }
+
+  // 8) Billable client expenses not yet recovered (aggregate row).
+  const [{ n: billN }] = await query(
+    'SELECT COUNT(*) AS n FROM expenses WHERE billable = 1 AND reimbursed_at IS NULL'
+  )
+  const billable = Number(billN)
+  total += billable
+  if (billable > 0) {
+    items.push({
+      id: 'billable-expenses',
+      title: `${plural(billable, 'billable expense')} to recover`,
+      meta: 'Client expenses · not yet rebilled',
+      icon: 'i-lucide-wallet', tone: 'info', chip: 'info', chipText: 'Rebill',
+      to: '/expenses', priority: 4600
+    })
+  }
+
   items.sort((a, b) => a.priority - b.priority)
   return { items: items.slice(0, 6), total }
 }
