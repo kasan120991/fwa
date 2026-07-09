@@ -220,7 +220,7 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
 
 <template>
   <!-- header -->
-  <div class="flex items-start justify-between gap-4">
+  <div class="flex items-center justify-between gap-4">
     <div>
       <div class="flex items-center gap-3">
         <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">Leads</h1>

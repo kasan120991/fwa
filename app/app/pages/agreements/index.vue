@@ -413,7 +413,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
 <template>
   <div class="flex flex-col gap-5">
     <!-- header -->
-    <div class="flex items-start justify-between gap-4">
+    <div class="flex items-center justify-between gap-4">
       <div>
         <div class="flex items-center gap-3">
           <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">

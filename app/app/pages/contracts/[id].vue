@@ -183,7 +183,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-5xl px-6 py-6">
+  <div class="w-full px-6 py-6">
     <div
       v-if="loading"
       class="flex items-center justify-center py-24 text-muted"
@@ -217,7 +217,7 @@ onBeforeUnmount(() => {
 
     <template v-else-if="contract">
       <!-- header -->
-      <div class="flex flex-col gap-4 border-b border-default pb-5 sm:flex-row sm:items-start sm:justify-between">
+      <div class="flex flex-col gap-4 border-b border-default pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div class="min-w-0">
           <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
             {{ contract.type === 'care_plan' ? 'Care Plan' : 'Project Contract' }}
@@ -279,7 +279,7 @@ onBeforeUnmount(() => {
           >
             <iframe
               :src="session.embedUrl"
-              class="h-[78vh] w-full border-0 bg-white"
+              class="h-[85vh] w-full border-0 bg-white"
               title="Contract document"
               allow="fullscreen"
             />

@@ -167,7 +167,7 @@ async function confirmConvert() {
     </NuxtLink>
 
     <!-- header identity -->
-    <div class="flex flex-wrap items-start justify-between gap-5">
+    <div class="flex flex-wrap items-center justify-between gap-5">
       <div class="flex min-w-0 items-center gap-4">
         <img
           v-if="contact.logo_url"

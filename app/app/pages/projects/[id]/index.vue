@@ -488,7 +488,7 @@ const scopeFields = computed(() => project.value
         </nav>
 
         <!-- header -->
-        <div class="flex flex-wrap items-start justify-between gap-5">
+        <div class="flex flex-wrap items-center justify-between gap-5">
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-3">
               <h1 class="font-display text-[28px] font-medium tracking-tight text-highlighted">

@@ -258,7 +258,7 @@ async function removeAttachment(a: Attachment) {
     <template v-else>
       <!-- header -->
       <div class="rounded-card bg-default p-5 ring ring-default">
-        <div class="flex items-start justify-between gap-4">
+        <div class="flex items-center justify-between gap-4">
           <div class="min-w-0">
             <div class="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">
               <span>{{ ticketCode(ticket.id) }}</span>

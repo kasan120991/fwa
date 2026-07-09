@@ -165,7 +165,7 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
     </NuxtLink>
 
     <!-- identity header -->
-    <div class="mt-4 flex flex-wrap items-start justify-between gap-5">
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-5">
       <div class="flex min-w-0 items-center gap-4">
         <span class="inline-flex size-[52px] flex-none items-center justify-center rounded-[14px] bg-mist text-primary"><UIcon name="i-lucide-globe" class="size-7" /></span>
         <div class="min-w-0">

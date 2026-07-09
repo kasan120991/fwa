@@ -285,7 +285,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="flex flex-col gap-4">
     <!-- header -->
-    <div class="flex flex-wrap items-start justify-between gap-4">
+    <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
         <div class="flex items-center gap-3">
           <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">AI Receptionist</h1>
