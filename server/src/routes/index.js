@@ -15,6 +15,7 @@ import { invoicesRouter } from './invoices.routes.js'
 import { paymentsRouter } from './payments.routes.js'
 import { expensesRouter } from './expenses.routes.js'
 import { dashboardRouter } from './dashboard.routes.js'
+import { searchRouter } from './search.routes.js'
 import { websitesRouter } from './websites.routes.js'
 import { ticketsRouter } from './tickets.routes.js'
 import { notificationsRouter } from './notifications.routes.js'
@@ -44,6 +45,7 @@ apiRouter.use('/invoices', requireAuth, invoicesRouter) // Billing — invoices
 apiRouter.use('/payments', requireAuth, paymentsRouter) // Billing — payments
 apiRouter.use('/expenses', requireAuth, expensesRouter) // Billing — expenses (money out)
 apiRouter.use('/dashboard', requireAuth, dashboardRouter) // Dashboard KPIs
+apiRouter.use('/search', requireAuth, searchRouter) // Global command-palette search
 apiRouter.use('/websites', requireAuth, websitesRouter) // Websites (cross-client analytics)
 apiRouter.use('/tickets', requireAuth, ticketsRouter) // Support tickets
 apiRouter.use('/notifications', requireAuth, notificationsRouter) // top-bar alert feed

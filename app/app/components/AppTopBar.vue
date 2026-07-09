@@ -57,14 +57,28 @@ const accountItems = computed(() => [
 const projectFormOpen = ref(false)
 const ticketFormOpen = ref(false)
 const invoiceFormOpen = ref(false)
+const expenseFormOpen = ref(false)
 
 const createItems = [[
   { label: 'New Lead', icon: 'i-lucide-user-plus', onSelect: () => navigateTo('/leads/new') },
   { label: 'New Client', icon: 'i-lucide-building-2', onSelect: () => navigateTo('/clients/new') },
   { label: 'New Project', icon: 'i-lucide-folder-plus', onSelect: () => { projectFormOpen.value = true } },
   { label: 'New Ticket', icon: 'i-lucide-life-buoy', onSelect: () => { ticketFormOpen.value = true } },
-  { label: 'New Invoice', icon: 'i-lucide-receipt-text', onSelect: () => { invoiceFormOpen.value = true } }
+  { label: 'New Invoice', icon: 'i-lucide-receipt-text', onSelect: () => { invoiceFormOpen.value = true } },
+  { label: 'New Expense', icon: 'i-lucide-wallet', onSelect: () => { expenseFormOpen.value = true } }
 ]]
+
+// --- Global search (⌘K command palette) -----------------------------------
+const searchOpen = ref(false)
+defineShortcuts({
+  meta_k: () => { searchOpen.value = !searchOpen.value }
+})
+function onSearchAction(key: string) {
+  if (key === 'project') projectFormOpen.value = true
+  else if (key === 'ticket') ticketFormOpen.value = true
+  else if (key === 'invoice') invoiceFormOpen.value = true
+  else if (key === 'expense') expenseFormOpen.value = true
+}
 
 function onProjectCreated(p: { id: number }) {
   navigateTo(`/projects/${p.id}`)
@@ -292,6 +306,7 @@ function onNotifOpen(n: Notification) {
       <button
         class="hidden w-[260px] cursor-text items-center gap-2.5 rounded-full border border-default bg-muted py-2 pl-3.5 pr-2.5 text-left transition-colors hover:border-accented md:flex"
         aria-label="Search"
+        @click="searchOpen = true"
       >
         <UIcon
           name="i-lucide-search"
@@ -619,6 +634,16 @@ function onNotifOpen(n: Notification) {
     <InvoiceForm
       v-model:open="invoiceFormOpen"
       @created="onInvoiceCreated"
+    />
+    <ExpenseForm
+      v-model:open="expenseFormOpen"
+      @saved="() => navigateTo('/expenses')"
+    />
+
+    <!-- Global ⌘K command palette -->
+    <GlobalSearch
+      v-model:open="searchOpen"
+      @action="onSearchAction"
     />
   </header>
 </template>
