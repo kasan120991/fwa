@@ -120,8 +120,8 @@ function itemClass(to: string) {
       </span>
       <span
         v-if="!collapsed"
-        class="font-display text-[19px] font-medium tracking-tight text-white"
-      >Francis</span>
+        class="font-display text-[19px] font-medium leading-tight tracking-tight text-white"
+      >Francis Web Agency</span>
     </div>
 
     <!-- scrollable nav -->
