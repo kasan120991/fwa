@@ -43,7 +43,7 @@ const collectedPct = computed(() => {
 <template>
   <div class="rounded-card bg-default p-[18px] ring ring-default">
     <div class="mb-3 font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
-      Money
+      Project Fee
     </div>
     <div class="font-display text-[26px] font-medium tracking-tight text-highlighted tabular-nums">
       {{ formatMoney(project.project_fee) || '—' }}
