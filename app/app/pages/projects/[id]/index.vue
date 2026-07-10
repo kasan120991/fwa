@@ -390,13 +390,13 @@ const billingAction = computed(() => {
   return null
 })
 
-// The hero's single contextual primary action, driven by the lifecycle:
-// generate the contract, then request the deposit, then send the final invoice.
+// The hero's single contextual primary action. Billing (deposit/final invoice)
+// lives in the Project Fee card, so the hero only surfaces contract generation.
 const primaryAction = computed(() => {
   if (!contracts.value.length && canGenerate.value) {
     return { label: 'Generate Contract', icon: 'i-lucide-file-signature', run: openContractModal, loading: false }
   }
-  return billingAction.value
+  return null
 })
 
 // The Actions kebab: edit + generate, plus the full status list as a second
@@ -758,7 +758,7 @@ const scopeFields = computed(() => project.value
                   <div class="flex min-w-0 items-center gap-2.5">
                     <span class="truncate text-sm font-semibold text-highlighted">{{ contract.title }}</span>
                     <StatusChip :status="DOC_STATUS[contract.status] || 'neutral'">
-                      {{ contract.status }}
+                      <span class="capitalize">{{ contract.status }}</span>
                     </StatusChip>
                   </div>
                   <NuxtLink
@@ -804,7 +804,7 @@ const scopeFields = computed(() => project.value
                   v-if="contract"
                   :status="DOC_STATUS[contract.status] || 'neutral'"
                 >
-                  {{ contract.status }}
+                  <span class="capitalize">{{ contract.status }}</span>
                 </StatusChip>
               </div>
               <NuxtLink
