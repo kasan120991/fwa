@@ -339,6 +339,23 @@ async function handleDocumentEvent(doc) {
     await updateContract(contract.id, patch)
     emitContractChanged(contract.id)
 
+    // A signed contract is a notable event — toast the owner (works for both
+    // project and care-plan contracts; no actorUserId so it always surfaces).
+    if (internal === 'signed') {
+      try {
+        const signer = await getClient(contract.client_id)
+        const who = signer?.company || signer?.name || 'A client'
+        await notify({
+          category: 'contract', tone: 'success', icon: 'i-lucide-file-check-2',
+          title: 'Contract signed',
+          body: `${who} signed ${contract.title}.`,
+          link: `/contracts/${contract.id}`
+        })
+      } catch (err) {
+        console.error(`contract.signed notification failed for contract ${contract.id}:`, err.message)
+      }
+    }
+
     // Drive the project lifecycle off the contract's signature state.
     if (contract.type === 'project') {
       if (internal === 'sent' && contract.project_id) {
