@@ -102,6 +102,15 @@ export function ticketCode(id?: number | null): string {
   return id == null ? '' : `SR-${String(id).padStart(3, '0')}`
 }
 
+/** Human-readable file size: 0 B, 8 KB, 2.1 MB, 1.3 GB. */
+export function formatBytes(n?: number | null): string {
+  if (n == null || !Number.isFinite(n) || n < 0) return '—'
+  if (n < 1024) return `${n} B`
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`
+  if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`
+  return `${(n / 1024 / 1024 / 1024).toFixed(1)} GB`
+}
+
 /** Build SVG polyline point strings for a sparkline/area chart from a number
  *  series, scaled to a `w`×`h` box. Returns `line` (the stroke) + `area` (a closed
  *  fill down to the baseline). Empty when there aren't at least two points. */

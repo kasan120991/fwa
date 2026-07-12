@@ -20,6 +20,7 @@ import { websitesRouter } from './websites.routes.js'
 import { ticketsRouter } from './tickets.routes.js'
 import { notificationsRouter } from './notifications.routes.js'
 import { uploadsRouter } from './uploads.routes.js'
+import { filesRouter } from './files.routes.js'
 import { webhooksRouter } from './webhooks.routes.js'
 import { requireAuth } from '../middleware/requireAuth.js'
 
@@ -50,3 +51,4 @@ apiRouter.use('/websites', requireAuth, websitesRouter) // Websites (cross-clien
 apiRouter.use('/tickets', requireAuth, ticketsRouter) // Support tickets
 apiRouter.use('/notifications', requireAuth, notificationsRouter) // top-bar alert feed
 apiRouter.use('/uploads', requireAuth, uploadsRouter) // file storage (logos, files)
+apiRouter.use('/files', requireAuth, filesRouter) // Workspace — Files library
