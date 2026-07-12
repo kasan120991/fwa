@@ -194,11 +194,13 @@ async function setStatus(s: Status) {
 }
 
 // ---- tabs ----
-const activeTab = ref<'tasks' | 'scope' | 'contract' | 'activity'>('tasks')
+const activeTab = ref<'tasks' | 'scope' | 'contract' | 'files' | 'activity'>('tasks')
+const filesCount = ref(0)
 const tabs = computed(() => [
   { key: 'tasks' as const, label: 'Tasks', badge: tasks.value.length || null },
   { key: 'scope' as const, label: 'Scope', badge: null },
   { key: 'contract' as const, label: 'Contract', badge: contracts.value.length || null },
+  { key: 'files' as const, label: 'Files', badge: filesCount.value || null },
   { key: 'activity' as const, label: 'Activity', badge: null }
 ])
 
@@ -785,6 +787,15 @@ const scopeFields = computed(() => project.value
                 </div>
                 <ContractEmbed :contract-id="contract.id" />
               </template>
+            </div>
+
+            <!-- FILES -->
+            <div v-else-if="activeTab === 'files'">
+              <FilesPanel
+                :project-id="Number(route.params.id)"
+                :client-id="project.client_id"
+                @update:count="filesCount = $event"
+              />
             </div>
 
             <!-- ACTIVITY -->
