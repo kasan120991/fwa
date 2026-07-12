@@ -59,12 +59,12 @@ async function onSubmit() {
         >
         <div class="my-[22px] mt-[34px] h-px w-10 bg-teal-200/35" />
         <p class="m-0 max-w-[340px] text-base leading-relaxed text-teal-200">
-          Agency Management Platform — everything your agency needs, in one place.
+          Your projects, invoices, and progress — all in one place.
         </p>
       </div>
 
       <div class="eyebrow absolute bottom-10 left-12 text-teal-200/55">
-        Francis Web Agency · Internal
+        Francis Web Agency · Portal
       </div>
     </div>
 
@@ -83,7 +83,7 @@ async function onSubmit() {
             Welcome Back
           </h1>
           <p class="mt-2 mb-[30px] text-[0.9375rem] leading-relaxed text-muted">
-            Sign in to your Francis Web Agency workspace.
+            Sign in to your client portal.
           </p>
         </div>
 
@@ -103,7 +103,7 @@ async function onSubmit() {
               v-model="email"
               type="email"
               autocomplete="email"
-              placeholder="you@agency.com"
+              placeholder="you@example.com"
               icon="i-lucide-mail"
               size="lg"
               class="w-full"
@@ -161,7 +161,7 @@ async function onSubmit() {
           <div class="h-px flex-1 bg-default" />
         </div>
         <p class="m-0 text-center text-sm text-muted">
-          Contact your workspace admin or
+          Contact your account manager or
           <ULink to="#" class="font-medium text-primary">get support</ULink>.
         </p>
 
