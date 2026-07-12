@@ -52,6 +52,8 @@ services:
       PLAUSIBLE_BASE_URL: ${PLAUSIBLE_BASE_URL:-https://plausible.io}
       DIGITALOCEAN_API_TOKEN: ${DIGITALOCEAN_API_TOKEN:-}
       DIGITALOCEAN_BASE_URL: ${DIGITALOCEAN_BASE_URL:-https://api.digitalocean.com}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      ALERTS_EMAIL: ${ALERTS_EMAIL:-info@franciswebagency.com}
     volumes:
       - api_uploads:/app/uploads
     networks: [internal, proxy]
