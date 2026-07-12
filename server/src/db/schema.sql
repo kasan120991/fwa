@@ -946,3 +946,36 @@ CREATE TABLE IF NOT EXISTS ticket_attachments (
     FOREIGN KEY (uploaded_user_id) REFERENCES users (id)
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- files — the Workspace › Files library. A first-class file record, optionally
+-- attached to a client and/or a project, grouped by `category`. Reuses the
+-- shared upload store: `path` is the /uploads/<name> returned by POST
+-- /api/uploads (bytes are written there first; this row is the metadata). FKs
+-- are SET NULL so deleting a client/project leaves the file (unattached) rather
+-- than destroying bytes. Deleting a file row also unlinks the file on disk
+-- (handled in files.routes.js), so no orphaned bytes accumulate.
+CREATE TABLE IF NOT EXISTS files (
+  id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  client_id        BIGINT UNSIGNED NULL,
+  project_id       BIGINT UNSIGNED NULL,
+  category         ENUM('brand', 'contract', 'deliverable', 'other') NOT NULL DEFAULT 'other',
+  path             VARCHAR(512)    NOT NULL,
+  name             VARCHAR(255)    NOT NULL,
+  mime             VARCHAR(120)    NULL,
+  size_bytes       BIGINT UNSIGNED NULL,
+  uploaded_user_id BIGINT UNSIGNED NULL,
+  created_at       TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_files_client  (client_id, id),
+  KEY idx_files_project (project_id, id),
+  KEY idx_files_created (created_at),
+  CONSTRAINT fk_files_client
+    FOREIGN KEY (client_id) REFERENCES clients (id)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_files_project
+    FOREIGN KEY (project_id) REFERENCES projects (id)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_files_uploader
+    FOREIGN KEY (uploaded_user_id) REFERENCES users (id)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

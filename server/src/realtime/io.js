@@ -161,3 +161,10 @@ export function emitCallCreated(call) {
 export function emitWebsiteChanged(id = null) {
   io?.to('role:admin').emit('website:changed', { id })
 }
+
+// --- files -----------------------------------------------------------------
+// Fired on any file upload/rename/delete so the Workspace › Files page (and,
+// later, the client/project Files tabs) refresh live.
+export function emitFileChanged(id = null) {
+  io?.to('role:admin').emit('file:changed', { id })
+}
