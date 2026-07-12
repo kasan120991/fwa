@@ -19,6 +19,7 @@ import {
 } from '../repositories/contracts.repo.js'
 import { getActiveTemplate } from '../repositories/documentTemplates.repo.js'
 import { notify } from '../services/notifications.service.js'
+import { sendTemplateEmail, alertTimestamp, TEMPLATES } from '../services/email.js'
 
 export const webhooksRouter = Router()
 
@@ -100,6 +101,28 @@ webhooksRouter.post('/contact-form', async (req, res) => {
     })
   } catch (err) {
     console.error('Contact-form lead notification failed:', err.message)
+  }
+
+  // Alert email (best-effort) — variables map straight to the "Website Inquiry"
+  // template. Uses the original submitted phone (not the digits-only lead value).
+  try {
+    await sendTemplateEmail({
+      template: TEMPLATES.websiteInquiry,
+      to: config.resend.alertsTo,
+      variables: {
+        name: name || email || 'N/A',
+        email: email || 'N/A',
+        phone: str(body.phone) || 'Not provided',
+        interested_in: interested || 'Not specified',
+        budget: budget || 'Not provided',
+        heard_about: heard || 'Not provided',
+        details: details || '—',
+        company: company || '—',
+        submitted_at: alertTimestamp()
+      }
+    })
+  } catch (err) {
+    console.error('Contact-form alert email failed:', err.message)
   }
 
   res.status(201).json({ ok: true, id: lead.id })
@@ -443,6 +466,10 @@ const CALL_ALERT = {
   other: { tone: 'info', icon: 'i-lucide-phone', title: 'New call logged' }
 }
 
+// Which classifications also send the "Phone Call" alert email (client calls are
+// already known contacts; spam/wrong_number stay silent).
+const CALL_EMAIL_CLASSIFICATIONS = new Set(['inquiry', 'other'])
+
 // Build the variableValues injected into the assistant for the whole call. Never
 // throws — on any lookup failure it returns the "unknown caller" shape so a DB
 // hiccup can't block a live inbound call from being answered.
@@ -549,6 +576,28 @@ async function ingestEndOfCall(message) {
       })
     } catch (err) {
       console.error('Vapi call notification failed:', err.message)
+    }
+  }
+
+  // Alert email (best-effort) for inquiry/other calls — variables map to the
+  // "Phone Call" template.
+  if (CALL_EMAIL_CLASSIFICATIONS.has(classification)) {
+    try {
+      await sendTemplateEmail({
+        template: TEMPLATES.phoneCall,
+        to: config.resend.alertsTo,
+        variables: {
+          name: call.caller_name || 'Unknown caller',
+          phone_number: number || 'Not provided',
+          email: structured.email || 'N/A',
+          intent: structured.intent || 'N/A',
+          call_summary: call.summary || 'N/A',
+          startedAt: alertTimestamp(message.startedAt ? new Date(message.startedAt) : new Date()),
+          client_name: client?.name || ''
+        }
+      })
+    } catch (err) {
+      console.error('Vapi call alert email failed:', err.message)
     }
   }
 }
