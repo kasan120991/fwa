@@ -401,10 +401,22 @@ const primaryAction = computed(() => {
 
 // The Actions kebab: edit + generate, plus the full status list as a second
 // group so out-of-order changes (and on_hold) stay reachable beyond the stepper.
+// One-click DigitalOcean provisioning (creates a droplet + linked website record).
+const provisionOpen = ref(false)
+function onProvisioned({ website_id, monthly_price }: { website_id: number, monthly_price: number | null, grouped: boolean }) {
+  toast.add({
+    title: 'Hosting provisioned',
+    description: monthly_price != null ? `A $${monthly_price}/mo droplet is spinning up.` : 'The droplet is spinning up.',
+    color: 'success',
+    actions: [{ label: 'View hosting', to: `/websites/${website_id}` }]
+  })
+}
+
 const headerMenu = computed(() => [
   [
     { label: 'Edit Scope', icon: 'i-lucide-pencil', onSelect: openEdit },
-    { label: 'Generate Contract', icon: 'i-lucide-file-signature', onSelect: openContractModal, disabled: !canGenerate.value }
+    { label: 'Generate Contract', icon: 'i-lucide-file-signature', onSelect: openContractModal, disabled: !canGenerate.value },
+    { label: 'Provision Hosting', icon: 'i-lucide-server-cog', onSelect: () => { provisionOpen.value = true } }
   ],
   ...statusItems.value
 ])
@@ -863,6 +875,12 @@ const scopeFields = computed(() => project.value
         v-model:open="contractModalOpen"
         :project="project"
         @created="loadDocs"
+      />
+
+      <ProvisionHostingModal
+        v-model:open="provisionOpen"
+        :project="{ id: project.id, name: project.name, clientLabel }"
+        @provisioned="onProvisioned"
       />
     </template>
   </div>

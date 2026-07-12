@@ -1,6 +1,7 @@
 import { query } from '../db/pool.js'
 import { invoiceStats } from './invoices.repo.js'
 import { ticketCode } from './tickets.repo.js'
+import { listActiveAlerts } from './infraAlerts.repo.js'
 
 const num = v => Number(v ?? 0)
 
@@ -289,6 +290,26 @@ export async function dashboardAttention() {
       meta: 'Client expenses · not yet rebilled',
       icon: 'i-lucide-wallet', tone: 'info', chip: 'info', chipText: 'Rebill',
       to: '/expenses', priority: 4600
+    })
+  }
+
+  // 9) Infrastructure alerts — down sites, high CPU, low disk (poll-based DO alerting).
+  const INFRA_META = {
+    site_down: { chip: 'Down', icon: 'i-lucide-server-crash' },
+    high_cpu: { chip: 'High CPU', icon: 'i-lucide-cpu' },
+    disk_full: { chip: 'Low disk', icon: 'i-lucide-hard-drive' }
+  }
+  const alerts = await listActiveAlerts()
+  total += alerts.length
+  for (const a of alerts) {
+    const meta = INFRA_META[a.kind] || { chip: 'Alert', icon: 'i-lucide-server-crash' }
+    items.push({
+      id: `infra-${a.id}`,
+      title: `${a.label} · ${meta.chip}`,
+      meta: a.detail || '',
+      icon: meta.icon, tone: a.tone, chip: a.tone, chipText: meta.chip,
+      to: a.link || '/websites',
+      priority: a.kind === 'site_down' ? 400 : 2500
     })
   }
 

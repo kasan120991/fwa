@@ -6,6 +6,11 @@ import {
 } from '../repositories/websites.repo.js'
 import { emitWebsiteChanged } from '../realtime/io.js'
 import { syncWebsite, syncAllWebsites } from '../services/websiteSync.js'
+import { isConfigured as doConfigured, listDroplets } from '../services/digitalocean.js'
+import { getWebsiteInfra } from '../services/websiteInfra.js'
+import { enableUptime, disableUptime } from '../services/websiteUptime.js'
+import { hostingSummary } from '../services/hostingCosts.js'
+import { provisionOptions } from '../services/websiteProvision.js'
 
 export const websitesRouter = Router()
 
@@ -32,6 +37,48 @@ websitesRouter.get('/', async (req, res) => {
     limit, offset
   })
   res.json({ data: rows })
+})
+
+// GET /api/websites/droplets — DigitalOcean Droplets for the link picker.
+// Empty list + configured:false when no DO token is set (form disables the field).
+websitesRouter.get('/droplets', async (req, res) => {
+  if (!doConfigured()) return res.json({ data: [], configured: false })
+  try {
+    res.json({ data: await listDroplets(), configured: true })
+  } catch (err) {
+    res.json({ data: [], configured: true, error: err.message })
+  }
+})
+
+// GET /api/websites/costs — account-wide monthly DigitalOcean hosting cost.
+websitesRouter.get('/costs', async (req, res) => {
+  res.json({ data: await hostingSummary() })
+})
+
+// GET /api/websites/provision-options — droplet sizes/regions for the provision modal.
+websitesRouter.get('/provision-options', async (req, res) => {
+  res.json({ data: await provisionOptions() })
+})
+
+// GET /api/websites/:id/infra — live DigitalOcean Droplet health (read-through).
+websitesRouter.get('/:id/infra', async (req, res) => {
+  const infra = await getWebsiteInfra(Number(req.params.id))
+  if (infra.notFound) return res.status(404).json({ error: { message: 'Website not found' } })
+  res.json({ data: infra })
+})
+
+// POST /api/websites/:id/uptime — provision a DO uptime check + adopt its verdict.
+websitesRouter.post('/:id/uptime', async (req, res) => {
+  const result = await enableUptime(Number(req.params.id))
+  if (result.notFound) return res.status(404).json({ error: { message: 'Website not found' } })
+  res.json({ data: result })
+})
+
+// DELETE /api/websites/:id/uptime — tear down the DO check, hand health back to local.
+websitesRouter.delete('/:id/uptime', async (req, res) => {
+  const result = await disableUptime(Number(req.params.id))
+  if (result.notFound) return res.status(404).json({ error: { message: 'Website not found' } })
+  res.json({ data: result })
 })
 
 // GET /api/websites/:id/metrics?days=7|30|90 — one site's daily series.

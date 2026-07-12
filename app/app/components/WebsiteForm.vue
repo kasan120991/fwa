@@ -13,6 +13,7 @@ interface WebsiteRow {
   analytics_provider: string
   conversion_goal: string | null
   launched_at: string | null
+  do_droplet_id: number | null
 }
 const props = defineProps<{
   open: boolean
@@ -51,18 +52,22 @@ interface FormState {
   analytics_provider: string
   conversion_goal: string
   launched_at: string
+  do_droplet_id: number | null
 }
 function blank(): FormState {
   return {
     client_id: props.contactId ?? undefined,
     project_id: null,
     name: '', domain: '', url: '', environment: 'live',
-    analytics_provider: 'none', conversion_goal: '', launched_at: ''
+    analytics_provider: 'none', conversion_goal: '', launched_at: '',
+    do_droplet_id: null
   }
 }
 const form = reactive<FormState>(blank())
 const clients = ref<{ label: string, value: number }[]>([])
 const projects = ref<{ label: string, value: number | null }[]>([{ label: 'No project', value: null }])
+const droplets = ref<{ label: string, value: number | null }[]>([{ label: 'Not linked', value: null }])
+const doConfigured = ref(true)
 const saving = ref(false)
 const errors = ref<Record<string, string>>({})
 
@@ -73,6 +78,14 @@ async function loadClients() {
 async function loadProjects(cid: number) {
   const { data } = await api<{ data: { id: number, name: string, code: string | null }[] }>('/projects', { query: { client_id: cid } })
   projects.value = [{ label: 'No project', value: null }, ...data.map(p => ({ label: `${p.code ? p.code + ' · ' : ''}${p.name}`, value: p.id }))]
+}
+async function loadDroplets() {
+  const { data, configured } = await api<{ data: { id: number, name: string, region: string | null, status: string | null }[], configured: boolean }>('/websites/droplets')
+  doConfigured.value = configured
+  droplets.value = [
+    { label: 'Not linked', value: null },
+    ...data.map(d => ({ label: `${d.name}${d.region ? ' · ' + d.region : ''}${d.status ? ' · ' + d.status : ''}`, value: d.id }))
+  ]
 }
 
 function fillFrom(w: WebsiteRow) {
@@ -85,7 +98,8 @@ function fillFrom(w: WebsiteRow) {
     environment: w.environment,
     analytics_provider: w.analytics_provider,
     conversion_goal: w.conversion_goal || '',
-    launched_at: w.launched_at ? String(w.launched_at).slice(0, 10) : ''
+    launched_at: w.launched_at ? String(w.launched_at).slice(0, 10) : '',
+    do_droplet_id: w.do_droplet_id ?? null
   })
 }
 
@@ -100,6 +114,7 @@ watch(() => props.open, (o) => {
   // Client picker only when creating without a locked client.
   if (mode.value === 'create' && !props.contactId && !clients.value.length) loadClients()
   if (form.client_id) loadProjects(form.client_id)
+  loadDroplets()
 })
 watch(() => form.client_id, (cid) => {
   if (mode.value === 'edit') return
@@ -130,7 +145,8 @@ async function save() {
     environment: form.environment,
     analytics_provider: form.analytics_provider,
     conversion_goal: form.conversion_goal.trim() || null,
-    launched_at: form.launched_at || null
+    launched_at: form.launched_at || null,
+    do_droplet_id: form.do_droplet_id
   }
   try {
     if (mode.value === 'edit' && props.website) {
@@ -235,6 +251,20 @@ const lockedClientLabel = computed(() => props.contactLabel || 'Selected client'
                 <UInput v-model="form.launched_at" type="date" size="lg" class="w-full" />
               </UFormField>
             </div>
+
+            <UFormField
+              label="DigitalOcean Droplet"
+              :help="doConfigured ? 'Link the Droplet this site runs on to see live infrastructure health.' : 'Set a DigitalOcean API token to link infrastructure.'"
+            >
+              <USelect
+                v-model="form.do_droplet_id"
+                :items="droplets"
+                :disabled="!doConfigured"
+                placeholder="Not linked"
+                size="lg"
+                class="w-full"
+              />
+            </UFormField>
           </div>
         </div>
 

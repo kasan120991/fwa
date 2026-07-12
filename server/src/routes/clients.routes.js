@@ -3,6 +3,7 @@ import {
   listClients, getClient, createClient, updateClient, deleteClient
 } from '../repositories/clients.repo.js'
 import { createStripeCustomer, updateStripeCustomer } from '../services/stripe.js'
+import { clientHosting } from '../services/hostingCosts.js'
 
 export const clientsRouter = Router()
 
@@ -139,6 +140,11 @@ clientsRouter.get('/:id', async (req, res) => {
   const client = await getClient(parseId(req))
   if (!client) return res.status(404).json({ error: { message: 'Client not found' } })
   res.json({ data: client })
+})
+
+// GET /api/clients/:id/hosting — monthly DigitalOcean hosting cost vs care-plan margin.
+clientsRouter.get('/:id/hosting', async (req, res) => {
+  res.json({ data: await clientHosting(parseId(req)) })
 })
 
 // POST /api/clients

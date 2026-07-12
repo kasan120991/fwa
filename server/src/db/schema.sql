@@ -135,6 +135,9 @@ CREATE TABLE IF NOT EXISTS clients (
   -- Stripe customer id (cus_…), created when the client is provisioned.
   stripe_customer_id VARCHAR(255) NULL,
 
+  -- DigitalOcean Project (resource group) for this client's hosting; set on first provision.
+  do_project_id      VARCHAR(36) NULL,
+
   created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                        ON UPDATE CURRENT_TIMESTAMP,
@@ -462,7 +465,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   user_id     BIGINT UNSIGNED NULL,
 
   category    ENUM('lead', 'call', 'proposal', 'contract',
-                   'invoice', 'payment', 'task', 'ticket', 'expense', 'system') NOT NULL,
+                   'invoice', 'payment', 'task', 'ticket', 'expense', 'website', 'system') NOT NULL,
   tone        ENUM('brand', 'success', 'warning', 'info', 'error')
                 NOT NULL DEFAULT 'brand',
   icon        VARCHAR(64)  NOT NULL,   -- lucide id, e.g. 'i-lucide-user-plus'
@@ -482,6 +485,27 @@ CREATE TABLE IF NOT EXISTS notifications (
 
   CONSTRAINT fk_notifications_user FOREIGN KEY (user_id)
     REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- infra_alerts — dedup/state store for poll-based DigitalOcean infra alerting.
+-- One active row per (subject, kind); resolved_at NULL = active. The poll job
+-- writes it (notifying on open/resolve); the dashboard reads active rows. No FKs:
+-- subject_id is a website id or droplet id (droplets aren't a local table).
+CREATE TABLE IF NOT EXISTS infra_alerts (
+  id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  subject_type ENUM('website', 'droplet') NOT NULL,
+  subject_id   VARCHAR(64)  NOT NULL,        -- website id or droplet id (string)
+  kind         ENUM('site_down', 'high_cpu', 'disk_full') NOT NULL,
+  label        VARCHAR(200) NOT NULL,        -- display subject (site/droplet name)
+  detail       VARCHAR(200) NULL,            -- condition text ('CPU 94%')
+  link         VARCHAR(512) NULL,            -- deep link (/websites/:id)
+  tone         ENUM('warning', 'error') NOT NULL DEFAULT 'error',
+  opened_at    DATETIME     NOT NULL,
+  resolved_at  DATETIME     NULL,            -- NULL = active
+  updated_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_infra_alert (subject_type, subject_id, kind),
+  KEY idx_infra_alerts_active (resolved_at)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- =====================================================================
@@ -792,6 +816,8 @@ CREATE TABLE IF NOT EXISTS websites (
   top_sources        JSON            NULL,
   launched_at        DATE            NULL,
   notes              TEXT            NULL,
+  do_droplet_id      BIGINT UNSIGNED NULL, -- linked DigitalOcean Droplet (live infra panel)
+  do_uptime_check_id VARCHAR(36)     NULL, -- managed DigitalOcean Uptime check (health verdict)
   created_at         TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at         TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),

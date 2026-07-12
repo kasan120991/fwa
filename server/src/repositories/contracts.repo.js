@@ -97,6 +97,17 @@ export async function generateContractFromProposal(proposal, { type = 'project',
   return getContract(id)
 }
 
+/** A client's monthly recurring revenue from signed monthly care-plan contracts. */
+export async function careplanMrr(clientId) {
+  const [row] = await query(
+    `SELECT COALESCE(SUM(total), 0) AS mrr FROM contracts
+      WHERE client_id = :clientId AND type = 'care_plan'
+        AND billing_interval = 'monthly' AND status = 'signed'`,
+    { clientId }
+  )
+  return Number(row?.mrr ?? 0)
+}
+
 export async function getContract(id) {
   const rows = await query('SELECT * FROM contracts WHERE id = :id LIMIT 1', { id })
   const contract = rows[0] ?? null

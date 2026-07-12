@@ -92,9 +92,11 @@ onMounted(() => {
   loadProjects()
   loadInvoices()
   loadWebsites()
+  loadHosting()
   loadTickets()
   loadCalls()
   websiteSocket.on('website:changed', loadWebsites)
+  websiteSocket.on('website:changed', loadHosting)
   websiteSocket.on('ticket:created', loadTickets)
   websiteSocket.on('ticket:updated', loadTickets)
   websiteSocket.on('ticket:deleted', loadTickets)
@@ -224,6 +226,22 @@ const websites = computed(() => websiteRows.value.map((w) => {
 const connectedWebsites = computed(() => websiteRows.value.filter(w => w.connected).length)
 const liveWebsites = computed(() => websiteRows.value.filter(w => w.environment === 'live').length)
 const envClass = (e: string) => e === 'Live' ? 'text-success' : (e === 'Staging' ? 'text-warning' : 'text-muted')
+
+// Hosting cost & margin — live DigitalOcean droplet cost vs care-plan MRR.
+interface Hosting {
+  configured: boolean
+  monthly_cost?: number
+  droplet_count?: number
+  mrr?: number
+  margin?: number
+  margin_pct?: number | null
+  error?: string
+}
+const hosting = ref<Hosting | null>(null)
+async function loadHosting() {
+  const { data } = await api<{ data: Hosting }>(`/clients/${route.params.id}/hosting`)
+  hosting.value = data
+}
 
 // Invoices tab — this client's invoices, from GET /api/invoices?client_id= .
 type InvStatus = 'draft' | 'open' | 'paid' | 'uncollectible' | 'void'
@@ -873,6 +891,33 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                   <span class="text-default">{{ websites.length }} {{ websites.length === 1 ? 'site' : 'sites' }}</span>
                   <span class="inline-flex items-center gap-1.5 font-semibold text-success"><span class="size-[7px] rounded-full bg-success" />{{ connectedWebsites }} analytics connected</span>
                 </div>
+              </div>
+              <!-- hosting cost & margin -->
+              <div class="rounded-card bg-default p-[18px] ring ring-default">
+                <div class="mb-3 flex items-center justify-between">
+                  <span class="text-[15px] font-semibold text-highlighted">Hosting margin</span>
+                  <span class="font-mono text-[10px] uppercase tracking-[0.05em] text-muted">Monthly</span>
+                </div>
+                <p v-if="!hosting" class="text-[13px] text-muted">Loading…</p>
+                <p v-else-if="!hosting.configured" class="text-[13px] text-muted">Connect DigitalOcean to see hosting cost.</p>
+                <p v-else-if="hosting.error" class="text-[13px] text-muted">Couldn't load hosting cost.</p>
+                <template v-else>
+                  <div class="flex items-center justify-between text-[13.5px]">
+                    <span class="text-muted">Care plan</span>
+                    <span class="tabular-nums text-default">{{ formatMoney(hosting.mrr ?? 0) }}</span>
+                  </div>
+                  <div class="mt-2 flex items-center justify-between text-[13.5px]">
+                    <span class="text-muted">Hosting cost{{ hosting.droplet_count ? ` · ${hosting.droplet_count} droplet${hosting.droplet_count === 1 ? '' : 's'}` : '' }}</span>
+                    <span class="tabular-nums text-default">{{ formatMoney(hosting.monthly_cost ?? 0) }}</span>
+                  </div>
+                  <div class="my-3 border-t border-default" />
+                  <div class="flex items-center justify-between">
+                    <span class="text-[13px] text-muted">Margin</span>
+                    <span class="text-[15px] font-bold tabular-nums" :class="(hosting.margin ?? 0) >= 0 ? 'text-success' : 'text-error'">
+                      {{ formatMoney(hosting.margin ?? 0) }}<span v-if="hosting.margin_pct != null" class="ml-1 text-[12px] font-semibold text-muted">({{ hosting.margin_pct }}%)</span>
+                    </span>
+                  </div>
+                </template>
               </div>
             </div>
           </div>
