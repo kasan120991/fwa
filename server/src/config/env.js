@@ -43,6 +43,17 @@ export const config = {
     // contact-form submission. Empty = the webhook is disabled (fails closed).
     webhookSecret: process.env.CONTACT_FORM_WEBHOOK_SECRET || ''
   },
+  resend: {
+    // Resend API key for outgoing alert emails (new web inquiry, new phone
+    // inquiry). Empty = email disabled (sends no-op), matching the Stripe/
+    // PandaDoc/Plausible key-gating.
+    apiKey: process.env.RESEND_API_KEY || '',
+    // Default From identity — must be on a Resend-verified domain. The published
+    // templates carry their own From, so this is only a fallback.
+    from: process.env.RESEND_FROM || 'Francis Web Agency <info@franciswebagency.com>',
+    // Where internal alert emails are delivered.
+    alertsTo: process.env.ALERTS_EMAIL || 'info@franciswebagency.com'
+  },
   vapi: {
     // Shared secret Vapi sends as `X-Vapi-Secret` on every server message
     // (assistant-request, end-of-call-report). Empty = the webhook is disabled
