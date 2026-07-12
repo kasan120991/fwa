@@ -33,6 +33,13 @@ const ADDITIVE_COLUMNS = {
   ],
   projects: [
     ['deposit_pct', 'DECIMAL(5,2) NOT NULL DEFAULT 50.00 AFTER project_fee']
+  ],
+  websites: [
+    ['do_droplet_id', 'BIGINT UNSIGNED NULL AFTER notes'],
+    ['do_uptime_check_id', 'VARCHAR(36) NULL AFTER do_droplet_id']
+  ],
+  clients: [
+    ['do_project_id', 'VARCHAR(36) NULL AFTER stripe_customer_id']
   ]
 }
 
@@ -88,8 +95,8 @@ const ENUM_COLUMNS = {
       "ENUM('planning','awaiting_signature','awaiting_deposit','in_progress','in_review','awaiting_final','on_hold','completed') NOT NULL DEFAULT 'planning'"]
   ],
   notifications: [
-    ['category', 'expense',
-      "ENUM('lead','call','proposal','contract','invoice','payment','task','ticket','expense','system') NOT NULL"]
+    ['category', 'website',
+      "ENUM('lead','call','proposal','contract','invoice','payment','task','ticket','expense','website','system') NOT NULL"]
   ]
 }
 

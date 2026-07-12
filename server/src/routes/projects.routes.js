@@ -7,6 +7,7 @@ import { listTasks } from '../repositories/tasks.repo.js'
 import { getClient, updateClient } from '../repositories/clients.repo.js'
 import { getProjectType, getProjectTypeByKey } from '../repositories/projectTypes.repo.js'
 import { generateProjectContract } from '../services/projectContract.js'
+import { provisionHosting } from '../services/websiteProvision.js'
 import { issueDeposit } from '../services/projectBilling.js'
 import { listContracts } from '../repositories/contracts.repo.js'
 import { pandadocEnabled } from '../services/pandadoc.js'
@@ -235,6 +236,14 @@ projectsRouter.post('/:id/deposit-invoice', async (req, res) => {
 
   const { invoice, amount } = await issueDeposit(project, client, { actorUserId: req.user.id })
   res.json({ data: { id: invoice.id, hosted_invoice_url: invoice.hosted_invoice_url, status: invoice.status, amount } })
+})
+
+// POST /api/projects/:id/provision — one-click DigitalOcean hosting: create a
+// droplet + linked website record, filed under the client's DO Project.
+projectsRouter.post('/:id/provision', async (req, res) => {
+  const result = await provisionHosting(parseId(req), req.body ?? {})
+  if (result.notFound) return res.status(404).json({ error: { message: 'Project not found' } })
+  res.json({ data: result })
 })
 
 // POST /api/projects/:id/final-invoice — Stripe-send the client the final

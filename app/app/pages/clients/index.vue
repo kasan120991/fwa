@@ -2,8 +2,9 @@
 useHead({ title: 'Clients · Francis Web Agency' })
 
 // Clients = the clients table (status active/past), from GET /api/clients.
-// `projects` is the count of the client's active (non-completed) projects,
-// returned by the list endpoint. `outstanding` is still a placeholder ("—").
+// `projects` is the count of the client's active (non-completed) projects, and
+// `outstanding`/`overdue` are the sum of open invoices (overdue = any past due),
+// all returned by the list endpoint.
 type Stage = 'active' | 'past'
 interface Client {
   id: number
@@ -33,6 +34,8 @@ interface ApiClient {
   updated_at: string
   last_contacted_at: string | null
   active_projects: number
+  outstanding: number | string
+  overdue_count: number | string
 }
 
 const api = useApi()
@@ -52,8 +55,8 @@ function mapClient(c: ApiClient, i: number): Client {
     contact: c.name,
     email: c.email || '',
     projects: Number(c.active_projects) || 0,
-    outstanding: 0,
-    overdue: false,
+    outstanding: Number(c.outstanding) || 0,
+    overdue: Number(c.overdue_count) > 0,
     activity: timeAgo(activityAt) || '—',
     days: -(daysFromNow(activityAt) ?? -999),
     color: i % 5

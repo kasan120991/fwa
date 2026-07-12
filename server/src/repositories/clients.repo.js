@@ -44,7 +44,12 @@ export async function listClients(opts = {}) {
 
   const rows = await query(
     `SELECT clients.*,
-       (SELECT COUNT(*) FROM projects p WHERE p.client_id = clients.id AND p.status <> 'completed') AS active_projects
+       (SELECT COUNT(*) FROM projects p WHERE p.client_id = clients.id AND p.status <> 'completed') AS active_projects,
+       (SELECT COALESCE(SUM(i.amount_due - i.amount_paid), 0) FROM invoices i
+          WHERE i.client_id = clients.id AND i.status = 'open') AS outstanding,
+       (SELECT COUNT(*) FROM invoices i
+          WHERE i.client_id = clients.id AND i.status = 'open'
+            AND i.due_date IS NOT NULL AND i.due_date < CURDATE()) AS overdue_count
      FROM clients${whereSql} ORDER BY ${sort} ${dir} LIMIT ${limit} OFFSET ${offset}`,
     params
   )
@@ -55,6 +60,12 @@ export async function listClients(opts = {}) {
 export async function getClient(id) {
   const rows = await query('SELECT * FROM clients WHERE id = :id LIMIT 1', { id })
   return rows[0] ?? null
+}
+
+/** Link a client to its DigitalOcean Project (resource group). Managed by the
+ *  provisioning flow, not user-settable — hence a dedicated setter, not WRITABLE. */
+export async function setClientDoProject(id, doProjectId) {
+  await query('UPDATE clients SET do_project_id = :doProjectId WHERE id = :id', { id, doProjectId })
 }
 
 export async function getClientByStripeCustomerId(customerId) {

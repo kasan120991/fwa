@@ -20,7 +20,9 @@ export async function checkWebsite(site) {
   }
   const response_ms = Date.now() - t0
   await insertCheck(site.id, { up, status_code, response_ms })
-  await recomputeHealth(site.id)
+  // Keep the latency history for every site, but let DO own the health verdict for
+  // sites it monitors — don't clobber the DO-sourced snapshot with a local average.
+  if (!site.do_uptime_check_id) await recomputeHealth(site.id)
   emitWebsiteChanged(site.id)
   return { up, status_code, response_ms }
 }
@@ -28,7 +30,7 @@ export async function checkWebsite(site) {
 /** Check every active site (scheduled). Gated: live checks hit real URLs. */
 export async function checkAllWebsites() {
   if (!config.websites.checksEnabled) return { checked: 0, enabled: false }
-  const sites = await query("SELECT id, domain, url FROM websites WHERE status = 'active'")
+  const sites = await query("SELECT id, domain, url, do_uptime_check_id FROM websites WHERE status = 'active'")
   let checked = 0
   for (const s of sites) {
     try {

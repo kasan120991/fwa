@@ -7,7 +7,8 @@ export const PROVIDERS = new Set(['none', 'plausible', 'ga4', 'fathom', 'umami']
 // top_pages/top_sources are populated by seeding / a future analytics sync, not here.
 const WRITABLE = [
   'client_id', 'project_id', 'name', 'domain', 'url', 'environment', 'status',
-  'analytics_provider', 'analytics_site_id', 'conversion_goal', 'launched_at', 'notes'
+  'analytics_provider', 'analytics_site_id', 'conversion_goal', 'launched_at', 'notes',
+  'do_droplet_id'
 ]
 
 const num = v => (v == null ? null : Number(v))
@@ -240,6 +241,56 @@ export async function setSynced(id, { top_pages, top_sources } = {}) {
 /** Connected Plausible sites, for the scheduled/bulk sync. */
 export async function listSyncableWebsites() {
   return query("SELECT id, domain, analytics_site_id, conversion_goal FROM websites WHERE analytics_provider = 'plausible'")
+}
+
+// ---- DigitalOcean uptime (managed check → health verdict) ----
+
+/** Link/unlink a website to its managed DO uptime check (UUID or null). */
+export async function setUptimeCheckId(id, checkId) {
+  await query('UPDATE websites SET do_uptime_check_id = :checkId WHERE id = :id', { id, checkId })
+}
+
+/** Write a DO-sourced health snapshot (same columns recomputeHealth touches). */
+export async function setUptimeHealth(id, { health_state, uptime_pct }) {
+  await query(
+    'UPDATE websites SET health_state = :health_state, uptime_pct = :uptime_pct, last_checked_at = NOW() WHERE id = :id',
+    { id, health_state, uptime_pct }
+  )
+}
+
+/** Sites whose health is owned by a managed DO uptime check (for the sync job). */
+export async function listUptimeSyncableWebsites() {
+  return query('SELECT id, do_uptime_check_id FROM websites WHERE do_uptime_check_id IS NOT NULL')
+}
+
+// ---- hosting cost attribution (distinct linked droplets) ----
+
+/** Distinct DO droplet ids a client's active sites are hosted on (cost dedupe). */
+export async function listClientDropletIds(clientId) {
+  const rows = await query(
+    "SELECT DISTINCT do_droplet_id FROM websites WHERE client_id = :clientId AND do_droplet_id IS NOT NULL AND status = 'active'",
+    { clientId }
+  )
+  return rows.map(r => Number(r.do_droplet_id))
+}
+
+/** Active sites' current health snapshot — the source for site-down alerting. */
+export async function listSiteHealth() {
+  return query("SELECT id, name, domain, health_state FROM websites WHERE status = 'active'")
+}
+
+/** A representative active site on a droplet — for a droplet alert's deep link. */
+export async function siteIdForDroplet(dropletId) {
+  const rows = await query("SELECT id FROM websites WHERE do_droplet_id = :dropletId AND status = 'active' ORDER BY id LIMIT 1", { dropletId })
+  return rows[0]?.id ?? null
+}
+
+/** Distinct DO droplet ids across all active sites (account-wide hosting total). */
+export async function listHostedDropletIds() {
+  const rows = await query(
+    "SELECT DISTINCT do_droplet_id FROM websites WHERE do_droplet_id IS NOT NULL AND status = 'active'"
+  )
+  return rows.map(r => Number(r.do_droplet_id))
 }
 
 // ---- uptime checks (health history) ----

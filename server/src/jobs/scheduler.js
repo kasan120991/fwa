@@ -1,6 +1,8 @@
 import { config } from '../config/env.js'
 import { syncConfigured, syncAllWebsites } from '../services/websiteSync.js'
 import { checkAllWebsites } from '../services/websiteChecks.js'
+import { uptimeConfigured, syncAllUptime } from '../services/websiteUptime.js'
+import { alertsConfigured, pollInfraAlerts } from '../services/infraAlerts.js'
 import { checkSubscriptionRenewals } from '../services/expenseReminders.js'
 
 let started = false
@@ -23,6 +25,24 @@ export function startScheduler() {
     const ms = config.websites.checkIntervalMs
     setInterval(() => { checkAllWebsites().catch(e => console.error('[scheduler] checks:', e.message)) }, ms).unref()
     console.log(`[scheduler] uptime checks every ${Math.round(ms / 60000)}m`)
+  }
+
+  // DO-managed uptime sync — independent of checksEnabled (DO probes the sites, not
+  // our box), so it runs whenever a token is set. Only touches sites with a check.
+  if (uptimeConfigured()) {
+    const ms = config.websites.checkIntervalMs
+    setInterval(() => { syncAllUptime().catch(e => console.error('[scheduler] do-uptime:', e.message)) }, ms).unref()
+    console.log(`[scheduler] DigitalOcean uptime sync every ${Math.round(ms / 60000)}m`)
+  }
+
+  // Infra alerting — poll site health + droplet metrics, raise/clear notifications
+  // and Needs Attention items. Run once at boot so a live problem surfaces promptly.
+  if (alertsConfigured()) {
+    const ms = config.websites.checkIntervalMs
+    const run = () => pollInfraAlerts().catch(e => console.error('[scheduler] infra-alerts:', e.message))
+    run()
+    setInterval(run, ms).unref()
+    console.log(`[scheduler] infra alerts every ${Math.round(ms / 60000)}m`)
   }
 
   if (config.expenses.remindersEnabled) {

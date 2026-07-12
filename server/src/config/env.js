@@ -60,6 +60,27 @@ export const config = {
     apiKey: process.env.PLAUSIBLE_API_KEY || '',
     baseUrl: process.env.PLAUSIBLE_BASE_URL || 'https://plausible.io'
   },
+  digitalocean: {
+    // DigitalOcean API token for the website Infrastructure panel (live Droplet
+    // health). A read-only token is sufficient — scopes `droplet:read` and
+    // `monitoring:read`. Empty = infra panel disabled (endpoints no-op, the UI
+    // shows a "not connected" state).
+    apiToken: process.env.DIGITALOCEAN_API_TOKEN || '',
+    baseUrl: process.env.DIGITALOCEAN_BASE_URL || 'https://api.digitalocean.com',
+    // Regions DO probes each managed uptime check from (multi-region verdict).
+    // Valid: us_east, us_west, eu_west, se_asia.
+    uptimeRegions: (process.env.DIGITALOCEAN_UPTIME_REGIONS || 'us_east,eu_west')
+      .split(',').map(r => r.trim()).filter(Boolean),
+    // Defaults for one-click droplet provisioning (the modal can override region/size).
+    provisionRegion: process.env.DIGITALOCEAN_PROVISION_REGION || 'nyc3',
+    provisionSize: process.env.DIGITALOCEAN_PROVISION_SIZE || 's-1vcpu-2gb',
+    provisionImage: process.env.DIGITALOCEAN_PROVISION_IMAGE || 'ubuntu-24-04-x64',
+    // Infra alerting thresholds (poll job → notifications + Needs Attention).
+    // Set DIGITALOCEAN_ALERTS_ENABLED=false to silence the poll (still gated on the token).
+    alertsEnabled: process.env.DIGITALOCEAN_ALERTS_ENABLED !== 'false',
+    alertCpuPct: Number(process.env.DIGITALOCEAN_ALERT_CPU_PCT) || 90,
+    alertDiskPct: Number(process.env.DIGITALOCEAN_ALERT_DISK_PCT) || 90
+  },
   websites: {
     // Live uptime checks hit each site's real URL, so they're off by default
     // (seeded domains are placeholders). Enable in production. Interval in ms.

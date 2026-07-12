@@ -26,6 +26,8 @@ interface Detail {
   last_synced_at: string | null
   launched_at: string | null
   notes: string | null
+  do_droplet_id: number | null
+  do_uptime_check_id: string | null
   top_pages: { path: string, views: number }[]
   top_sources: { source: string, visits: number }[]
   visitors_30d: number
@@ -51,6 +53,10 @@ const HEALTH_META: Record<Health, { label: string, status: 'success' | 'warning'
   down: { label: 'Down', status: 'error' },
   unknown: { label: 'No data', status: 'neutral' }
 }
+const DROPLET_STATUS: Record<string, 'success' | 'warning' | 'error' | 'neutral'> = {
+  active: 'success', new: 'warning', off: 'error', archive: 'neutral'
+}
+const dropletStatusTone = (s: string | null | undefined) => (s && DROPLET_STATUS[s]) || 'neutral'
 const compactNum = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n))
 
 const site = ref<Detail | null>(null)
@@ -61,7 +67,11 @@ const metric = ref<'visitors' | 'pageviews'>('visitors')
 const formOpen = ref(false)
 
 async function loadSite() {
-  pending.value = true
+  // Only show the full-screen loader on the first load. Background refreshes
+  // (after a save, or a website:changed socket event) must not flip `pending`,
+  // or the `v-else` subtree — including the edit modal — unmounts mid-close and
+  // leaves an orphaned overlay (the modal appears not to close).
+  if (!site.value) pending.value = true
   try {
     const { data } = await api<{ data: Detail }>(`/websites/${route.params.id}`)
     site.value = data
@@ -81,11 +91,51 @@ async function loadChecks() {
   const { data } = await api<{ data: CheckDay[] }>(`/websites/${route.params.id}/checks`, { query: { days: range.value } })
   checks.value = data
 }
+
+// Live DigitalOcean infrastructure (read-through). The shape carries its own state
+// (not linked / not configured / error) so the panel renders every case.
+interface DropletInfo {
+  status: string | null
+  region: string | null
+  size_slug: string | null
+  vcpus: number | null
+  memory_mb: number | null
+  disk_gb: number | null
+  ipv4: string | null
+  created_at: string | null
+}
+interface Infra {
+  linked: boolean
+  configured?: boolean
+  error?: string
+  droplet?: DropletInfo
+  metrics?: {
+    cpuPct: number | null
+    memUsedPct: number | null
+    diskUsedPct: number | null
+    bandwidth: { inboundMbps: number | null, outboundMbps: number | null }
+  }
+}
+const infra = ref<Infra | null>(null)
+const infraPending = ref(true)
+async function loadInfra() {
+  infraPending.value = true
+  try {
+    const { data } = await api<{ data: Infra }>(`/websites/${route.params.id}/infra`)
+    infra.value = data
+  } catch {
+    infra.value = null
+  } finally {
+    infraPending.value = false
+  }
+}
+
 watch(range, () => { loadMetrics(); loadChecks() })
 function refreshDetail() {
   loadSite()
   loadMetrics()
   loadChecks()
+  loadInfra()
 }
 const socket = useSocket()
 onMounted(() => {
@@ -97,6 +147,40 @@ useHead({ title: () => `${site.value?.name ?? 'Website'} · Francis Web Agency` 
 
 function onSaved() {
   refreshDetail()
+}
+
+// DigitalOcean uptime monitoring — the app provisions/tears down a managed check
+// (POST/DELETE /websites/:id/uptime). When on, DO owns the health verdict.
+const uptimeBusy = ref(false)
+async function enableUptime() {
+  if (uptimeBusy.value) return
+  uptimeBusy.value = true
+  try {
+    const { data } = await api<{ data: { enabled: boolean, configured?: boolean } }>(`/websites/${route.params.id}/uptime`, { method: 'POST' })
+    if (data.configured === false) {
+      toast.add({ title: "DigitalOcean isn't connected", description: 'Add an API token to enable uptime monitoring.', color: 'neutral' })
+    } else {
+      toast.add({ title: 'Uptime monitoring enabled', color: 'success' })
+      refreshDetail()
+    }
+  } catch {
+    toast.add({ title: "Couldn't enable uptime monitoring", description: 'Check the connection and try again.', color: 'error' })
+  } finally {
+    uptimeBusy.value = false
+  }
+}
+async function disableUptime() {
+  if (uptimeBusy.value) return
+  uptimeBusy.value = true
+  try {
+    await api(`/websites/${route.params.id}/uptime`, { method: 'DELETE' })
+    toast.add({ title: 'Uptime monitoring disabled', color: 'success' })
+    refreshDetail()
+  } catch {
+    toast.add({ title: "Couldn't disable uptime monitoring", description: 'Check the connection and try again.', color: 'error' })
+  } finally {
+    uptimeBusy.value = false
+  }
 }
 const uptimeAvg = computed(() => {
   const vals = checks.value.map(c => c.uptime).filter((u): u is number => u != null)
@@ -329,6 +413,27 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
           <div class="mt-4 border-t border-default pt-3 text-[13px] text-muted">
             Last checked {{ site.last_checked_at ? timeAgo(site.last_checked_at) : '—' }} · Analytics synced {{ site.last_synced_at ? timeAgo(site.last_synced_at) : '—' }}
           </div>
+          <div class="mt-3 flex items-center justify-between gap-3 border-t border-default pt-3">
+            <div class="flex items-center gap-2 text-[13px]">
+              <UIcon name="i-lucide-activity" class="size-4 text-muted" />
+              <template v-if="site.do_uptime_check_id">
+                <span class="text-muted">Uptime monitored by</span>
+                <span class="font-medium text-highlighted">DigitalOcean</span>
+                <span class="font-mono text-[10px] uppercase tracking-[0.05em] text-muted">multi-region</span>
+              </template>
+              <span v-else class="text-muted">Uptime checked locally</span>
+            </div>
+            <UButton
+              v-if="site.do_uptime_check_id"
+              color="neutral" variant="ghost" size="xs" class="rounded-full"
+              :loading="uptimeBusy" @click="disableUptime"
+            >Disable</UButton>
+            <UButton
+              v-else
+              color="primary" variant="soft" size="xs" class="rounded-full"
+              icon="i-lucide-plus" :loading="uptimeBusy" @click="enableUptime"
+            >Monitor via DigitalOcean</UButton>
+          </div>
         </div>
         <div class="rounded-card bg-default p-5 ring ring-default">
           <div class="mb-3.5 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">Details</div>
@@ -353,6 +458,84 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
         </div>
       </div>
     </template>
+
+    <!-- infrastructure (DigitalOcean) — shown regardless of analytics connection -->
+    <div class="mt-5 rounded-card bg-default p-5 ring ring-default">
+      <div class="mb-3.5 flex items-center justify-between gap-3">
+        <span class="font-mono text-[11px] uppercase tracking-[0.05em] text-muted">Infrastructure</span>
+        <StatusChip v-if="infra?.droplet?.status" :status="dropletStatusTone(infra.droplet.status)" class="capitalize">
+          {{ infra.droplet.status }}
+        </StatusChip>
+      </div>
+
+      <div v-if="infraPending" class="py-4 text-[13px] text-muted">
+        Loading infrastructure…
+      </div>
+
+      <div v-else-if="!infra || !infra.linked" class="flex items-center gap-3 py-1 text-[13px] text-muted">
+        <span class="inline-flex size-8 flex-none items-center justify-center rounded-[9px] bg-muted text-muted"><UIcon name="i-lucide-server" class="size-[17px]" /></span>
+        <span>No Droplet linked. <button class="font-medium text-primary hover:opacity-80" @click="formOpen = true">Link one</button> to see live infrastructure health.</span>
+      </div>
+
+      <div v-else-if="infra.configured === false" class="flex items-center gap-3 py-1 text-[13px] text-muted">
+        <span class="inline-flex size-8 flex-none items-center justify-center rounded-[9px] bg-muted text-muted"><UIcon name="i-lucide-plug" class="size-[17px]" /></span>
+        <span>DigitalOcean isn't connected. Add an API token to see live infrastructure.</span>
+      </div>
+
+      <div v-else-if="infra.error" class="flex items-center gap-3 py-1 text-[13px] text-muted">
+        <UIcon name="i-lucide-triangle-alert" class="size-4 flex-none text-warning" />
+        <span>Couldn't load infrastructure. {{ infra.error }}</span>
+      </div>
+
+      <template v-else>
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <div class="font-display text-[22px] font-medium text-highlighted tabular-nums">{{ infra.metrics?.cpuPct != null ? Math.round(infra.metrics.cpuPct) + '%' : '—' }}</div>
+            <div class="mt-0.5 text-xs text-muted">CPU</div>
+          </div>
+          <div>
+            <div class="font-display text-[22px] font-medium text-highlighted tabular-nums">{{ infra.metrics?.memUsedPct != null ? Math.round(infra.metrics.memUsedPct) + '%' : '—' }}</div>
+            <div class="mt-0.5 text-xs text-muted">Memory</div>
+          </div>
+          <div>
+            <div class="font-display text-[22px] font-medium text-highlighted tabular-nums">{{ infra.metrics?.diskUsedPct != null ? Math.round(infra.metrics.diskUsedPct) + '%' : '—' }}</div>
+            <div class="mt-0.5 text-xs text-muted">Disk</div>
+          </div>
+        </div>
+
+        <dl class="mt-4 flex flex-col gap-2.5 border-t border-default pt-3 text-[13.5px]">
+          <div class="flex justify-between gap-3">
+            <dt class="text-muted">Region</dt><dd class="font-medium text-highlighted">{{ infra.droplet?.region || '—' }}</dd>
+          </div>
+          <div class="flex justify-between gap-3">
+            <dt class="flex-none text-muted">Size</dt>
+            <dd class="truncate text-right">
+              <span class="font-medium text-highlighted">{{ infra.droplet?.size_slug || '—' }}</span>
+              <span v-if="infra.droplet?.vcpus" class="text-muted"> · {{ infra.droplet.vcpus }} vCPU · {{ infra.droplet.memory_mb ? Math.round(infra.droplet.memory_mb / 1024) + 'GB' : '—' }} · {{ infra.droplet.disk_gb }}GB</span>
+            </dd>
+          </div>
+          <div class="flex justify-between gap-3">
+            <dt class="text-muted">Public IPv4</dt><dd class="font-medium text-highlighted tabular-nums">{{ infra.droplet?.ipv4 || '—' }}</dd>
+          </div>
+          <div class="flex justify-between gap-3">
+            <dt class="text-muted">Bandwidth</dt>
+            <dd class="tabular-nums">
+              <span v-if="infra.metrics && (infra.metrics.bandwidth.inboundMbps != null || infra.metrics.bandwidth.outboundMbps != null)" class="text-default">
+                {{ infra.metrics.bandwidth.inboundMbps != null ? infra.metrics.bandwidth.inboundMbps.toFixed(2) : '—' }} ↓ / {{ infra.metrics.bandwidth.outboundMbps != null ? infra.metrics.bandwidth.outboundMbps.toFixed(2) : '—' }} ↑ Mbps
+              </span>
+              <span v-else class="text-muted">—</span>
+            </dd>
+          </div>
+          <div class="flex justify-between gap-3">
+            <dt class="text-muted">Created</dt><dd class="text-default tabular-nums">{{ infra.droplet?.created_at ? shortDate(infra.droplet.created_at) : '—' }}</dd>
+          </div>
+        </dl>
+
+        <p v-if="infra.metrics && infra.metrics.cpuPct == null" class="mt-3 text-[12px] text-muted">
+          CPU, memory, and disk need the DigitalOcean metrics agent installed on the Droplet.
+        </p>
+      </template>
+    </div>
 
     <WebsiteForm
       v-model:open="formOpen"

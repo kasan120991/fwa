@@ -63,11 +63,18 @@ async function loadTraffic() {
   const { data } = await api<{ data: TrafficDay[] }>('/websites/traffic', { query: { days: range.value } })
   traffic.value = data
 }
+interface Costs { configured: boolean, monthly_cost?: number, droplet_count?: number }
+const costs = ref<Costs | null>(null)
+async function loadCosts() {
+  const { data } = await api<{ data: Costs }>('/websites/costs')
+  costs.value = data
+}
 watch(range, loadTraffic)
 function refreshAll() {
   loadWebsites()
   loadStats()
   loadTraffic()
+  loadCosts()
 }
 const socket = useSocket()
 onMounted(() => {
@@ -84,7 +91,8 @@ const tiles = computed(() => {
     { key: 'sites', label: 'Total sites', icon: 'i-lucide-globe', value: s ? String(s.total_sites) : '—', sub: 'across clients', delta: null as number | null },
     { key: 'visitors', label: 'Visitors · 30d', icon: 'i-lucide-users', value: s ? compactNum(s.visitors_30d) : '—', sub: 'all sites', delta: s?.visitors_delta_pct ?? null },
     { key: 'live', label: 'Live sites', icon: 'i-lucide-signal', value: s ? String(s.live_count) : '—', sub: 'in production', delta: null as number | null },
-    { key: 'connected', label: 'Analytics connected', icon: 'i-lucide-plug', value: s ? `${s.connected_count}/${s.total_sites}` : '—', sub: 'tracking', delta: null as number | null }
+    { key: 'connected', label: 'Analytics connected', icon: 'i-lucide-plug', value: s ? `${s.connected_count}/${s.total_sites}` : '—', sub: 'tracking', delta: null as number | null },
+    { key: 'hosting', label: 'Hosting cost · mo', icon: 'i-lucide-server', value: costs.value?.configured ? formatMoney(costs.value.monthly_cost ?? 0) : '—', sub: costs.value?.configured ? `${costs.value.droplet_count ?? 0} droplet${costs.value.droplet_count === 1 ? '' : 's'}` : 'DigitalOcean', delta: null as number | null }
   ]
 })
 
@@ -168,7 +176,7 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
     </PageHeader>
 
     <!-- KPI tiles -->
-    <div class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       <div
         v-for="t in tiles"
         :key="t.key"
