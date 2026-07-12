@@ -367,22 +367,7 @@ async function loadContracts() {
   }
 }
 
-const EXT_CLASS: Record<string, string> = { PDF: 'text-error', FIG: 'text-info', ZIP: 'text-warning', XLSX: 'text-success', DOC: 'text-info' }
-const fileGroups = [
-  { name: 'Brand & Design', files: [
-    { name: 'Logo pack.zip', ext: 'ZIP', size: '8.4 MB', meta: 'Uploaded Mar 20 · Dana Cole' },
-    { name: 'Brand guidelines.pdf', ext: 'PDF', size: '2.1 MB', meta: 'Uploaded Mar 22 · Jordan Rivera' },
-    { name: 'Homepage mockups.fig', ext: 'FIG', size: '14.2 MB', meta: 'Uploaded Apr 02 · Priya Shah' }
-  ] },
-  { name: 'Contracts', files: [
-    { name: '2024 Retainer.pdf', ext: 'PDF', size: '420 KB', meta: 'Uploaded Mar 14 · Jordan Rivera' },
-    { name: 'Storefront SOW.pdf', ext: 'PDF', size: '380 KB', meta: 'Uploaded Jun 18 · Jordan Rivera' }
-  ] },
-  { name: 'Deliverables', files: [
-    { name: 'Analytics report Q2.pdf', ext: 'PDF', size: '1.3 MB', meta: 'Uploaded Jul 01 · System' },
-    { name: 'Sitemap.xlsx', ext: 'XLSX', size: '88 KB', meta: 'Uploaded May 09 · Priya Shah' }
-  ] }
-]
+const filesCount = ref(0)
 
 const PRIO_CLASS: Record<string, string> = { High: 'bg-error', Medium: 'bg-warning', Low: 'bg-ink-400' }
 // Support tickets (real, from /tickets?client_id=). Mapped to a small view model
@@ -482,7 +467,7 @@ const tabs = computed(() => [
   { key: 'websites' as const, label: 'Websites', badge: websites.value.length || null },
   { key: 'invoices' as const, label: 'Invoices', badge: invoicesRaw.value.length || null },
   { key: 'contracts' as const, label: 'Contracts', badge: contracts.value.length || null },
-  { key: 'files' as const, label: 'Files', badge: null },
+  { key: 'files' as const, label: 'Files', badge: filesCount.value || null },
   { key: 'support' as const, label: 'Support', badge: openTicketCount.value || null },
   { key: 'calls' as const, label: 'Calls', badge: callsRaw.value.length || null },
   { key: 'activity' as const, label: 'Activity', badge: null }
@@ -898,9 +883,24 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                   <span class="text-[15px] font-semibold text-highlighted">Hosting margin</span>
                   <span class="font-mono text-[10px] uppercase tracking-[0.05em] text-muted">Monthly</span>
                 </div>
-                <p v-if="!hosting" class="text-[13px] text-muted">Loading…</p>
-                <p v-else-if="!hosting.configured" class="text-[13px] text-muted">Connect DigitalOcean to see hosting cost.</p>
-                <p v-else-if="hosting.error" class="text-[13px] text-muted">Couldn't load hosting cost.</p>
+                <p
+                  v-if="!hosting"
+                  class="text-[13px] text-muted"
+                >
+                  Loading…
+                </p>
+                <p
+                  v-else-if="!hosting.configured"
+                  class="text-[13px] text-muted"
+                >
+                  Connect DigitalOcean to see hosting cost.
+                </p>
+                <p
+                  v-else-if="hosting.error"
+                  class="text-[13px] text-muted"
+                >
+                  Couldn't load hosting cost.
+                </p>
                 <template v-else>
                   <div class="flex items-center justify-between text-[13.5px]">
                     <span class="text-muted">Care plan</span>
@@ -913,8 +913,14 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                   <div class="my-3 border-t border-default" />
                   <div class="flex items-center justify-between">
                     <span class="text-[13px] text-muted">Margin</span>
-                    <span class="text-[15px] font-bold tabular-nums" :class="(hosting.margin ?? 0) >= 0 ? 'text-success' : 'text-error'">
-                      {{ formatMoney(hosting.margin ?? 0) }}<span v-if="hosting.margin_pct != null" class="ml-1 text-[12px] font-semibold text-muted">({{ hosting.margin_pct }}%)</span>
+                    <span
+                      class="text-[15px] font-bold tabular-nums"
+                      :class="(hosting.margin ?? 0) >= 0 ? 'text-success' : 'text-error'"
+                    >
+                      {{ formatMoney(hosting.margin ?? 0) }}<span
+                        v-if="hosting.margin_pct != null"
+                        class="ml-1 text-[12px] font-semibold text-muted"
+                      >({{ hosting.margin_pct }}%)</span>
                     </span>
                   </div>
                 </template>
@@ -1012,75 +1018,75 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
           </div>
           <div class="overflow-hidden rounded-card bg-default ring ring-default">
             <div class="overflow-x-auto">
-            <table class="w-full border-collapse">
-              <thead>
-                <tr class="border-b border-default bg-muted/40">
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
-                    Project
-                  </th>
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
-                    Status
-                  </th>
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
-                    Progress
-                  </th>
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
-                    Due
-                  </th>
-                  <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
-                    Value
-                  </th>
-                  <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
-                    Tasks
-                  </th>
-                  <th class="w-11" />
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="p in projects"
-                  :key="p.id"
-                  class="cursor-pointer border-t border-default transition-colors hover:bg-muted first:border-t-0"
-                  @click="navigateTo(`/projects/${p.id}`)"
-                >
-                  <td class="px-4 py-3.5 text-sm font-semibold text-highlighted">
-                    {{ p.name }}
-                  </td>
-                  <td class="px-4 py-3.5">
-                    <StatusChip :status="p.status">
-                      {{ p.statusLabel }}
-                    </StatusChip>
-                  </td>
-                  <td class="px-4 py-3.5">
-                    <div class="flex items-center gap-2.5">
-                      <div class="h-1.5 w-[90px] overflow-hidden rounded-full bg-muted">
-                        <div
-                          class="h-full rounded-full"
-                          :class="p.bar"
-                          :style="{ width: p.progress + '%' }"
-                        />
+              <table class="w-full border-collapse">
+                <thead>
+                  <tr class="border-b border-default bg-muted/40">
+                    <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                      Project
+                    </th>
+                    <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                      Status
+                    </th>
+                    <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                      Progress
+                    </th>
+                    <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                      Due
+                    </th>
+                    <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                      Value
+                    </th>
+                    <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                      Tasks
+                    </th>
+                    <th class="w-11" />
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="p in projects"
+                    :key="p.id"
+                    class="cursor-pointer border-t border-default transition-colors hover:bg-muted first:border-t-0"
+                    @click="navigateTo(`/projects/${p.id}`)"
+                  >
+                    <td class="px-4 py-3.5 text-sm font-semibold text-highlighted">
+                      {{ p.name }}
+                    </td>
+                    <td class="px-4 py-3.5">
+                      <StatusChip :status="p.status">
+                        {{ p.statusLabel }}
+                      </StatusChip>
+                    </td>
+                    <td class="px-4 py-3.5">
+                      <div class="flex items-center gap-2.5">
+                        <div class="h-1.5 w-[90px] overflow-hidden rounded-full bg-muted">
+                          <div
+                            class="h-full rounded-full"
+                            :class="p.bar"
+                            :style="{ width: p.progress + '%' }"
+                          />
+                        </div>
+                        <span class="text-[12.5px] text-muted tabular-nums">{{ p.progress }}%</span>
                       </div>
-                      <span class="text-[12.5px] text-muted tabular-nums">{{ p.progress }}%</span>
-                    </div>
-                  </td>
-                  <td class="whitespace-nowrap px-4 py-3.5 text-sm text-default tabular-nums">
-                    {{ p.due }}
-                  </td>
-                  <td class="px-4 py-3.5 text-right text-sm text-highlighted tabular-nums">
-                    {{ p.value }}
-                  </td>
-                  <td class="px-4 py-3.5 text-right text-sm text-default tabular-nums">
-                    {{ p.tasks }}
-                  </td>
-                  <td class="px-3 py-3.5 text-right text-muted">
-                    <UIcon
-                      name="i-lucide-chevron-right"
-                      class="size-4"
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                    </td>
+                    <td class="whitespace-nowrap px-4 py-3.5 text-sm text-default tabular-nums">
+                      {{ p.due }}
+                    </td>
+                    <td class="px-4 py-3.5 text-right text-sm text-highlighted tabular-nums">
+                      {{ p.value }}
+                    </td>
+                    <td class="px-4 py-3.5 text-right text-sm text-default tabular-nums">
+                      {{ p.tasks }}
+                    </td>
+                    <td class="px-3 py-3.5 text-right text-muted">
+                      <UIcon
+                        name="i-lucide-chevron-right"
+                        class="size-4"
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
             <div
               v-if="!projects.length"
@@ -1267,65 +1273,65 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
               v-else
               class="overflow-x-auto"
             >
-            <table class="w-full border-collapse">
-              <thead>
-                <tr class="border-b border-default bg-muted/40">
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
-                    Invoice
-                  </th>
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
-                    Issued
-                  </th>
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
-                    Due
-                  </th>
-                  <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
-                    Amount
-                  </th>
-                  <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
-                    Balance
-                  </th>
-                  <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="v in invoices"
-                  :key="v.key"
-                  class="cursor-pointer border-t border-default transition-colors hover:bg-muted first:border-t-0"
-                  @click="openInvoiceId = v.key"
-                >
-                  <td class="px-4 py-3 text-sm font-semibold text-highlighted tabular-nums">
-                    {{ v.num }}
-                  </td>
-                  <td class="whitespace-nowrap px-4 py-3 text-sm text-default tabular-nums">
-                    {{ v.issue }}
-                  </td>
-                  <td
-                    class="whitespace-nowrap px-4 py-3 text-sm tabular-nums"
-                    :class="v.overdue ? 'text-error' : 'text-default'"
+              <table class="w-full border-collapse">
+                <thead>
+                  <tr class="border-b border-default bg-muted/40">
+                    <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                      Invoice
+                    </th>
+                    <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                      Issued
+                    </th>
+                    <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                      Due
+                    </th>
+                    <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                      Amount
+                    </th>
+                    <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                      Balance
+                    </th>
+                    <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="v in invoices"
+                    :key="v.key"
+                    class="cursor-pointer border-t border-default transition-colors hover:bg-muted first:border-t-0"
+                    @click="openInvoiceId = v.key"
                   >
-                    {{ v.due }}
-                  </td>
-                  <td class="px-4 py-3 text-right text-sm text-highlighted tabular-nums">
-                    {{ v.amount }}
-                  </td>
-                  <td
-                    class="px-4 py-3 text-right text-sm tabular-nums"
-                    :class="v.balanceZero ? 'text-muted' : (v.overdue ? 'font-bold text-error' : 'text-highlighted')"
-                  >
-                    {{ v.balance }}
-                  </td>
-                  <td class="px-4 py-3">
-                    <StatusChip :status="v.status">
-                      {{ v.statusLabel }}
-                    </StatusChip>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                    <td class="px-4 py-3 text-sm font-semibold text-highlighted tabular-nums">
+                      {{ v.num }}
+                    </td>
+                    <td class="whitespace-nowrap px-4 py-3 text-sm text-default tabular-nums">
+                      {{ v.issue }}
+                    </td>
+                    <td
+                      class="whitespace-nowrap px-4 py-3 text-sm tabular-nums"
+                      :class="v.overdue ? 'text-error' : 'text-default'"
+                    >
+                      {{ v.due }}
+                    </td>
+                    <td class="px-4 py-3 text-right text-sm text-highlighted tabular-nums">
+                      {{ v.amount }}
+                    </td>
+                    <td
+                      class="px-4 py-3 text-right text-sm tabular-nums"
+                      :class="v.balanceZero ? 'text-muted' : (v.overdue ? 'font-bold text-error' : 'text-highlighted')"
+                    >
+                      {{ v.balance }}
+                    </td>
+                    <td class="px-4 py-3">
+                      <StatusChip :status="v.status">
+                        {{ v.statusLabel }}
+                      </StatusChip>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -1408,58 +1414,10 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
 
         <!-- FILES -->
         <div v-else-if="activeTab === 'files'">
-          <div class="mb-3.5 flex flex-wrap items-center justify-between gap-3.5">
-            <span class="text-base font-semibold text-highlighted">Files</span>
-            <UButton
-              icon="i-lucide-upload"
-              color="primary"
-              size="sm"
-            >
-              Upload
-            </UButton>
-          </div>
-          <div class="flex flex-col gap-4">
-            <div
-              v-for="g in fileGroups"
-              :key="g.name"
-              class="overflow-hidden rounded-card bg-default ring ring-default"
-            >
-              <div class="flex items-center gap-2.5 border-b border-default px-4 py-3">
-                <UIcon
-                  name="i-lucide-folder"
-                  class="size-4 text-muted"
-                />
-                <span class="text-[13.5px] font-semibold text-highlighted">{{ g.name }}</span>
-                <span class="text-[12.5px] text-muted">{{ g.files.length }} files</span>
-              </div>
-              <div
-                v-for="f in g.files"
-                :key="f.name"
-                class="flex items-center gap-3 border-t border-default px-4 py-3 transition-colors hover:bg-muted first:border-t-0"
-              >
-                <span
-                  class="inline-flex size-[38px] flex-none items-center justify-center rounded-[9px] bg-muted font-mono text-[10px] font-semibold"
-                  :class="EXT_CLASS[f.ext] ?? 'text-muted'"
-                >{{ f.ext }}</span>
-                <div class="min-w-0 flex-1">
-                  <div class="truncate text-sm font-medium text-highlighted">
-                    {{ f.name }}
-                  </div>
-                  <div class="mt-0.5 text-[12.5px] text-muted">
-                    {{ f.meta }}
-                  </div>
-                </div>
-                <span class="whitespace-nowrap text-[13px] text-muted tabular-nums">{{ f.size }}</span>
-                <UButton
-                  icon="i-lucide-download"
-                  color="neutral"
-                  variant="ghost"
-                  size="xs"
-                  aria-label="Download"
-                />
-              </div>
-            </div>
-          </div>
+          <FilesPanel
+            :client-id="Number(route.params.id)"
+            @update:count="filesCount = $event"
+          />
         </div>
 
         <!-- SUPPORT -->
