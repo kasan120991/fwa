@@ -5,7 +5,7 @@ import {
 import { createStripeCustomer, updateStripeCustomer } from '../services/stripe.js'
 import { clientHosting } from '../services/hostingCosts.js'
 import { inviteClientToPortal } from '../services/portalInvite.service.js'
-import { getPortalUserForClient } from '../repositories/users.repo.js'
+import { getPortalUserForClient, findUserByEmail } from '../repositories/users.repo.js'
 
 export const clientsRouter = Router()
 
@@ -160,6 +160,11 @@ clientsRouter.post('/:id/invite', async (req, res) => {
   const client = await getClient(parseId(req))
   if (!client) return res.status(404).json({ error: { message: 'Client not found' } })
   if (!client.email) throw badRequest('This client has no email address to invite.')
+  // Never let a client invite hijack an admin login that shares the email.
+  const existing = await findUserByEmail(client.email)
+  if (existing && existing.role === 'admin') {
+    throw badRequest('That email belongs to a Francis Web Agency admin account and can’t be used for a client portal login. Use a different email for this client.')
+  }
   const { setPasswordUrl } = await inviteClientToPortal(client, req.user?.id ?? null)
   res.json({ data: { status: 'invited', email: client.email, setPasswordUrl } })
 })
