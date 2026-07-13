@@ -6,7 +6,8 @@ import {
 import { createTicket, updateTicket, deleteTicket, addMessage, addAttachment, removeAttachment } from '../services/tickets.service.js'
 import { getClient } from '../repositories/clients.repo.js'
 import { getWebsite } from '../repositories/websites.repo.js'
-import { notify } from '../services/notifications.service.js'
+import { notify, clientNotify } from '../services/notifications.service.js'
+import { emitClientTicketUpdated } from '../realtime/io.js'
 
 const PRIORITY_TONE = { high: 'warning', medium: 'info', low: 'info' }
 const STATUS_LABEL = { open: 'Open', in_progress: 'In Progress', waiting: 'Waiting', resolved: 'Resolved', closed: 'Closed' }
@@ -202,6 +203,16 @@ ticketsRouter.post('/:id/messages', async (req, res) => {
     body: `${ticketWho(ticket)}: ${ticket.subject}`,
     tone: 'info'
   }, req.user.id)
+  // Push the reply to the client's portal (live refresh + their own bell).
+  emitClientTicketUpdated(ticket.client_id, ticket.id)
+  try {
+    await clientNotify(ticket.client_id, {
+      category: 'ticket', tone: 'info', icon: 'i-lucide-life-buoy',
+      title: `New reply on ${ticketCode(ticket.id)}`,
+      body: ticket.subject,
+      link: `/support/${ticket.id}`
+    })
+  } catch (err) { console.error('client ticket notify failed:', err.message) }
   res.status(201).json({ data: message })
 })
 

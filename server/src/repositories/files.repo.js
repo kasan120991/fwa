@@ -38,8 +38,8 @@ export async function listFiles(opts = {}) {
 
 export async function createFile(data) {
   const res = await query(
-    `INSERT INTO files (client_id, project_id, category, path, name, mime, size_bytes, uploaded_user_id)
-     VALUES (:client_id, :project_id, :category, :path, :name, :mime, :size_bytes, :uploaded_user_id)`,
+    `INSERT INTO files (client_id, project_id, category, path, name, mime, size_bytes, uploaded_by, uploaded_user_id)
+     VALUES (:client_id, :project_id, :category, :path, :name, :mime, :size_bytes, :uploaded_by, :uploaded_user_id)`,
     {
       client_id: data.client_id ?? null,
       project_id: data.project_id ?? null,
@@ -48,6 +48,7 @@ export async function createFile(data) {
       name: data.name,
       mime: data.mime ?? null,
       size_bytes: data.size_bytes ?? null,
+      uploaded_by: data.uploaded_by ?? 'admin',
       uploaded_user_id: data.uploaded_user_id ?? null
     }
   )

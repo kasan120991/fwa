@@ -4,6 +4,9 @@
 const user = useAuthUser()
 const { logout } = useAuth()
 const route = useRoute()
+const api = useApi()
+const socket = useSocket()
+const toast = useToast()
 
 const nav = [
   { label: 'Home', to: '/', icon: 'i-lucide-home' },
@@ -28,6 +31,50 @@ const accountItems = [[
 ], [
   { label: 'Sign out', icon: 'i-lucide-log-out', onSelect: onLogout }
 ]]
+
+// ---- notification bell ----
+interface PortalNotification {
+  id: number
+  tone: string
+  icon: string
+  title: string
+  body: string | null
+  link: string | null
+  read: boolean
+  created_at: string | null
+}
+const notifications = ref<PortalNotification[]>([])
+const unread = computed(() => notifications.value.filter(n => !n.read).length)
+
+async function loadNotifications() {
+  try {
+    const { data } = await api<{ data: PortalNotification[] }>('/portal/notifications', { query: { limit: 30 } })
+    notifications.value = data
+  } catch { /* non-fatal */ }
+}
+function onNotificationNew(raw: PortalNotification & { actor_user_id?: number | null }) {
+  if (notifications.value.some(n => n.id === raw.id)) return
+  notifications.value.unshift({ ...raw, read: false })
+  toast.add({ title: raw.title, description: raw.body || undefined, icon: raw.icon, color: 'info' })
+}
+async function markAllRead() {
+  if (!unread.value) return
+  notifications.value = notifications.value.map(n => ({ ...n, read: true }))
+  try { await api('/portal/notifications/mark-all-read', { method: 'POST' }) } catch { /* non-fatal */ }
+}
+async function openNotification(n: PortalNotification) {
+  if (!n.read) {
+    n.read = true
+    try { await api(`/portal/notifications/${n.id}`, { method: 'PATCH', body: { read: true } }) } catch { /* non-fatal */ }
+  }
+  if (n.link) await navigateTo(n.link)
+}
+
+onMounted(() => {
+  loadNotifications()
+  socket.on('notification:new', onNotificationNew)
+})
+onBeforeUnmount(() => socket.off('notification:new', onNotificationNew))
 </script>
 
 <template>
@@ -58,7 +105,73 @@ const accountItems = [[
             {{ item.label }}
           </NuxtLink>
         </nav>
-        <div class="ms-auto">
+        <div class="ms-auto flex items-center gap-1">
+          <UPopover :ui="{ content: 'w-80' }">
+            <button
+              class="relative inline-flex size-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-muted hover:text-highlighted"
+              aria-label="Notifications"
+            >
+              <UIcon
+                name="i-lucide-bell"
+                class="size-5"
+              />
+              <span
+                v-if="unread"
+                class="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary ring-2 ring-default"
+              />
+            </button>
+            <template #content>
+              <div class="flex items-center justify-between border-b border-default px-4 py-2.5">
+                <span class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">Notifications</span>
+                <button
+                  v-if="unread"
+                  class="text-[12px] font-medium text-primary hover:underline"
+                  @click="markAllRead"
+                >
+                  Mark all read
+                </button>
+              </div>
+              <div class="max-h-[60vh] overflow-y-auto">
+                <p
+                  v-if="!notifications.length"
+                  class="px-4 py-8 text-center text-[13px] text-muted"
+                >
+                  You're all caught up.
+                </p>
+                <button
+                  v-for="n in notifications"
+                  :key="n.id"
+                  class="flex w-full items-start gap-3 border-b border-default px-4 py-3 text-left transition-colors last:border-0 hover:bg-muted/50"
+                  :class="n.read ? '' : 'bg-mist/40'"
+                  @click="openNotification(n)"
+                >
+                  <UIcon
+                    :name="n.icon || 'i-lucide-bell'"
+                    class="mt-0.5 size-4 flex-none text-primary"
+                  />
+                  <div class="min-w-0 flex-1">
+                    <div class="text-[13px] font-medium text-highlighted">
+                      {{ n.title }}
+                    </div>
+                    <div
+                      v-if="n.body"
+                      class="truncate text-[12.5px] text-muted"
+                    >
+                      {{ n.body }}
+                    </div>
+                    <div class="mt-0.5 text-[11px] text-muted">
+                      {{ timeAgo(n.created_at) }}
+                    </div>
+                  </div>
+                  <span
+                    v-if="!n.read"
+                    class="mt-1 size-2 flex-none rounded-full bg-primary"
+                  />
+                </button>
+              </div>
+            </template>
+          </UPopover>
+
           <UDropdownMenu :items="accountItems">
             <UButton
               color="neutral"

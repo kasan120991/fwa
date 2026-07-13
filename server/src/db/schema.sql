@@ -1039,6 +1039,7 @@ CREATE TABLE IF NOT EXISTS files (
   name             VARCHAR(255)    NOT NULL,
   mime             VARCHAR(120)    NULL,
   size_bytes       BIGINT UNSIGNED NULL,
+  uploaded_by      ENUM('admin', 'client') NOT NULL DEFAULT 'admin',
   uploaded_user_id BIGINT UNSIGNED NULL,
   created_at       TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),

@@ -99,4 +99,39 @@ export async function createNotification(data) {
   return getNotification(payload.user_id, result.insertId)
 }
 
+// ---- portal: strict per-user scope (never the admin broadcast rows) ----
+const OWN = 'user_id = :uid'
+
+export async function listOwnNotifications(userId, opts = {}) {
+  const limit = Math.min(Math.max(Number(opts.limit) || 50, 1), 200)
+  const rows = await query(
+    `SELECT * FROM notifications WHERE ${OWN} ORDER BY created_at DESC, id DESC LIMIT ${limit}`,
+    { uid: userId }
+  )
+  const [{ unread }] = await query(
+    `SELECT COUNT(*) AS unread FROM notifications WHERE ${OWN} AND read_at IS NULL`,
+    { uid: userId }
+  )
+  return { rows: rows.map(mapRow), unread }
+}
+
+export async function setOwnRead(userId, id, read) {
+  await query(
+    `UPDATE notifications SET read_at = :read_at WHERE id = :id AND ${OWN}`,
+    { id, uid: userId, read_at: read ? new Date() : null }
+  )
+  const rows = await query(`SELECT * FROM notifications WHERE id = :id AND ${OWN} LIMIT 1`, { id, uid: userId })
+  return mapRow(rows[0] ?? null)
+}
+
+export async function markAllOwnRead(userId) {
+  await query(`UPDATE notifications SET read_at = :now WHERE ${OWN} AND read_at IS NULL`, { uid: userId, now: new Date() })
+  return { unread: 0 }
+}
+
+export async function clearOwnNotifications(userId) {
+  const result = await query(`DELETE FROM notifications WHERE ${OWN}`, { uid: userId })
+  return { deleted: result.affectedRows ?? 0 }
+}
+
 export { CATEGORIES, TONES }

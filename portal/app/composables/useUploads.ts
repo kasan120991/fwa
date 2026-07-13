@@ -18,7 +18,7 @@ export function useUploads() {
   async function upload(file: File): Promise<UploadResult> {
     const body = new FormData()
     body.append('file', file)
-    const { data } = await api<{ data: UploadResult }>('/uploads', { method: 'POST', body })
+    const { data } = await api<{ data: UploadResult }>('/portal/uploads', { method: 'POST', body })
     return data
   }
 

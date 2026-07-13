@@ -7,7 +7,8 @@ import {
 } from '../repositories/files.repo.js'
 import { getClient } from '../repositories/clients.repo.js'
 import { getProject } from '../repositories/projects.repo.js'
-import { emitFileChanged } from '../realtime/io.js'
+import { emitFileChanged, emitClientFileChanged } from '../realtime/io.js'
+import { clientNotify } from '../services/notifications.service.js'
 
 export const filesRouter = Router()
 
@@ -76,9 +77,20 @@ filesRouter.post('/', async (req, res) => {
     name,
     mime: typeof b.mime === 'string' ? b.mime : null,
     size_bytes: Number.isFinite(size) && size >= 0 ? size : null,
+    uploaded_by: 'admin',
     uploaded_user_id: req.user.id
   })
   emitFileChanged(file.id)
+  // If shared with a client, push it to their portal (live refresh + bell).
+  if (client_id) {
+    emitClientFileChanged(client_id, file.id)
+    try {
+      await clientNotify(client_id, {
+        category: 'system', tone: 'info', icon: 'i-lucide-file',
+        title: 'New file shared', body: file.name, link: '/files'
+      })
+    } catch (err) { console.error('client file notify failed:', err.message) }
+  }
   res.status(201).json({ data: file })
 })
 
