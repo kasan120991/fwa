@@ -41,11 +41,15 @@ export async function getPortalUserForClient(clientId) {
  */
 export async function upsertClientUser({ email, name, clientId, placeholderHash }) {
   const e = norm(email)
+  // Safety net: if a row with this email already exists and is an admin, never
+  // downgrade it to a client (the caller should reject this case up front).
   await query(
     `INSERT INTO users (email, name, password_hash, role, client_id)
      VALUES (:email, :name, :placeholderHash, 'client', :clientId)
      ON DUPLICATE KEY UPDATE
-       name = VALUES(name), role = 'client', client_id = VALUES(client_id), is_active = 1`,
+       name = IF(role = 'admin', name, VALUES(name)),
+       client_id = IF(role = 'admin', client_id, VALUES(client_id)),
+       is_active = IF(role = 'admin', is_active, 1)`,
     { email: e, name, placeholderHash, clientId }
   )
   return findUserByEmail(e)
