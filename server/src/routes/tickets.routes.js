@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import {
   getTicket, listTickets, listMessages, listAttachments, getMessage, getAttachment,
-  ticketCode, TICKET_STATUSES, TICKET_PRIORITIES, TICKET_TYPES
+  ticketCode, openCount, TICKET_STATUSES, TICKET_PRIORITIES, TICKET_TYPES
 } from '../repositories/tickets.repo.js'
 import { createTicket, updateTicket, deleteTicket, addMessage, addAttachment, removeAttachment } from '../services/tickets.service.js'
 import { getClient } from '../repositories/clients.repo.js'
@@ -116,6 +116,12 @@ ticketsRouter.get('/', async (req, res) => {
     offset: req.query.offset
   })
   res.json({ data: result.rows, total: result.total, limit: result.limit, offset: result.offset })
+})
+
+// GET /api/tickets/open-count — count of tickets still needing work (for the
+// sidebar badge). Registered before /:id so "open-count" isn't parsed as an id.
+ticketsRouter.get('/open-count', async (req, res) => {
+  res.json({ data: { count: await openCount() } })
 })
 
 // GET /api/tickets/:id — the ticket with its reply thread + attachments embedded.

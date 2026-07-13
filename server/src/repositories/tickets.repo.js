@@ -71,6 +71,13 @@ export async function listTickets(opts = {}) {
   return { rows, total, limit, offset }
 }
 
+/** Count of tickets still needing work (open + in_progress + waiting). Drives the
+ *  sidebar Support Tickets badge. */
+export async function openCount() {
+  const [{ n }] = await query(`SELECT COUNT(*) AS n FROM tickets WHERE status IN ${OPEN_STATUSES}`)
+  return Number(n)
+}
+
 export async function updateTicket(id, data) {
   const cols = UPDATABLE.filter(c => data[c] !== undefined)
   const set = cols.map(c => `${c} = :${c}`)
