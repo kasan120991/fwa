@@ -17,7 +17,9 @@ import { getClient, updateClient } from '../repositories/clients.repo.js'
 import {
   listOwnNotifications, setOwnRead, markAllOwnRead, clearOwnNotifications
 } from '../repositories/notifications.repo.js'
-import { updateStripeCustomer } from '../services/stripe.js'
+import {
+  updateStripeCustomer, stripeEnabled, publishableKey, createInvoiceCheckoutSession
+} from '../services/stripe.js'
 import { notify } from '../services/notifications.service.js'
 import { pandadocEnabled, getDocumentStatus, createDocumentSession } from '../services/pandadoc.js'
 import { portalUpload } from '../storage/local.js'
@@ -106,6 +108,28 @@ portalRouter.get('/invoices/:id', async (req, res) => {
     return res.status(404).json({ error: { message: 'Invoice not found' } })
   }
   res.json({ data: invoice })
+})
+
+// POST /api/portal/invoices/:id/checkout-session — mint an embedded Checkout
+// Session so the client can pay this invoice inside the portal. Returns the
+// session client_secret + the publishable key needed to mount Stripe.js.
+portalRouter.post('/invoices/:id/checkout-session', async (req, res) => {
+  const invoice = await getInvoice(parseId(req))
+  if (!invoice || Number(invoice.client_id) !== req.clientId || HIDDEN_INVOICE_STATUSES.has(invoice.status)) {
+    return res.status(404).json({ error: { message: 'Invoice not found' } })
+  }
+  if (invoice.status !== 'open') {
+    return res.status(409).json({ error: { message: 'This invoice is not open for payment.' } })
+  }
+  if (!stripeEnabled() || !publishableKey()) {
+    return res.status(409).json({ error: { message: 'Online payments are not available right now.' } })
+  }
+  const client = await getClient(req.clientId)
+  if (!client?.stripe_customer_id) {
+    return res.status(409).json({ error: { message: 'No billing account is set up for this invoice.' } })
+  }
+  const session = await createInvoiceCheckoutSession(client, invoice)
+  res.json({ data: { clientSecret: session.clientSecret, publishableKey: publishableKey() } })
 })
 
 // ---- agreements (proposals + contracts union; read-only this phase) ----

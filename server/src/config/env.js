@@ -25,7 +25,10 @@ export const config = {
     // Secret key (sk_test_… / sk_live_…). Empty = Stripe disabled (no-ops).
     secretKey: process.env.STRIPE_SECRET_KEY || '',
     // Webhook signing secret (whsec_…) for verifying incoming Stripe events.
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || ''
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    // Publishable key (pk_test_… / pk_live_…) — safe to expose to the browser.
+    // Returned to the portal so it can mount embedded Checkout for invoice pay.
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY || ''
   },
   pandadoc: {
     // API key for PandaDoc (document generation, sending, e-sign). Empty =

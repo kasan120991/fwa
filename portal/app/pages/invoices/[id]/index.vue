@@ -26,19 +26,32 @@ interface Invoice {
 const invoice = ref<Invoice | null>(null)
 const pending = ref(true)
 const notFound = ref(false)
+const showPay = ref(false)
+const socket = useSocket()
 
 useHead({ title: () => `${invoice.value?.number || 'Invoice'} · Francis Web Agency` })
 
-onMounted(async () => {
+async function load() {
   try {
     const { data } = await api<{ data: Invoice }>(`/portal/invoices/${route.params.id}`)
     invoice.value = data
+    // Once it's no longer open (e.g. a payment landed), drop the checkout panel.
+    if (data.status !== 'open') showPay.value = false
   } catch {
     notFound.value = true
   } finally {
     pending.value = false
   }
+}
+
+// A payment (or any change) pushes over the socket; refetch to reflect it live.
+function onInvoiceChanged() { load() }
+
+onMounted(() => {
+  load()
+  socket.on('invoice:changed', onInvoiceChanged)
 })
+onBeforeUnmount(() => socket.off('invoice:changed', onInvoiceChanged))
 
 // DECIMAL columns arrive as strings — coerce so formatMoney/qty compare work.
 const items = computed(() => (invoice.value?.items ?? invoice.value?.line_items ?? []).map(li => ({
@@ -124,14 +137,23 @@ const statusChip = computed(() => {
             </div>
           </div>
           <UButton
-            v-if="invoice.status === 'open' && invoice.hosted_invoice_url"
-            :to="invoice.hosted_invoice_url"
-            target="_blank"
+            v-if="invoice.status === 'open' && !showPay"
             color="primary"
             size="lg"
             icon="i-lucide-credit-card"
+            @click="showPay = true"
           >
             Pay Invoice
+          </UButton>
+          <UButton
+            v-if="invoice.status === 'open' && showPay"
+            color="neutral"
+            variant="ghost"
+            size="lg"
+            icon="i-lucide-x"
+            @click="showPay = false"
+          >
+            Cancel
           </UButton>
           <UButton
             v-if="invoice.invoice_pdf"
@@ -146,6 +168,13 @@ const statusChip = computed(() => {
           </UButton>
         </div>
       </div>
+
+      <!-- embedded Stripe Checkout — pay without leaving the portal -->
+      <PortalInvoicePay
+        v-if="invoice.status === 'open' && showPay"
+        :invoice-id="invoice.id"
+        @paid="load"
+      />
 
       <!-- line items -->
       <div
