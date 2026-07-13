@@ -22,9 +22,9 @@ onMounted(async () => {
 
 const greetName = computed(() => overview.value?.client?.company || overview.value?.client?.name || 'there')
 const stats = computed(() => [
-  { label: 'Active projects', value: String(overview.value?.active_projects ?? 0), icon: 'i-lucide-folder-kanban', to: '/projects' },
-  { label: 'Outstanding balance', value: formatMoney(overview.value?.outstanding_balance ?? 0), icon: 'i-lucide-receipt-text', to: '/invoices' },
-  { label: 'Open tickets', value: String(overview.value?.open_tickets ?? 0), icon: 'i-lucide-life-buoy', to: '/support' }
+  { label: 'Active Projects', value: String(overview.value?.active_projects ?? 0), icon: 'i-lucide-folder-kanban', to: '/projects' },
+  { label: 'Outstanding Balance', value: formatMoney(overview.value?.outstanding_balance ?? 0), icon: 'i-lucide-receipt-text', to: '/invoices' },
+  { label: 'Open Tickets', value: String(overview.value?.open_tickets ?? 0), icon: 'i-lucide-life-buoy', to: '/support' }
 ])
 </script>
 
