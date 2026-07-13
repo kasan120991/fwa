@@ -40,6 +40,12 @@ const ADDITIVE_COLUMNS = {
   ],
   clients: [
     ['do_project_id', 'VARCHAR(36) NULL AFTER stripe_customer_id']
+  ],
+  // Delivery milestones: tasks gain a soft milestone_id (no FK, like the
+  // project back-links above). project_milestones/milestone_templates are new
+  // tables handled by CREATE TABLE IF NOT EXISTS, so they need no entry here.
+  tasks: [
+    ['milestone_id', 'BIGINT UNSIGNED NULL AFTER project_id']
   ]
 }
 
@@ -66,6 +72,9 @@ async function ensureColumns(conn, database) {
 const ADDITIVE_INDEXES = {
   calls: [
     ['uq_calls_vapi', 'ADD UNIQUE KEY uq_calls_vapi (vapi_call_id)']
+  ],
+  tasks: [
+    ['idx_tasks_milestone', 'ADD KEY idx_tasks_milestone (milestone_id)']
   ]
 }
 

@@ -3,7 +3,7 @@ import { query } from '../db/pool.js'
 export const TASK_STATUSES = new Set(['todo', 'in_progress', 'blocked', 'done'])
 export const TASK_PRIORITIES = new Set(['low', 'medium', 'high'])
 
-const UPDATABLE = ['project_id', 'title', 'description', 'status', 'priority', 'due_date', 'position']
+const UPDATABLE = ['project_id', 'milestone_id', 'title', 'description', 'status', 'priority', 'due_date', 'position']
 
 // Join the parent project for display on the cross-project /tasks page, plus a
 // checklist rollup so every task row carries its checklist progress.
@@ -43,6 +43,8 @@ export async function listTasks(opts = {}) {
   const params = {}
   if (opts.project_id) { where.push('t.project_id = :project_id'); params.project_id = opts.project_id }
   if (opts.noProject) { where.push('t.project_id IS NULL') }
+  if (opts.milestone_id) { where.push('t.milestone_id = :milestone_id'); params.milestone_id = opts.milestone_id }
+  if (opts.noMilestone) { where.push('t.milestone_id IS NULL') }
   if (opts.status) { where.push('t.status = :status'); params.status = opts.status }
   if (opts.overdue) { where.push("t.due_date IS NOT NULL AND t.due_date < CURDATE() AND t.status <> 'done'") }
   if (opts.dueToday) { where.push("t.due_date = CURDATE() AND t.status <> 'done'") }

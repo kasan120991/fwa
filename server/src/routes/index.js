@@ -10,6 +10,7 @@ import { contractsRouter } from './contracts.routes.js'
 import { agreementsRouter } from './agreements.routes.js'
 import { projectsRouter } from './projects.routes.js'
 import { tasksRouter } from './tasks.routes.js'
+import { milestonesRouter } from './milestones.routes.js'
 import { projectTypesRouter } from './projectTypes.routes.js'
 import { invoicesRouter } from './invoices.routes.js'
 import { paymentsRouter } from './payments.routes.js'
@@ -41,6 +42,7 @@ apiRouter.use('/contracts', requireAuth, contractsRouter) // Sales — contracts
 apiRouter.use('/agreements', requireAuth, agreementsRouter) // Agreements (merged view)
 apiRouter.use('/projects', requireAuth, projectsRouter) // Projects (SOW hub)
 apiRouter.use('/tasks', requireAuth, tasksRouter) // Tasks
+apiRouter.use('/milestones', requireAuth, milestonesRouter) // Delivery milestones (over tasks)
 apiRouter.use('/project-types', requireAuth, projectTypesRouter) // Project type catalog
 apiRouter.use('/invoices', requireAuth, invoicesRouter) // Billing — invoices
 apiRouter.use('/payments', requireAuth, paymentsRouter) // Billing — payments

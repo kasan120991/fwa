@@ -225,6 +225,16 @@ try {
   )
   const [[websiteType]] = await pool.query("SELECT id FROM project_types WHERE `key` = 'website' LIMIT 1")
 
+  // Default delivery-milestone templates for the website type (config, not sample
+  // data). Seed once if none exist, like the project type above.
+  const [[{ mt }]] = await pool.query('SELECT COUNT(*) AS mt FROM milestone_templates WHERE project_type_id = ?', [websiteType.id])
+  if (mt === 0) {
+    const TEMPLATES = ['Discovery', 'Design', 'Build', 'Launch']
+    for (let i = 0; i < TEMPLATES.length; i++) {
+      await pool.query('INSERT INTO milestone_templates (project_type_id, title, position) VALUES (?, ?, ?)', [websiteType.id, TEMPLATES[i], i])
+    }
+  }
+
   const [[{ n }]] = await pool.query('SELECT COUNT(*) AS n FROM clients')
   if (n > 0 && !force) {
     console.log(`Clients already present (${n}). Use "npm run seed -- --force" to reseed.`)
@@ -305,13 +315,43 @@ try {
     projectKeyToId[key] = res.insertId
   }
 
+  // Seed delivery milestones per project from the type's templates (the seed
+  // inserts projects directly, bypassing createProject's auto-seed). Give a
+  // little state variety so the timeline reads realistically.
+  const [templateRows] = await pool.query(
+    'SELECT title, position FROM milestone_templates WHERE project_type_id = ? AND is_active = 1 ORDER BY position ASC, id ASC',
+    [websiteType.id]
+  )
+  const projectKeyToMilestoneIds = {}
+  for (const [key, projectId] of Object.entries(projectKeyToId)) {
+    const ids = []
+    for (const t of templateRows) {
+      const [res] = await pool.query(
+        'INSERT INTO project_milestones (project_id, title, position) VALUES (?, ?, ?)',
+        [projectId, t.title, t.position]
+      )
+      ids.push(res.insertId)
+    }
+    projectKeyToMilestoneIds[key] = ids
+    if (ids[0]) await pool.query("UPDATE project_milestones SET state = 'complete', completed_at = ? WHERE id = ?", [daysAgo(10), ids[0]])
+    if (ids[1]) await pool.query("UPDATE project_milestones SET state = 'in_progress' WHERE id = ?", [ids[1]])
+  }
+
   for (const t of TASKS) {
     const { projectKey, due, doneAgo, ...rest } = t
     const row = {
       ...rest,
       project_id: projectKey ? projectKeyToId[projectKey] : null,
+      milestone_id: null,
       due_date: due ?? null,
       completed_at: rest.status === 'done' ? daysAgo(doneAgo ?? 1) : null
+    }
+    // Bucket tasks into milestones by status so completed work sits under the
+    // completed milestone, active work under the in-progress one, etc.
+    const ms = projectKey ? projectKeyToMilestoneIds[projectKey] : null
+    if (ms?.length) {
+      const idx = rest.status === 'done' ? 0 : rest.status === 'todo' ? Math.min(2, ms.length - 1) : 1
+      row.milestone_id = ms[idx] ?? null
     }
     const { sql, params } = cols(row)
     await pool.query(`INSERT INTO tasks ${sql}`, params)

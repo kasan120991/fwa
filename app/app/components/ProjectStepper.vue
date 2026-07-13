@@ -1,7 +1,9 @@
 <script setup lang="ts">
-// Milestone stepper across the project's linear lifecycle. `on_hold` is a
-// side-state (a pause), not a step — it renders as an amber overlay badge and
-// mutes the track. Clicking a step emits `advance`; the page owns the PATCH.
+// Lifecycle stepper across the project's linear commercial/billing pipeline
+// (planning → signature → deposit → … → completed) — distinct from the delivery
+// "Milestones" that group tasks. `on_hold` is a side-state (a pause), not a step
+// — it renders as an amber overlay badge and mutes the track. Clicking a step
+// emits `advance`; the page owns the PATCH.
 type Status = 'planning' | 'awaiting_signature' | 'awaiting_deposit' | 'in_progress' | 'in_review' | 'awaiting_final' | 'on_hold' | 'completed'
 type Step = Exclude<Status, 'on_hold'>
 
