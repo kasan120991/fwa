@@ -104,6 +104,20 @@ export function emitTaskDeleted(id, project_id = null) {
   io?.to('role:admin').emit('task:deleted', { id, project_id })
 }
 
+// --- milestone emitters ----------------------------------------------------
+// Delivery milestones over tasks. Broadcast to admins so a project's task board
+// re-renders live. Payload is the full mapped milestone (or { id, project_id }).
+
+export function emitMilestoneCreated(milestone) {
+  io?.to('role:admin').emit('milestone:created', milestone)
+}
+export function emitMilestoneUpdated(milestone) {
+  io?.to('role:admin').emit('milestone:updated', milestone)
+}
+export function emitMilestoneDeleted(id, project_id = null) {
+  io?.to('role:admin').emit('milestone:deleted', { id, project_id })
+}
+
 // --- support ticket emitters ----------------------------------------------
 // Broadcast to admins so the /support list, a ticket detail, and the client
 // Support tab refresh live. Payload is the full mapped ticket (or { id } for

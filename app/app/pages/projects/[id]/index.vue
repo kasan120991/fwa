@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // Project detail — a task-delivery command center. A full-width hero with a
-// milestone stepper + progress, a main column optimized for tasks, and a
+// lifecycle stepper (the commercial/billing pipeline) + progress, a main column
+// optimized for delivery milestones and their tasks, and a
 // persistent rail for money/timeline/contract. The project is the hub: its
 // Statement of Work (Scope tab) feeds contract generation, its tasks roll up
 // here. Backed by /projects/:id. All API calls live here; the extracted
@@ -49,6 +50,7 @@ interface ApiProject {
 interface Task {
   id: number
   project_id: number | null
+  milestone_id: number | null
   title: string
   description: string | null
   status: TaskStatus
@@ -58,6 +60,18 @@ interface Task {
   completed_at: string | null
   checklist_total: number
   checklist_done: number
+}
+type MilestoneState = 'upcoming' | 'in_progress' | 'complete'
+interface Milestone {
+  id: number
+  project_id: number
+  title: string
+  description: string | null
+  state: MilestoneState
+  position: number
+  target_date: string | null
+  task_total: number
+  task_done: number
 }
 interface Doc { id: number, title: string, status: string, total: number | null, created_at: string, sent_at: string | null, signed_at: string | null }
 type InvStatus = 'draft' | 'open' | 'paid' | 'uncollectible' | 'void'
@@ -80,6 +94,12 @@ const TASK_META: Record<TaskStatus, { label: string, status: 'neutral' | 'info' 
   done: { label: 'Done', status: 'success' }
 }
 const TASK_ORDER: TaskStatus[] = ['todo', 'in_progress', 'blocked', 'done']
+const MILESTONE_STATE_META: Record<MilestoneState, { label: string, status: 'neutral' | 'info' | 'success' }> = {
+  upcoming: { label: 'Upcoming', status: 'neutral' },
+  in_progress: { label: 'In Progress', status: 'info' },
+  complete: { label: 'Complete', status: 'success' }
+}
+const MILESTONE_STATES: MilestoneState[] = ['upcoming', 'in_progress', 'complete']
 const DOC_STATUS: Record<string, 'neutral' | 'info' | 'warning' | 'success' | 'error'> = {
   draft: 'neutral', sent: 'info', viewed: 'info', signed: 'success', accepted: 'success',
   declined: 'error', expired: 'warning', voided: 'error'
@@ -88,6 +108,7 @@ const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-
 
 const project = ref<ApiProject | null>(null)
 const tasks = ref<Task[]>([])
+const milestones = ref<Milestone[]>([])
 const contracts = ref<Doc[]>([])
 const proposals = ref<Doc[]>([])
 const invoices = ref<ProjectInvoice[]>([])
@@ -119,6 +140,10 @@ async function loadTasks() {
   const { data } = await api<{ data: Task[] }>(`/projects/${route.params.id}/tasks`)
   tasks.value = data.map(t => ({ ...t, checklist_total: Number(t.checklist_total ?? 0), checklist_done: Number(t.checklist_done ?? 0) }))
 }
+async function loadMilestones() {
+  const { data } = await api<{ data: Milestone[] }>('/milestones', { query: { project_id: route.params.id } })
+  milestones.value = data.map(m => ({ ...m, task_total: Number(m.task_total ?? 0), task_done: Number(m.task_done ?? 0) }))
+}
 async function loadDocs() {
   const [c, p] = await Promise.all([
     api<{ data: Doc[] }>('/contracts', { query: { project_id: route.params.id } }),
@@ -140,6 +165,12 @@ async function loadInvoices() {
 // rollup on project changes. Cheap given the single-admin scope.
 function onTaskEvent() {
   loadTasks()
+  loadMilestones() // task changes shift per-milestone progress rollups
+}
+// Milestone create/edit/delete/reorder — reload both (a delete detaches tasks).
+function onMilestoneEvent() {
+  loadMilestones()
+  loadTasks()
 }
 function onProjectEvent() {
   loadProject()
@@ -156,11 +187,14 @@ function onInvoiceEvent() {
 onMounted(async () => {
   await loadProject()
   if (!notFound.value) {
-    await Promise.all([loadTasks(), loadDocs(), loadInvoices()])
+    await Promise.all([loadTasks(), loadMilestones(), loadDocs(), loadInvoices()])
   }
   socket.on('task:created', onTaskEvent)
   socket.on('task:updated', onTaskEvent)
   socket.on('task:deleted', onTaskEvent)
+  socket.on('milestone:created', onMilestoneEvent)
+  socket.on('milestone:updated', onMilestoneEvent)
+  socket.on('milestone:deleted', onMilestoneEvent)
   socket.on('project:updated', onProjectEvent)
   socket.on('contract:changed', onContractEvent)
   socket.on('invoice:changed', onInvoiceEvent)
@@ -169,6 +203,9 @@ onBeforeUnmount(() => {
   socket.off('task:created', onTaskEvent)
   socket.off('task:updated', onTaskEvent)
   socket.off('task:deleted', onTaskEvent)
+  socket.off('milestone:created', onMilestoneEvent)
+  socket.off('milestone:updated', onMilestoneEvent)
+  socket.off('milestone:deleted', onMilestoneEvent)
   socket.off('project:updated', onProjectEvent)
   socket.off('contract:changed', onContractEvent)
   socket.off('invoice:changed', onInvoiceEvent)
@@ -204,11 +241,27 @@ const tabs = computed(() => [
   { key: 'activity' as const, label: 'Activity', badge: null }
 ])
 
-const groupedTasks = computed(() => TASK_ORDER.map(s => ({
-  status: s,
-  meta: TASK_META[s],
-  items: tasks.value.filter(t => t.status === s)
-})).filter(g => g.items.length))
+// Tasks board: group by milestone (in order), each with the status sub-grouping
+// nested inside. Unassigned tasks fall into a trailing "General" board.
+function statusGroupsFor(list: Task[]) {
+  return TASK_ORDER
+    .map(s => ({ status: s, meta: TASK_META[s], items: list.filter(t => t.status === s) }))
+    .filter(g => g.items.length)
+}
+const taskBoards = computed(() => {
+  const boards = milestones.value.map((m) => {
+    const list = tasks.value.filter(t => t.milestone_id === m.id)
+    return { key: `m-${m.id}`, milestone: m as Milestone | null, statusGroups: statusGroupsFor(list), count: list.length }
+  })
+  const general = tasks.value.filter(t => t.milestone_id == null)
+  if (general.length) {
+    boards.push({ key: 'general', milestone: null, statusGroups: statusGroupsFor(general), count: general.length })
+  }
+  return boards
+})
+function milestonePct(m: Milestone) {
+  return m.task_total ? Math.round((m.task_done / m.task_total) * 100) : 0
+}
 
 // Overdue or due-within-3-days, not done — the "what's next" focus strip.
 const focusTasks = computed(() => tasks.value
@@ -220,20 +273,30 @@ const focusTasks = computed(() => tasks.value
   .sort((a, b) => (a.due_date || '').localeCompare(b.due_date || '')))
 
 // ---- task inline actions ----
-const newTaskTitle = ref('')
-const addingTask = ref(false)
-async function addTask() {
-  const title = newTaskTitle.value.trim()
-  if (!title || addingTask.value) return
-  addingTask.value = true
+// Add-task state is keyed per board (a milestone id or 'general').
+const newTaskByBoard = reactive<Record<string, string>>({})
+const addingByBoard = reactive<Record<string, boolean>>({})
+async function addTaskTo(milestoneId: number | null) {
+  const key = milestoneId == null ? 'general' : `m-${milestoneId}`
+  const title = (newTaskByBoard[key] ?? '').trim()
+  if (!title || addingByBoard[key]) return
+  addingByBoard[key] = true
   try {
-    await api('/tasks', { method: 'POST', body: { title, project_id: Number(route.params.id) } })
-    newTaskTitle.value = ''
-    await loadTasks()
+    await api('/tasks', { method: 'POST', body: { title, project_id: Number(route.params.id), milestone_id: milestoneId } })
+    newTaskByBoard[key] = ''
+    await Promise.all([loadTasks(), loadMilestones()])
   } catch {
     toast.add({ title: 'Could not add task', color: 'error' })
   } finally {
-    addingTask.value = false
+    addingByBoard[key] = false
+  }
+}
+async function setTaskMilestone(t: Task, milestone_id: number | null) {
+  try {
+    await api(`/tasks/${t.id}`, { method: 'PATCH', body: { milestone_id } })
+    await Promise.all([loadTasks(), loadMilestones()])
+  } catch {
+    toast.add({ title: 'Could not move task', color: 'error' })
   }
 }
 async function toggleTask(t: Task) {
@@ -261,11 +324,86 @@ async function deleteTask(t: Task) {
   }
 }
 function taskMenu(t: Task) {
-  return [TASK_ORDER.map(s => ({
+  const statusGroup = TASK_ORDER.map(s => ({
     label: `Move to ${TASK_META[s].label}`,
     icon: t.status === s ? 'i-lucide-check' : undefined,
     onSelect: () => setTaskStatus(t, s)
-  })), [{ label: 'Delete', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => deleteTask(t) }]]
+  }))
+  const milestoneGroup = [
+    ...milestones.value.map(m => ({
+      label: m.title,
+      icon: t.milestone_id === m.id ? 'i-lucide-check' : undefined,
+      onSelect: () => setTaskMilestone(t, m.id)
+    })),
+    {
+      label: 'General (no milestone)',
+      icon: t.milestone_id == null ? 'i-lucide-check' : undefined,
+      onSelect: () => setTaskMilestone(t, null)
+    }
+  ]
+  return [statusGroup, milestoneGroup, [{ label: 'Delete', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => deleteTask(t) }]]
+}
+
+// ---- milestone actions ----
+const milestoneFormOpen = ref(false)
+const milestoneFormMode = ref<'create' | 'edit'>('create')
+const editingMilestone = ref<Milestone | null>(null)
+function openAddMilestone() {
+  milestoneFormMode.value = 'create'
+  editingMilestone.value = null
+  milestoneFormOpen.value = true
+}
+function openEditMilestone(m: Milestone) {
+  milestoneFormMode.value = 'edit'
+  editingMilestone.value = m
+  milestoneFormOpen.value = true
+}
+function onMilestoneSaved() {
+  loadMilestones()
+}
+async function setMilestoneState(m: Milestone, state: MilestoneState) {
+  try {
+    await api(`/milestones/${m.id}`, { method: 'PATCH', body: { state } })
+    await loadMilestones()
+  } catch {
+    toast.add({ title: 'Could not update milestone', color: 'error' })
+  }
+}
+async function removeMilestone(m: Milestone) {
+  try {
+    await api(`/milestones/${m.id}`, { method: 'DELETE' })
+    await Promise.all([loadMilestones(), loadTasks()])
+  } catch {
+    toast.add({ title: 'Could not delete milestone', color: 'error' })
+  }
+}
+async function moveMilestone(m: Milestone, dir: -1 | 1) {
+  const ids = milestones.value.map(x => x.id)
+  const i = ids.indexOf(m.id)
+  const j = i + dir
+  if (i < 0 || j < 0 || j >= ids.length) return
+  ;[ids[i], ids[j]] = [ids[j]!, ids[i]!]
+  try {
+    await api('/milestones/reorder', { method: 'PATCH', body: { project_id: Number(route.params.id), order: ids } })
+    await loadMilestones()
+  } catch {
+    toast.add({ title: 'Could not reorder milestones', color: 'error' })
+  }
+}
+function milestoneMenu(m: Milestone, index: number, total: number) {
+  return [
+    MILESTONE_STATES.map(s => ({
+      label: `Mark ${MILESTONE_STATE_META[s].label}`,
+      icon: m.state === s ? 'i-lucide-check' : undefined,
+      onSelect: () => setMilestoneState(m, s)
+    })),
+    [
+      { label: 'Edit', icon: 'i-lucide-pencil', onSelect: () => openEditMilestone(m) },
+      ...(index > 0 ? [{ label: 'Move up', icon: 'i-lucide-arrow-up', onSelect: () => moveMilestone(m, -1) }] : []),
+      ...(index < total - 1 ? [{ label: 'Move down', icon: 'i-lucide-arrow-down', onSelect: () => moveMilestone(m, 1) }] : [])
+    ],
+    [{ label: 'Delete', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => removeMilestone(m) }]
+  ]
 }
 
 // ---- edit ----
@@ -549,7 +687,7 @@ const scopeFields = computed(() => project.value
             </div>
           </div>
 
-          <!-- milestone stepper -->
+          <!-- lifecycle stepper (commercial / billing pipeline) -->
           <div class="mt-6">
             <ProjectStepper
               :status="project.status"
@@ -598,80 +736,143 @@ const scopeFields = computed(() => project.value
               v-if="activeTab === 'tasks'"
               class="flex flex-col gap-4"
             >
-              <div class="flex items-center gap-2.5 rounded-card bg-default p-3 ring ring-default">
-                <UInput
-                  v-model="newTaskTitle"
-                  placeholder="Add a task and press Enter…"
-                  icon="i-lucide-plus"
-                  class="flex-1"
-                  :ui="{ base: 'rounded-full' }"
-                  @keydown.enter="addTask"
-                />
+              <!-- toolbar -->
+              <div class="flex items-center justify-between gap-2">
+                <span class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Milestones &amp; tasks</span>
                 <UButton
-                  color="primary"
+                  size="xs"
+                  color="neutral"
+                  variant="outline"
+                  icon="i-lucide-plus"
                   class="rounded-full"
-                  :loading="addingTask"
-                  :disabled="!newTaskTitle.trim()"
-                  @click="addTask"
+                  @click="openAddMilestone"
                 >
-                  Add Task
+                  Add milestone
                 </UButton>
               </div>
 
-              <!-- empty state -->
+              <!-- due-soon / overdue focus strip (spans all milestones) -->
               <div
-                v-if="!tasks.length"
+                v-if="focusTasks.length"
+                class="overflow-hidden rounded-card bg-warning/[0.06] ring ring-warning/20"
+              >
+                <div class="flex items-center gap-2 border-b border-warning/20 px-4 py-2.5">
+                  <UIcon
+                    name="i-lucide-flame"
+                    class="size-4 text-warning"
+                  />
+                  <span class="text-[12.5px] font-semibold text-highlighted">Due soon</span>
+                  <span class="text-[12px] text-muted tabular-nums">{{ focusTasks.length }}</span>
+                </div>
+                <TaskCard
+                  v-for="t in focusTasks"
+                  :key="`focus-${t.id}`"
+                  :task="t"
+                  :expanded="!!expanded[t.id]"
+                  :checklist-items="checklist[t.id] ?? []"
+                  :menu="taskMenu(t)"
+                  @toggle="toggleTask(t)"
+                  @set-due="(v) => setDue(t, v)"
+                  @toggle-expand="toggleExpand(t)"
+                  @add-item="(title) => addChecklistItem(t.id, title)"
+                  @toggle-item="(item) => toggleItem(t.id, item)"
+                  @remove-item="(item) => removeChecklistItem(t.id, item)"
+                />
+              </div>
+
+              <!-- empty: no milestones and no tasks -->
+              <div
+                v-if="!taskBoards.length"
                 class="flex flex-col items-center rounded-card bg-default px-6 py-16 text-center ring ring-default"
               >
                 <span class="mb-4 inline-flex size-12 items-center justify-center rounded-[12px] bg-muted text-muted"><UIcon
-                  name="i-lucide-list-checks"
+                  name="i-lucide-milestone"
                   class="size-6"
                 /></span>
                 <h3 class="font-display text-lg font-medium text-highlighted">
-                  No Tasks Yet
+                  No Milestones Yet
                 </h3>
                 <p class="mt-1.5 max-w-xs text-sm text-muted">
-                  Add the first task above to start tracking this project's work.
+                  Add a milestone to start grouping this project's delivery work.
                 </p>
+                <UButton
+                  class="mt-4 rounded-full"
+                  color="primary"
+                  icon="i-lucide-plus"
+                  @click="openAddMilestone"
+                >
+                  Add Milestone
+                </UButton>
               </div>
 
-              <template v-else>
-                <!-- due-soon / overdue focus strip -->
-                <div
-                  v-if="focusTasks.length"
-                  class="overflow-hidden rounded-card bg-warning/[0.06] ring ring-warning/20"
-                >
-                  <div class="flex items-center gap-2 border-b border-warning/20 px-4 py-2.5">
-                    <UIcon
-                      name="i-lucide-flame"
-                      class="size-4 text-warning"
-                    />
-                    <span class="text-[12.5px] font-semibold text-highlighted">Due soon</span>
-                    <span class="text-[12px] text-muted tabular-nums">{{ focusTasks.length }}</span>
+              <!-- milestone boards (+ trailing General for unassigned tasks) -->
+              <div
+                v-for="(board, bi) in taskBoards"
+                :key="board.key"
+                class="overflow-hidden rounded-card bg-default ring ring-default"
+              >
+                <!-- board header -->
+                <div class="border-b border-default px-4 py-3">
+                  <div class="flex items-center gap-2.5">
+                    <template v-if="board.milestone">
+                      <StatusChip :status="MILESTONE_STATE_META[board.milestone.state].status">
+                        {{ MILESTONE_STATE_META[board.milestone.state].label }}
+                      </StatusChip>
+                      <span class="font-display text-[15px] font-medium text-highlighted">{{ board.milestone.title }}</span>
+                    </template>
+                    <template v-else>
+                      <span class="font-display text-[15px] font-medium text-highlighted">General</span>
+                      <span class="text-[12px] text-muted">Unassigned</span>
+                    </template>
+                    <span class="text-[12px] text-muted tabular-nums">{{ board.count }}</span>
+                    <div class="ms-auto flex items-center gap-3">
+                      <span
+                        v-if="board.milestone?.target_date"
+                        class="inline-flex items-center gap-1 whitespace-nowrap text-[12px] text-muted"
+                      >
+                        <UIcon
+                          name="i-lucide-calendar"
+                          class="size-3.5"
+                        />
+                        {{ shortDate(board.milestone.target_date) }}
+                      </span>
+                      <UDropdownMenu
+                        v-if="board.milestone"
+                        :items="milestoneMenu(board.milestone, bi, milestones.length)"
+                      >
+                        <UButton
+                          size="xs"
+                          color="neutral"
+                          variant="ghost"
+                          icon="i-lucide-ellipsis"
+                          square
+                          aria-label="Milestone actions"
+                        />
+                      </UDropdownMenu>
+                    </div>
                   </div>
-                  <TaskCard
-                    v-for="t in focusTasks"
-                    :key="`focus-${t.id}`"
-                    :task="t"
-                    :expanded="!!expanded[t.id]"
-                    :checklist-items="checklist[t.id] ?? []"
-                    :menu="taskMenu(t)"
-                    @toggle="toggleTask(t)"
-                    @set-due="(v) => setDue(t, v)"
-                    @toggle-expand="toggleExpand(t)"
-                    @add-item="(title) => addChecklistItem(t.id, title)"
-                    @toggle-item="(item) => toggleItem(t.id, item)"
-                    @remove-item="(item) => removeChecklistItem(t.id, item)"
-                  />
+                  <!-- per-milestone progress (from task rollup) -->
+                  <div
+                    v-if="board.milestone"
+                    class="mt-2.5 flex items-center gap-2.5"
+                  >
+                    <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                      <div
+                        class="h-full rounded-full bg-teal-500 transition-[width] duration-500"
+                        :style="{ width: milestonePct(board.milestone) + '%' }"
+                      />
+                    </div>
+                    <span class="text-[12px] font-semibold text-highlighted tabular-nums">{{ milestonePct(board.milestone) }}%</span>
+                    <span class="whitespace-nowrap text-[12px] text-muted tabular-nums">{{ board.milestone.task_done }}/{{ board.milestone.task_total }}</span>
+                  </div>
                 </div>
 
-                <!-- grouped by status -->
+                <!-- status sub-groups nested inside the milestone -->
                 <div
-                  v-for="g in groupedTasks"
+                  v-for="g in board.statusGroups"
                   :key="g.status"
-                  class="overflow-hidden rounded-card bg-default ring ring-default"
                 >
-                  <div class="flex items-center gap-2 border-b border-default px-4 py-2.5">
+                  <div class="flex items-center gap-2 border-b border-default bg-muted/40 px-4 py-1.5">
                     <StatusChip :status="g.meta.status">
                       {{ g.meta.label }}
                     </StatusChip>
@@ -692,7 +893,30 @@ const scopeFields = computed(() => project.value
                     @remove-item="(item) => removeChecklistItem(t.id, item)"
                   />
                 </div>
-              </template>
+
+                <!-- per-board add task -->
+                <div class="flex items-center gap-2 px-4 py-2.5">
+                  <UInput
+                    v-model="newTaskByBoard[board.key]"
+                    placeholder="Add a task…"
+                    icon="i-lucide-plus"
+                    class="flex-1"
+                    :ui="{ base: 'rounded-full' }"
+                    @keydown.enter="addTaskTo(board.milestone ? board.milestone.id : null)"
+                  />
+                  <UButton
+                    size="sm"
+                    color="neutral"
+                    variant="soft"
+                    class="rounded-full"
+                    :loading="addingByBoard[board.key]"
+                    :disabled="!(newTaskByBoard[board.key] || '').trim()"
+                    @click="addTaskTo(board.milestone ? board.milestone.id : null)"
+                  >
+                    Add
+                  </UButton>
+                </div>
+              </div>
             </div>
 
             <!-- SCOPE -->
@@ -880,6 +1104,14 @@ const scopeFields = computed(() => project.value
         mode="edit"
         :project="project"
         @saved="onSaved"
+      />
+
+      <MilestoneForm
+        v-model:open="milestoneFormOpen"
+        :mode="milestoneFormMode"
+        :project-id="project.id"
+        :milestone="editingMilestone"
+        @saved="onMilestoneSaved"
       />
 
       <GenerateContractModal

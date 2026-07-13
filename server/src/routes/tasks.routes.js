@@ -56,6 +56,14 @@ function validateTask(body, { partial = false } = {}) {
       else data.project_id = n
     }
   }
+  if (body.milestone_id !== undefined) {
+    if (body.milestone_id === null) data.milestone_id = null
+    else {
+      const n = Number(body.milestone_id)
+      if (!Number.isInteger(n) || n <= 0) fields.milestone_id = 'must be a valid milestone id or null'
+      else data.milestone_id = n
+    }
+  }
 
   if (Object.keys(fields).length) throw badRequest('Validation failed', fields)
   return data
@@ -68,6 +76,8 @@ tasksRouter.get('/', async (req, res) => {
   const result = await listTasks({
     project_id: req.query.project_id ? Number(req.query.project_id) : undefined,
     noProject: req.query.no_project === '1' || req.query.no_project === 'true',
+    milestone_id: req.query.milestone_id ? Number(req.query.milestone_id) : undefined,
+    noMilestone: req.query.no_milestone === '1' || req.query.no_milestone === 'true',
     status,
     overdue: req.query.overdue === '1' || req.query.overdue === 'true',
     dueToday: req.query.due === 'today',

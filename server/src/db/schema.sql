@@ -545,6 +545,27 @@ CREATE TABLE IF NOT EXISTS project_types (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
+-- milestone_templates — per project_type default delivery milestones.
+--   Copied into project_milestones at project creation, then editable.
+--   Managed via seed/SQL for now (a Settings UI comes later).
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS milestone_templates (
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  project_type_id BIGINT UNSIGNED NOT NULL,
+  title           VARCHAR(160)    NOT NULL,
+  position        INT             NOT NULL DEFAULT 0,
+  is_active       BOOLEAN         NOT NULL DEFAULT TRUE,
+  created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                  ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_milestone_templates_type (project_type_id, position),
+  CONSTRAINT fk_milestone_templates_type
+    FOREIGN KEY (project_type_id) REFERENCES project_types (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
 -- projects — a client engagement + its Statement of Work (Exhibit A).
 --   Child of a client; typed via project_types. The SOW fields below
 --   feed the contract's PandaDoc tokens on generation.
@@ -599,12 +620,41 @@ CREATE TABLE IF NOT EXISTS projects (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
+-- project_milestones — the client-visible delivery layer. Groups tasks
+--   (tasks.milestone_id) and rolls up their completion. Hybrid state:
+--   progress % is derived from tasks, but the admin sets `state`
+--   (current/complete) and a target_date. Orthogonal to projects.status
+--   (which is the commercial/billing lifecycle).
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS project_milestones (
+  id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  project_id   BIGINT UNSIGNED NOT NULL,
+  title        VARCHAR(160)    NOT NULL,
+  description  TEXT            NULL,
+  state        ENUM('upcoming', 'in_progress', 'complete') NOT NULL DEFAULT 'upcoming',
+  position     INT             NOT NULL DEFAULT 0,
+  target_date  DATE            NULL,
+  completed_at TIMESTAMP       NULL,
+  created_at   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                               ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_project_milestones_project (project_id, position),
+  CONSTRAINT fk_project_milestones_project
+    FOREIGN KEY (project_id) REFERENCES projects (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
 -- tasks — units of work. project_id NULL = a standalone ad-hoc task.
 --   completed_at is stamped when status crosses into 'done'.
+--   milestone_id is a soft link (no FK, like proposals.project_id); the
+--   app nulls it when a milestone is deleted.
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS tasks (
   id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   project_id   BIGINT UNSIGNED NULL,
+  milestone_id BIGINT UNSIGNED NULL,             -- soft link (no FK); app nulls on milestone delete
   title        VARCHAR(255)    NOT NULL,
   description  TEXT            NULL,
   status       ENUM('todo', 'in_progress', 'blocked', 'done') NOT NULL DEFAULT 'todo',
@@ -617,6 +667,7 @@ CREATE TABLE IF NOT EXISTS tasks (
                                ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY idx_tasks_project (project_id),
+  KEY idx_tasks_milestone (milestone_id),
   KEY idx_tasks_status  (status),
   KEY idx_tasks_due     (due_date),
   CONSTRAINT fk_tasks_project

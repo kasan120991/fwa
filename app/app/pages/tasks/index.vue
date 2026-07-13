@@ -7,6 +7,7 @@ type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'done'
 interface Task {
   id: number
   project_id: number | null
+  milestone_id: number | null
   project_name: string | null
   project_code: string | null
   title: string
@@ -16,6 +17,7 @@ interface Task {
   completed_at: string | null
 }
 interface ProjectOpt { id: number, name: string, code: string | null }
+interface MilestoneOpt { id: number, title: string }
 
 const api = useApi()
 const socket = useSocket()
@@ -69,6 +71,29 @@ onBeforeUnmount(() => {
 // ---- filters ----
 const statusTab = ref<TaskStatus | 'all' | 'open'>('open')
 const projectFilter = ref<number | 'all' | 'none'>('all')
+// Milestone sub-filter — only meaningful once a specific project is chosen.
+const milestoneFilter = ref<number | 'all' | 'none'>('all')
+const milestones = ref<MilestoneOpt[]>([])
+watch(projectFilter, async (pf) => {
+  milestoneFilter.value = 'all'
+  if (typeof pf === 'number') {
+    try {
+      const { data } = await api<{ data: MilestoneOpt[] }>('/milestones', { query: { project_id: pf } })
+      milestones.value = data
+    } catch { milestones.value = [] }
+  } else {
+    milestones.value = []
+  }
+})
+const milestoneItems = computed(() => [
+  { label: 'All milestones', icon: milestoneFilter.value === 'all' ? 'i-lucide-check' : undefined, onSelect: () => { milestoneFilter.value = 'all' } },
+  { label: 'General (no milestone)', icon: milestoneFilter.value === 'none' ? 'i-lucide-check' : undefined, onSelect: () => { milestoneFilter.value = 'none' } },
+  ...milestones.value.map(m => ({
+    label: m.title,
+    icon: milestoneFilter.value === m.id ? 'i-lucide-check' : undefined,
+    onSelect: () => { milestoneFilter.value = m.id }
+  }))
+])
 
 const counts = computed(() => {
   const c: Record<string, number> = { all: tasks.value.length, open: tasks.value.filter(t => t.status !== 'done').length }
@@ -95,6 +120,11 @@ const filtered = computed(() => tasks.value.filter((t) => {
   if (statusTab.value !== 'all' && statusTab.value !== 'open' && t.status !== statusTab.value) return false
   if (projectFilter.value === 'none' && t.project_id != null) return false
   if (typeof projectFilter.value === 'number' && t.project_id !== projectFilter.value) return false
+  // Milestone sub-filter only applies within a single project.
+  if (typeof projectFilter.value === 'number') {
+    if (milestoneFilter.value === 'none' && t.milestone_id != null) return false
+    if (typeof milestoneFilter.value === 'number' && t.milestone_id !== milestoneFilter.value) return false
+  }
   return true
 }))
 
@@ -202,19 +232,35 @@ function taskOverdue(t: Task) {
           >{{ t.count }}</span>
         </button>
       </div>
-      <UDropdownMenu
-        :items="projectItems"
-        :ui="{ content: 'w-56' }"
-      >
-        <UButton
-          icon="i-lucide-folder"
-          color="neutral"
-          variant="outline"
-          class="rounded-full"
+      <div class="flex items-center gap-2">
+        <UDropdownMenu
+          :items="projectItems"
+          :ui="{ content: 'w-56' }"
         >
-          {{ projectFilter === 'all' ? 'All projects' : projectFilter === 'none' ? 'Standalone' : (projects.find(p => p.id === projectFilter)?.name || 'Project') }}
-        </UButton>
-      </UDropdownMenu>
+          <UButton
+            icon="i-lucide-folder"
+            color="neutral"
+            variant="outline"
+            class="rounded-full"
+          >
+            {{ projectFilter === 'all' ? 'All projects' : projectFilter === 'none' ? 'Standalone' : (projects.find(p => p.id === projectFilter)?.name || 'Project') }}
+          </UButton>
+        </UDropdownMenu>
+        <UDropdownMenu
+          v-if="typeof projectFilter === 'number'"
+          :items="milestoneItems"
+          :ui="{ content: 'w-56' }"
+        >
+          <UButton
+            icon="i-lucide-milestone"
+            color="neutral"
+            variant="outline"
+            class="rounded-full"
+          >
+            {{ milestoneFilter === 'all' ? 'All milestones' : milestoneFilter === 'none' ? 'General' : (milestones.find(m => m.id === milestoneFilter)?.title || 'Milestone') }}
+          </UButton>
+        </UDropdownMenu>
+      </div>
     </div>
 
     <!-- list -->
