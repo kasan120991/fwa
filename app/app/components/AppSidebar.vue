@@ -104,9 +104,9 @@ const groups: NavGroup[] = [
   }
 ]
 
+// Settings lives in the account dropdown (AppTopBar), so it's not repeated here.
 const bottom: NavItem[] = [
-  { label: 'Support Tickets', to: '/support', icon: 'i-lucide-life-buoy' },
-  { label: 'Settings', to: '/settings', icon: 'i-lucide-settings' }
+  { label: 'Support Tickets', to: '/support', icon: 'i-lucide-life-buoy' }
 ]
 
 function isActive(to: string) {
