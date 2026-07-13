@@ -18,7 +18,7 @@ import {
   listOwnNotifications, setOwnRead, markAllOwnRead, clearOwnNotifications
 } from '../repositories/notifications.repo.js'
 import {
-  updateStripeCustomer, stripeEnabled, publishableKey, createInvoiceCheckoutSession
+  updateStripeCustomer, stripeEnabled, publishableKey, getInvoicePaymentSecret
 } from '../services/stripe.js'
 import { notify } from '../services/notifications.service.js'
 import { pandadocEnabled, getDocumentStatus, createDocumentSession } from '../services/pandadoc.js'
@@ -110,10 +110,10 @@ portalRouter.get('/invoices/:id', async (req, res) => {
   res.json({ data: invoice })
 })
 
-// POST /api/portal/invoices/:id/checkout-session — mint an embedded Checkout
-// Session so the client can pay this invoice inside the portal. Returns the
-// session client_secret + the publishable key needed to mount Stripe.js.
-portalRouter.post('/invoices/:id/checkout-session', async (req, res) => {
+// POST /api/portal/invoices/:id/payment-intent — return this invoice's own
+// PaymentIntent client secret so the client can pay it in-portal with the Stripe
+// Payment Element. Confirming it client-side pays the invoice directly.
+portalRouter.post('/invoices/:id/payment-intent', async (req, res) => {
   const invoice = await getInvoice(parseId(req))
   if (!invoice || Number(invoice.client_id) !== req.clientId || HIDDEN_INVOICE_STATUSES.has(invoice.status)) {
     return res.status(404).json({ error: { message: 'Invoice not found' } })
@@ -124,12 +124,14 @@ portalRouter.post('/invoices/:id/checkout-session', async (req, res) => {
   if (!stripeEnabled() || !publishableKey()) {
     return res.status(409).json({ error: { message: 'Online payments are not available right now.' } })
   }
-  const client = await getClient(req.clientId)
-  if (!client?.stripe_customer_id) {
-    return res.status(409).json({ error: { message: 'No billing account is set up for this invoice.' } })
+  if (!invoice.stripe_invoice_id) {
+    return res.status(409).json({ error: { message: 'This invoice can’t be paid online yet.' } })
   }
-  const session = await createInvoiceCheckoutSession(client, invoice)
-  res.json({ data: { clientSecret: session.clientSecret, publishableKey: publishableKey() } })
+  const clientSecret = await getInvoicePaymentSecret(invoice.stripe_invoice_id)
+  if (!clientSecret) {
+    return res.status(409).json({ error: { message: 'Online payments are not available right now.' } })
+  }
+  res.json({ data: { clientSecret, publishableKey: publishableKey() } })
 })
 
 // ---- agreements (proposals + contracts union; read-only this phase) ----

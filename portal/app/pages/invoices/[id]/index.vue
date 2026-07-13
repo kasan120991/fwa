@@ -169,10 +169,11 @@ const statusChip = computed(() => {
         </div>
       </div>
 
-      <!-- embedded Stripe Checkout — pay without leaving the portal -->
-      <PortalInvoicePay
+      <!-- pay in-portal via the Stripe Payment Element -->
+      <PortalInvoicePayElement
         v-if="invoice.status === 'open' && showPay"
         :invoice-id="invoice.id"
+        :amount="Number(invoice.amount_due)"
         @paid="load"
       />
 
