@@ -7,7 +7,12 @@ const route = useRoute()
 
 const nav = [
   { label: 'Home', to: '/', icon: 'i-lucide-home' },
-  { label: 'Projects', to: '/projects', icon: 'i-lucide-folder-kanban' }
+  { label: 'Projects', to: '/projects', icon: 'i-lucide-folder-kanban' },
+  { label: 'Invoices', to: '/invoices', icon: 'i-lucide-receipt-text' },
+  { label: 'Agreements', to: '/agreements', icon: 'i-lucide-file-signature' },
+  { label: 'Files', to: '/files', icon: 'i-lucide-folder' },
+  { label: 'Support', to: '/support', icon: 'i-lucide-life-buoy' },
+  { label: 'Websites', to: '/websites', icon: 'i-lucide-globe' }
 ]
 function isActive(to: string) {
   return to === '/' ? route.path === '/' : route.path === to || route.path.startsWith(to + '/')
@@ -19,6 +24,8 @@ async function onLogout() {
   await navigateTo('/login')
 }
 const accountItems = [[
+  { label: 'Account', icon: 'i-lucide-user', onSelect: () => { navigateTo('/account') } }
+], [
   { label: 'Sign out', icon: 'i-lucide-log-out', onSelect: onLogout }
 ]]
 </script>

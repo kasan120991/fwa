@@ -72,6 +72,26 @@ authRouter.post('/set-password', async (req, res) => {
   res.json({ user: await getUserById(invite.user_id) })
 })
 
+// POST /api/auth/change-password — verify the current password, set a new one.
+// Works for both roles (admin + portal client).
+authRouter.post('/change-password', requireAuth, async (req, res) => {
+  const current = typeof req.body?.current_password === 'string' ? req.body.current_password : ''
+  const next = typeof req.body?.new_password === 'string' ? req.body.new_password : ''
+  if (!current || next.length < 8) {
+    return res.status(400).json({ error: { message: 'Your current password and a new password of at least 8 characters are required.' } })
+  }
+
+  const rows = await query('SELECT password_hash FROM users WHERE id = :id LIMIT 1', { id: req.user.id })
+  const ok = rows[0] && (await bcrypt.compare(current, rows[0].password_hash))
+  if (!ok) {
+    return res.status(400).json({ error: { message: 'Current password is incorrect.' } })
+  }
+
+  const passwordHash = await bcrypt.hash(next, 12)
+  await query('UPDATE users SET password_hash = :passwordHash WHERE id = :id', { id: req.user.id, passwordHash })
+  res.json({ ok: true })
+})
+
 // POST /api/auth/logout — revoke the current session.
 authRouter.post('/logout', async (req, res) => {
   await destroySession(req.cookies?.[SESSION_COOKIE])

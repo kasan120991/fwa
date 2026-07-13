@@ -22,9 +22,9 @@ onMounted(async () => {
 
 const greetName = computed(() => overview.value?.client?.company || overview.value?.client?.name || 'there')
 const stats = computed(() => [
-  { label: 'Active projects', value: String(overview.value?.active_projects ?? 0), icon: 'i-lucide-folder-kanban' },
-  { label: 'Outstanding balance', value: formatMoney(overview.value?.outstanding_balance ?? 0), icon: 'i-lucide-receipt-text' },
-  { label: 'Open tickets', value: String(overview.value?.open_tickets ?? 0), icon: 'i-lucide-life-buoy' }
+  { label: 'Active projects', value: String(overview.value?.active_projects ?? 0), icon: 'i-lucide-folder-kanban', to: '/projects' },
+  { label: 'Outstanding balance', value: formatMoney(overview.value?.outstanding_balance ?? 0), icon: 'i-lucide-receipt-text', to: '/invoices' },
+  { label: 'Open tickets', value: String(overview.value?.open_tickets ?? 0), icon: 'i-lucide-life-buoy', to: '/support' }
 ])
 </script>
 
@@ -43,10 +43,11 @@ const stats = computed(() => [
     </div>
 
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <div
+      <NuxtLink
         v-for="s in stats"
         :key="s.label"
-        class="flex items-center gap-4 rounded-card bg-default p-5 ring ring-default"
+        :to="s.to"
+        class="flex items-center gap-4 rounded-card bg-default p-5 ring ring-default transition-shadow hover:ring-primary/40"
       >
         <span class="inline-flex size-10 flex-none items-center justify-center rounded-[10px] bg-mist text-primary">
           <UIcon
@@ -62,7 +63,7 @@ const stats = computed(() => [
             {{ pending ? '—' : s.value }}
           </div>
         </div>
-      </div>
+      </NuxtLink>
     </div>
 
     <NuxtLink
