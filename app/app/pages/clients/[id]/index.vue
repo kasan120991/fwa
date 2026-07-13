@@ -2,6 +2,7 @@
 const route = useRoute()
 const { user } = useAuth()
 const api = useApi()
+const toast = useToast()
 const { resolveUrl } = useUploads()
 
 // Identity/profile comes from GET /api/clients/:id. The tabs below (projects,
@@ -88,6 +89,7 @@ async function load() {
 const websiteSocket = useSocket()
 onMounted(() => {
   load()
+  loadPortalAccount()
   loadContracts()
   loadProjects()
   loadInvoices()
@@ -481,14 +483,42 @@ const metrics = computed(() => [
   { label: 'Total Billed', value: money(totalBilled.value), sub: 'lifetime', tone: 'text-highlighted' }
 ])
 
-const headerMenu = [[
+// ---- client portal access ----
+const portalAccount = ref<{ invited: boolean, email?: string, last_login_at?: string | null }>({ invited: false })
+async function loadPortalAccount() {
+  try {
+    const { data } = await api<{ data: { invited: boolean, email?: string, last_login_at?: string | null } }>(`/clients/${route.params.id}/portal-account`)
+    portalAccount.value = data
+  } catch { /* non-fatal */ }
+}
+const inviting = ref(false)
+async function inviteToPortal() {
+  if (inviting.value) return
+  inviting.value = true
+  try {
+    const { data } = await api<{ data: { setPasswordUrl: string, email: string } }>(`/clients/${route.params.id}/invite`, { method: 'POST' })
+    try {
+      await navigator.clipboard?.writeText(data.setPasswordUrl)
+    } catch { /* clipboard is a nicety */ }
+    toast.add({ title: 'Portal invite sent', description: `Set-password link copied — emailed to ${data.email}.`, color: 'success' })
+    loadPortalAccount()
+  } catch (err: unknown) {
+    const e = err as { data?: { error?: { message?: string } } }
+    toast.add({ title: 'Could not send invite', description: e?.data?.error?.message || 'Try again.', color: 'error' })
+  } finally {
+    inviting.value = false
+  }
+}
+
+const headerMenu = computed(() => [[
   { label: 'New Invoice', icon: 'i-lucide-receipt-text' },
   { label: 'New Proposal', icon: 'i-lucide-file-text' },
   { label: 'New Ticket', icon: 'i-lucide-life-buoy', onSelect: openNewTicket },
-  { label: 'Add Website', icon: 'i-lucide-globe', onSelect: () => { websiteFormOpen.value = true } }
+  { label: 'Add Website', icon: 'i-lucide-globe', onSelect: () => { websiteFormOpen.value = true } },
+  { label: portalAccount.value.invited ? 'Re-send portal invite' : 'Invite to portal', icon: 'i-lucide-user-plus', onSelect: inviteToPortal }
 ], [
   { label: 'Archive Client', icon: 'i-lucide-archive', color: 'error' as const }
-]]
+]])
 
 function websiteMenu(w: { href: string, id: number }) {
   return [[
@@ -664,6 +694,15 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                   class="size-[15px] flex-none text-muted"
                 />{{ client.email }}
               </a>
+              <div
+                v-if="portalAccount.invited"
+                class="flex items-center gap-2.5 text-[13.5px] text-muted"
+              >
+                <UIcon
+                  name="i-lucide-user-check"
+                  class="size-[15px] flex-none text-success"
+                />Portal access · {{ portalAccount.last_login_at ? 'active' : 'invited' }}
+              </div>
               <a
                 :href="`tel:${phoneDigits(client.phone)}`"
                 class="flex items-center gap-2.5 text-[13.5px] text-default hover:text-primary"

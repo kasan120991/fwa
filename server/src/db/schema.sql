@@ -205,10 +205,10 @@ CREATE TABLE IF NOT EXISTS calls (
 
 -- ---------------------------------------------------------------------
 -- users — app login accounts. Two-sided by design (see CLAUDE.md):
---   role = 'admin'  -> internal ops app (the only role in use this phase)
---   role = 'client' -> external client portal (built in a later phase)
--- Client-portal users will later link to their clients row; that column
--- is added when the portal is built, not speculatively now.
+--   role = 'admin'  -> internal ops app
+--   role = 'client' -> external client portal; client_id links to the
+--                      clients row whose data that portal login may see.
+--   client_id is NULL for admins, set for portal users (invite flow).
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
   id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -216,6 +216,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash  VARCHAR(255) NOT NULL,
   name           VARCHAR(160) NOT NULL,
   role           ENUM('admin', 'client') NOT NULL DEFAULT 'admin',
+  client_id      BIGINT UNSIGNED NULL,
   is_active      TINYINT(1) NOT NULL DEFAULT 1,
   last_login_at  DATETIME NULL,
   created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -224,7 +225,10 @@ CREATE TABLE IF NOT EXISTS users (
 
   PRIMARY KEY (id),
   UNIQUE KEY uq_users_email (email),
-  KEY idx_users_role (role)
+  KEY idx_users_role (role),
+  KEY idx_users_client (client_id),
+  CONSTRAINT fk_users_client FOREIGN KEY (client_id)
+    REFERENCES clients (id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
@@ -247,6 +251,27 @@ CREATE TABLE IF NOT EXISTS sessions (
   KEY idx_sessions_expires (expires_at),
 
   CONSTRAINT fk_sessions_user FOREIGN KEY (user_id)
+    REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- portal_invites — one-time tokens for the client-portal set-password
+-- flow (and reusable for password reset). Mirrors sessions: the emailed
+-- link carries the raw token; only its SHA-256 hash is stored. A row is
+-- spent when used_at is set.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS portal_invites (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id     BIGINT UNSIGNED NOT NULL,
+  token_hash  CHAR(64) NOT NULL,
+  expires_at  DATETIME NOT NULL,
+  used_at     DATETIME NULL,
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_portal_invites_token (token_hash),
+  KEY idx_portal_invites_user (user_id),
+  CONSTRAINT fk_portal_invites_user FOREIGN KEY (user_id)
     REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 

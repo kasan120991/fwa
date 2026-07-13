@@ -4,6 +4,8 @@ import {
 } from '../repositories/clients.repo.js'
 import { createStripeCustomer, updateStripeCustomer } from '../services/stripe.js'
 import { clientHosting } from '../services/hostingCosts.js'
+import { inviteClientToPortal } from '../services/portalInvite.service.js'
+import { getPortalUserForClient } from '../repositories/users.repo.js'
 
 export const clientsRouter = Router()
 
@@ -145,6 +147,21 @@ clientsRouter.get('/:id', async (req, res) => {
 // GET /api/clients/:id/hosting — monthly DigitalOcean hosting cost vs care-plan margin.
 clientsRouter.get('/:id/hosting', async (req, res) => {
   res.json({ data: await clientHosting(parseId(req)) })
+})
+
+// GET /api/clients/:id/portal-account — whether a portal login exists for this client.
+clientsRouter.get('/:id/portal-account', async (req, res) => {
+  const user = await getPortalUserForClient(parseId(req))
+  res.json({ data: user ? { invited: true, email: user.email, last_login_at: user.last_login_at } : { invited: false } })
+})
+
+// POST /api/clients/:id/invite — provision a portal login + email a set-password link.
+clientsRouter.post('/:id/invite', async (req, res) => {
+  const client = await getClient(parseId(req))
+  if (!client) return res.status(404).json({ error: { message: 'Client not found' } })
+  if (!client.email) throw badRequest('This client has no email address to invite.')
+  const { setPasswordUrl } = await inviteClientToPortal(client, req.user?.id ?? null)
+  res.json({ data: { status: 'invited', email: client.email, setPasswordUrl } })
 })
 
 // POST /api/clients

@@ -9,7 +9,10 @@ import { config } from '../config/env.js'
 // template recreation, so they're safer to hard-reference than UUIDs.
 export const TEMPLATES = {
   websiteInquiry: 'website-inquiry',
-  phoneCall: 'phone-call'
+  phoneCall: 'phone-call',
+  // Client-facing: the portal invite / set-password email.
+  // Variables: { name, set_password_url }.
+  portalInvite: 'portal-invite'
 }
 
 export const isConfigured = () => !!config.resend.apiKey

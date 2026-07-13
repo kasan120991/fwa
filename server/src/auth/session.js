@@ -7,7 +7,7 @@ const SESSION_TTL_DAYS = 7
 const SESSION_TTL_MS = SESSION_TTL_DAYS * 24 * 60 * 60 * 1000
 
 /** SHA-256 hex of a token. Only the hash is stored server-side. */
-function hashToken(token) {
+export function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex')
 }
 
@@ -47,7 +47,7 @@ export async function createSession(userId, { userAgent, ip } = {}) {
 export async function getSessionUser(token) {
   if (!token) return null
   const rows = await query(
-    `SELECT u.id, u.email, u.name, u.role
+    `SELECT u.id, u.email, u.name, u.role, u.client_id
        FROM sessions s
        JOIN users u ON u.id = s.user_id
       WHERE s.token_hash = :tokenHash

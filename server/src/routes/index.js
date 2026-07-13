@@ -22,8 +22,10 @@ import { ticketsRouter } from './tickets.routes.js'
 import { notificationsRouter } from './notifications.routes.js'
 import { uploadsRouter } from './uploads.routes.js'
 import { filesRouter } from './files.routes.js'
+import { portalRouter } from './portal.routes.js'
 import { webhooksRouter } from './webhooks.routes.js'
-import { requireAuth } from '../middleware/requireAuth.js'
+import { requireAdmin } from '../middleware/requireAdmin.js'
+import { requirePortal } from '../middleware/requirePortal.js'
 
 export const apiRouter = Router()
 
@@ -33,24 +35,28 @@ apiRouter.use('/auth', authRouter)
 apiRouter.use('/webhooks', webhooksRouter)
 
 // Admin-only resource routers.
-apiRouter.use('/leads', requireAuth, leadsRouter) // Leads (top of funnel)
-apiRouter.use('/clients', requireAuth, clientsRouter) // Clients (converted parties)
-apiRouter.use('/calls', requireAuth, callsRouter) // AI Receptionist
-apiRouter.use('/services', requireAuth, servicesRouter) // price book / catalog
-apiRouter.use('/proposals', requireAuth, proposalsRouter) // Sales — proposals
-apiRouter.use('/contracts', requireAuth, contractsRouter) // Sales — contracts
-apiRouter.use('/agreements', requireAuth, agreementsRouter) // Agreements (merged view)
-apiRouter.use('/projects', requireAuth, projectsRouter) // Projects (SOW hub)
-apiRouter.use('/tasks', requireAuth, tasksRouter) // Tasks
-apiRouter.use('/milestones', requireAuth, milestonesRouter) // Delivery milestones (over tasks)
-apiRouter.use('/project-types', requireAuth, projectTypesRouter) // Project type catalog
-apiRouter.use('/invoices', requireAuth, invoicesRouter) // Billing — invoices
-apiRouter.use('/payments', requireAuth, paymentsRouter) // Billing — payments
-apiRouter.use('/expenses', requireAuth, expensesRouter) // Billing — expenses (money out)
-apiRouter.use('/dashboard', requireAuth, dashboardRouter) // Dashboard KPIs
-apiRouter.use('/search', requireAuth, searchRouter) // Global command-palette search
-apiRouter.use('/websites', requireAuth, websitesRouter) // Websites (cross-client analytics)
-apiRouter.use('/tickets', requireAuth, ticketsRouter) // Support tickets
-apiRouter.use('/notifications', requireAuth, notificationsRouter) // top-bar alert feed
-apiRouter.use('/uploads', requireAuth, uploadsRouter) // file storage (logos, files)
-apiRouter.use('/files', requireAuth, filesRouter) // Workspace — Files library
+apiRouter.use('/leads', requireAdmin, leadsRouter) // Leads (top of funnel)
+apiRouter.use('/clients', requireAdmin, clientsRouter) // Clients (converted parties)
+apiRouter.use('/calls', requireAdmin, callsRouter) // AI Receptionist
+apiRouter.use('/services', requireAdmin, servicesRouter) // price book / catalog
+apiRouter.use('/proposals', requireAdmin, proposalsRouter) // Sales — proposals
+apiRouter.use('/contracts', requireAdmin, contractsRouter) // Sales — contracts
+apiRouter.use('/agreements', requireAdmin, agreementsRouter) // Agreements (merged view)
+apiRouter.use('/projects', requireAdmin, projectsRouter) // Projects (SOW hub)
+apiRouter.use('/tasks', requireAdmin, tasksRouter) // Tasks
+apiRouter.use('/milestones', requireAdmin, milestonesRouter) // Delivery milestones (over tasks)
+apiRouter.use('/project-types', requireAdmin, projectTypesRouter) // Project type catalog
+apiRouter.use('/invoices', requireAdmin, invoicesRouter) // Billing — invoices
+apiRouter.use('/payments', requireAdmin, paymentsRouter) // Billing — payments
+apiRouter.use('/expenses', requireAdmin, expensesRouter) // Billing — expenses (money out)
+apiRouter.use('/dashboard', requireAdmin, dashboardRouter) // Dashboard KPIs
+apiRouter.use('/search', requireAdmin, searchRouter) // Global command-palette search
+apiRouter.use('/websites', requireAdmin, websitesRouter) // Websites (cross-client analytics)
+apiRouter.use('/tickets', requireAdmin, ticketsRouter) // Support tickets
+apiRouter.use('/notifications', requireAdmin, notificationsRouter) // top-bar alert feed
+apiRouter.use('/uploads', requireAdmin, uploadsRouter) // file storage (logos, files)
+apiRouter.use('/files', requireAdmin, filesRouter) // Workspace — Files library
+
+// Client-portal API — gated by requirePortal (role='client' + linked client_id),
+// every query hard-scoped to req.clientId. Isolated from the admin routers above.
+apiRouter.use('/portal', requirePortal, portalRouter)

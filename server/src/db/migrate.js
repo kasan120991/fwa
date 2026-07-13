@@ -46,6 +46,12 @@ const ADDITIVE_COLUMNS = {
   // tables handled by CREATE TABLE IF NOT EXISTS, so they need no entry here.
   tasks: [
     ['milestone_id', 'BIGINT UNSIGNED NULL AFTER project_id']
+  ],
+  // Client-portal: link a portal login to its client (soft column on existing
+  // DBs; fresh installs get the FK from schema.sql). portal_invites is a new
+  // table, handled by CREATE TABLE IF NOT EXISTS.
+  users: [
+    ['client_id', 'BIGINT UNSIGNED NULL AFTER role']
   ]
 }
 
