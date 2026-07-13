@@ -2,7 +2,7 @@
 const route = useRoute()
 const api = useApi()
 
-interface LineItem { id: number, description: string, quantity: number, unit_amount: number, amount: number }
+interface LineItem { id: number, name_snapshot: string, unit_price_snapshot: number, qty: number, line_total: number }
 interface Payment { id: number, amount: number, method: string, status: string, paid_at: string | null }
 interface Invoice {
   id: number
@@ -40,7 +40,13 @@ onMounted(async () => {
   }
 })
 
-const items = computed(() => invoice.value?.items ?? invoice.value?.line_items ?? [])
+// DECIMAL columns arrive as strings — coerce so formatMoney/qty compare work.
+const items = computed(() => (invoice.value?.items ?? invoice.value?.line_items ?? []).map(li => ({
+  ...li,
+  qty: Number(li.qty),
+  unit_price_snapshot: Number(li.unit_price_snapshot),
+  line_total: Number(li.line_total)
+})))
 const payments = computed(() => invoice.value?.payments ?? [])
 const statusChip = computed(() => {
   const i = invoice.value
@@ -154,12 +160,18 @@ const statusChip = computed(() => {
           :key="li.id"
           class="flex items-center gap-4 border-b border-default px-5 py-3.5 last:border-0"
         >
-          <span class="min-w-0 flex-1 text-[13.5px] text-default">{{ li.description }}</span>
-          <span
-            v-if="li.quantity > 1"
-            class="text-[12.5px] text-muted tabular-nums"
-          >× {{ li.quantity }}</span>
-          <span class="w-24 text-right text-[13.5px] font-medium tabular-nums text-highlighted">{{ formatMoney(li.amount) }}</span>
+          <div class="min-w-0 flex-1">
+            <div class="text-[13.5px] text-default">
+              {{ li.name_snapshot }}
+            </div>
+            <div
+              v-if="li.qty > 1"
+              class="text-[12px] text-muted tabular-nums"
+            >
+              {{ li.qty }} × {{ formatMoney(li.unit_price_snapshot) }}
+            </div>
+          </div>
+          <span class="w-24 flex-none text-right text-[13.5px] font-medium tabular-nums text-highlighted">{{ formatMoney(li.line_total) }}</span>
         </div>
       </div>
 
