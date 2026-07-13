@@ -44,7 +44,7 @@ const accountItems = computed(() => [
     { label: displayName.value, slot: 'account' as const, type: 'label' as const }
   ],
   [
-    { label: 'Profile', icon: 'i-lucide-user' },
+    { label: 'Profile', icon: 'i-lucide-user', to: '/settings?section=profile' },
     { label: 'Settings', icon: 'i-lucide-settings', to: '/settings' }
   ],
   [

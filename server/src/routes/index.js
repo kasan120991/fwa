@@ -22,6 +22,7 @@ import { ticketsRouter } from './tickets.routes.js'
 import { notificationsRouter } from './notifications.routes.js'
 import { uploadsRouter } from './uploads.routes.js'
 import { filesRouter } from './files.routes.js'
+import { settingsRouter } from './settings.routes.js'
 import { portalRouter } from './portal.routes.js'
 import { webhooksRouter } from './webhooks.routes.js'
 import { requireAdmin } from '../middleware/requireAdmin.js'
@@ -56,6 +57,7 @@ apiRouter.use('/tickets', requireAdmin, ticketsRouter) // Support tickets
 apiRouter.use('/notifications', requireAdmin, notificationsRouter) // top-bar alert feed
 apiRouter.use('/uploads', requireAdmin, uploadsRouter) // file storage (logos, files)
 apiRouter.use('/files', requireAdmin, filesRouter) // Workspace — Files library
+apiRouter.use('/settings', requireAdmin, settingsRouter) // Settings (agency, prefs, integrations, portal access)
 
 // Client-portal API — gated by requirePortal (role='client' + linked client_id),
 // every query hard-scoped to req.clientId. Isolated from the admin routers above.

@@ -51,7 +51,8 @@ const ADDITIVE_COLUMNS = {
   // DBs; fresh installs get the FK from schema.sql). portal_invites is a new
   // table, handled by CREATE TABLE IF NOT EXISTS.
   users: [
-    ['client_id', 'BIGINT UNSIGNED NULL AFTER role']
+    ['client_id', 'BIGINT UNSIGNED NULL AFTER role'],
+    ['avatar_url', 'MEDIUMTEXT NULL AFTER name']
   ],
   // Distinguish client-uploaded files from admin-shared ones (mirrors
   // ticket_attachments.uploaded_by).

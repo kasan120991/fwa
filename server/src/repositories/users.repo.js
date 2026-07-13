@@ -16,10 +16,22 @@ export async function findUserByEmail(email) {
 
 export async function getUserById(id) {
   const rows = await query(
-    'SELECT id, email, name, role, client_id FROM users WHERE id = :id LIMIT 1',
+    'SELECT id, email, name, avatar_url, role, client_id FROM users WHERE id = :id LIMIT 1',
     { id }
   )
   return rows[0] ?? null
+}
+
+/** Update an admin's own profile fields (name, email, avatar_url). Returns the fresh user. */
+export async function updateUser(id, patch) {
+  const cols = ['name', 'email', 'avatar_url'].filter(c => patch[c] !== undefined)
+  if (cols.length) {
+    const sets = cols.map(c => `${c} = :${c}`).join(', ')
+    const params = { id }
+    for (const c of cols) params[c] = c === 'email' && patch[c] ? norm(patch[c]) : patch[c]
+    await query(`UPDATE users SET ${sets} WHERE id = :id`, params)
+  }
+  return getUserById(id)
 }
 
 /** The active client-portal login linked to a client (for the admin status chip). */
@@ -57,6 +69,24 @@ export async function upsertClientUser({ email, name, clientId, placeholderHash 
 
 export async function setUserPassword(userId, passwordHash) {
   await query('UPDATE users SET password_hash = :passwordHash WHERE id = :id', { id: userId, passwordHash })
+}
+
+/**
+ * Enable or disable a client's portal login(s). Disabling (revoke) also deletes
+ * their sessions so they're logged out immediately (login already requires
+ * is_active = 1). No-op if the client has no portal user.
+ */
+export async function setPortalAccess(clientId, active) {
+  await query(
+    "UPDATE users SET is_active = :active WHERE client_id = :clientId AND role = 'client'",
+    { clientId, active: active ? 1 : 0 }
+  )
+  if (!active) {
+    await query(
+      "DELETE s FROM sessions s JOIN users u ON u.id = s.user_id WHERE u.client_id = :clientId AND u.role = 'client'",
+      { clientId }
+    )
+  }
 }
 
 // ---- portal invites (one-time set-password tokens; mirrors sessions) ----
