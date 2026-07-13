@@ -123,39 +123,34 @@ export async function payStripeInvoiceOutOfBand(stripeInvoiceId) {
 }
 
 /**
- * Mint an embedded Checkout Session so a portal client can pay an invoice
- * without leaving the portal. Stripe Checkout can't "pay" an existing invoice,
- * so we charge the amount via a one-off payment session (its own PaymentIntent)
- * and reconcile the original invoice out-of-band on `checkout.session.completed`
- * (see the webhook). `redirect_on_completion:'never'` keeps the client in-app —
- * Checkout fires onComplete instead of redirecting, so no return_url is needed.
- * The metadata carries the link back to our invoice/client for the webhook.
- * Returns { clientSecret, sessionId } or null when Stripe is disabled.
+ * Resolve the PaymentIntent id that paid an invoice. Recent Stripe API versions
+ * (2025+) dropped the top-level `invoice.payment_intent` in favour of an
+ * `invoice.payments` list (to support partial payments), and that list isn't in
+ * the webhook payload — so we retrieve the invoice with it expanded. Returns the
+ * PI id of the most recent payment, or null.
  */
-export async function createInvoiceCheckoutSession(client, invoice) {
+export async function getInvoicePaymentIntentId(stripeInvoiceId) {
   if (!stripe) return null
-  const meta = {
-    fwa_invoice_id: String(invoice.id),
-    fwa_client_id: String(client.id),
-    stripe_invoice_id: invoice.stripe_invoice_id || ''
-  }
-  const session = await stripe.checkout.sessions.create({
-    ui_mode: 'embedded_page',
-    mode: 'payment',
-    customer: client.stripe_customer_id,
-    redirect_on_completion: 'never',
-    line_items: [{
-      quantity: 1,
-      price_data: {
-        currency: 'usd',
-        unit_amount: Math.round(Number(invoice.amount_due) * 100),
-        product_data: { name: invoice.number ? `Invoice ${invoice.number}` : `Invoice #${invoice.id}` }
-      }
-    }],
-    payment_intent_data: { metadata: meta },
-    metadata: meta
-  })
-  return { clientSecret: session.client_secret, sessionId: session.id }
+  const inv = await stripe.invoices.retrieve(stripeInvoiceId, { expand: ['payments'] })
+  // Only the payment that actually settled the invoice. An out-of-band pay (admin
+  // "mark paid") settles via type 'out_of_band' with NO payment_intent, so this
+  // returns null there — the invoice's own (unpaid) PI is ignored and we don't
+  // record a phantom payment on top of the one that path writes itself.
+  const paid = inv.payments?.data?.find(x => x.status === 'paid')
+  return paid?.payment?.payment_intent || null
+}
+
+/**
+ * Get the client secret of an invoice's own PaymentIntent, for paying it with
+ * the Payment Element. Expanding `confirmation_secret` on a finalized invoice
+ * exposes the PI client secret; confirming it client-side pays the invoice
+ * directly (so invoice.paid fires — no out-of-band reconciliation needed).
+ * Returns the client secret, or null when Stripe is disabled / not available.
+ */
+export async function getInvoicePaymentSecret(stripeInvoiceId) {
+  if (!stripe) return null
+  const inv = await stripe.invoices.retrieve(stripeInvoiceId, { expand: ['confirmation_secret'] })
+  return inv.confirmation_secret?.client_secret || null
 }
 
 /**

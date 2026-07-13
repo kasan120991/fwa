@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import { Router } from 'express'
 import { config } from '../config/env.js'
-import { constructWebhookEvent, createStripeCustomer, mapStripeInvoice, payStripeInvoiceOutOfBand } from '../services/stripe.js'
+import { constructWebhookEvent, createStripeCustomer, mapStripeInvoice, getInvoicePaymentIntentId } from '../services/stripe.js'
 import { verifyWebhookSignature, pandadocEnabled, createDocumentFromTemplate, sendDocument } from '../services/pandadoc.js'
 import { getClient, getClientByStripeCustomerId, getClientByPhone, updateClient } from '../repositories/clients.repo.js'
 import { createLead, getRecentWebsiteLeadByEmail } from '../repositories/leads.repo.js'
@@ -180,11 +180,12 @@ webhooksRouter.post('/stripe', async (req, res) => {
           emitInvoiceChanged(local.id)
         }
         // Record the card payment (dedup on the PaymentIntent). Only when a PI is
-        // present: an out-of-band pay (admin "mark paid", or a portal Checkout
-        // payment which records its own card payment in checkout.session.completed)
-        // carries no PI, and its payment row is written by that path instead — so
-        // requiring a PI here avoids a duplicate/no-PI payment row.
-        const pi = typeof inv.payment_intent === 'string' ? inv.payment_intent : inv.payment_intent?.id
+        // present: an out-of-band pay (admin "mark paid") carries no PI and records
+        // its own payment row, so requiring a PI here avoids a duplicate/no-PI row.
+        // The PI id moved off the invoice object in recent API versions, so fall
+        // back to fetching it (covers the in-portal Payment Element + hosted-page flows).
+        let pi = typeof inv.payment_intent === 'string' ? inv.payment_intent : inv.payment_intent?.id
+        if (!pi && inv.id) pi = await getInvoicePaymentIntentId(inv.id)
         if (client && pi && !(await getPaymentByIntentId(pi))) {
           const payment = await createPayment({
             client_id: client.id, invoice_id: local?.id ?? null, stripe_payment_intent_id: pi,
@@ -221,44 +222,6 @@ webhooksRouter.post('/stripe', async (req, res) => {
         if (local?.project_id) {
           if (local.kind === 'deposit') await advanceProject(local.project_id, 'in_progress')
           else if (local.kind === 'balance') await advanceProject(local.project_id, 'completed')
-        }
-        break
-      }
-      case 'checkout.session.completed': {
-        // A portal client paid an invoice via embedded Checkout. The charge runs
-        // on the session's own PaymentIntent (Checkout can't pay an invoice
-        // directly), so we record that card payment here, then close the original
-        // invoice out-of-band — the resulting invoice.paid event flips local
-        // status, notifies, and advances the project (it won't re-record the
-        // payment, since an out-of-band invoice carries no PI).
-        const s = event.data.object
-        if (s.mode !== 'payment' || s.payment_status !== 'paid' || !s.metadata?.fwa_invoice_id) break
-        const stripeInvoiceId = s.metadata.stripe_invoice_id || null
-        const client = s.customer ? await getClientByStripeCustomerId(s.customer) : null
-        const local = await getInvoice(Number(s.metadata.fwa_invoice_id))
-        const amount = (s.amount_total ?? 0) / 100
-        const clientId = client?.id ?? local?.client_id ?? null
-        const pi = typeof s.payment_intent === 'string' ? s.payment_intent : s.payment_intent?.id
-        if (pi && clientId && !(await getPaymentByIntentId(pi))) {
-          const payment = await createPayment({
-            client_id: clientId, invoice_id: local?.id ?? null, stripe_payment_intent_id: pi,
-            amount, method: 'card', paid_at: new Date()
-          })
-          emitPaymentCreated(payment.id)
-        }
-        if (stripeInvoiceId) {
-          // Fires invoice.paid, which reconciles status + notifications + project.
-          try {
-            await payStripeInvoiceOutOfBand(stripeInvoiceId)
-          } catch (err) {
-            // A retry on an already-paid invoice is fine; anything else re-throws.
-            if (!/already.*paid|no longer|not open/i.test(err.message)) throw err
-          }
-        } else if (local) {
-          // Dashboard-born invoice with no Stripe invoice to close — reconcile here.
-          await updateInvoice(local.id, { status: 'paid', amount_paid: amount, paid_at: new Date() })
-          emitInvoiceChanged(local.id)
-          if (clientId) emitClientInvoiceChanged(clientId, local.id)
         }
         break
       }
