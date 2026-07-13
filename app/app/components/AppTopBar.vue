@@ -379,14 +379,14 @@ function onNotifOpen(n: Notification) {
                 class="text-[13px] font-medium text-primary transition-colors hover:text-primary/80"
                 @click="markAllRead"
               >
-                Mark all read
+                Mark All Read
               </button>
               <button
                 v-if="notifications.length"
                 class="text-[13px] font-medium text-muted transition-colors hover:text-highlighted"
                 @click="clearAll"
               >
-                Clear all
+                Clear All
               </button>
             </div>
           </div>
@@ -510,14 +510,14 @@ function onNotifOpen(n: Notification) {
                     class="whitespace-nowrap text-[13px] font-medium text-primary transition-colors hover:text-primary/80"
                     @click="markAllRead"
                   >
-                    Mark all read
+                    Mark All Read
                   </button>
                   <button
                     v-if="notifications.length"
                     class="whitespace-nowrap text-[13px] font-medium text-muted transition-colors hover:text-highlighted"
                     @click="clearAll"
                   >
-                    Clear all
+                    Clear All
                   </button>
                 </div>
               </div>

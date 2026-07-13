@@ -31,7 +31,7 @@ useHead({ title: 'Review & sign · Francis Web Agency' })
         {{ parsed?.kind === 'contract' ? 'Contract' : 'Proposal' }}
       </p>
       <h1 class="mt-1 font-display text-[1.9rem] font-medium leading-tight tracking-tight text-highlighted">
-        Review &amp; sign
+        Review &amp; Sign
       </h1>
     </div>
 

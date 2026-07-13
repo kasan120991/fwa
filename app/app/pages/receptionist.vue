@@ -104,7 +104,7 @@ async function loadStats() {
       { label: 'Inquiries Captured', value: String(data.inquiries), trend: '' },
       { label: 'After-Hours Answered', value: String(data.after_hours), trend: '' },
       { label: 'Avg. Duration', value: durationMMSS(data.avg_duration), trend: '' },
-      { label: 'Converted To Leads', value: String(data.converted), trend: '' }
+      { label: 'Converted to Leads', value: String(data.converted), trend: '' }
     ]
   } catch { /* leave strip empty on failure */ }
 }
@@ -499,7 +499,7 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="flex flex-none flex-wrap items-center gap-2.5 border-t border-default bg-default px-[26px] py-3.5">
-            <UButton v-if="canConvert" icon="i-lucide-arrow-down-to-line" color="primary" @click="convertTarget = cur">Convert To Lead</UButton>
+            <UButton v-if="canConvert" icon="i-lucide-arrow-down-to-line" color="primary" @click="convertTarget = cur">Convert to Lead</UButton>
             <NuxtLink
               v-else-if="curLink"
               :to="curLink.href"
@@ -533,7 +533,7 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- convert-to-lead modal -->
-    <UModal :open="!!convertTarget" title="Convert To Lead" @update:open="v => { if (!v) convertTarget = null }">
+    <UModal :open="!!convertTarget" title="Convert to Lead" @update:open="v => { if (!v) convertTarget = null }">
       <template #body>
         <span class="mb-4 inline-flex size-[46px] items-center justify-center rounded-xl bg-mist text-primary"><UIcon name="i-lucide-arrow-down-to-line" class="size-5" /></span>
         <p class="text-[14.5px] leading-relaxed text-default">

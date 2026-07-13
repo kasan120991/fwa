@@ -122,7 +122,7 @@ async function submit() {
 
           <div v-else class="flex flex-col gap-4">
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <UFormField label="Site name">
+              <UFormField label="Site Name">
                 <UInput v-model="form.name" placeholder="Northwind Storefront" size="lg" class="w-full" />
               </UFormField>
               <UFormField label="Domain" :required="true" :error="errors.domain">
@@ -139,7 +139,7 @@ async function submit() {
               </UFormField>
             </div>
 
-            <UFormField label="Droplet size" :required="true" :error="errors.size" help="Base droplet cost billed monthly by DigitalOcean.">
+            <UFormField label="Droplet Size" :required="true" :error="errors.size" help="Base droplet cost billed monthly by DigitalOcean.">
               <USelect v-model="form.size" :items="sizeItems" placeholder="Choose a size…" size="lg" class="w-full" />
             </UFormField>
 

@@ -242,7 +242,7 @@ function applyTile(s: 'all' | 'proposals' | 'contracts', sf: Group) {
 const tiles = computed(() => [
   { key: 'resp', label: 'Awaiting Response', value: String(awaitingResp.value.length), sub: 'proposals out', icon: 'i-lucide-clock', on: seg.value === 'proposals' && statusFilter.value === 'inflight', apply: () => applyTile('proposals', 'inflight') },
   { key: 'sign', label: 'Awaiting Signature', value: String(awaitingSign.value.length), sub: 'contracts out', icon: 'i-lucide-file-check-2', on: seg.value === 'contracts' && statusFilter.value === 'inflight', apply: () => applyTile('contracts', 'inflight') },
-  { key: 'val', label: 'Value In Flight', value: formatMoney(inFlightValue.value), sub: 'awaiting close', icon: 'i-lucide-dollar-sign', on: seg.value === 'all' && statusFilter.value === 'inflight', apply: () => applyTile('all', 'inflight') }
+  { key: 'val', label: 'Value in Flight', value: formatMoney(inFlightValue.value), sub: 'awaiting close', icon: 'i-lucide-dollar-sign', on: seg.value === 'all' && statusFilter.value === 'inflight', apply: () => applyTile('all', 'inflight') }
 ])
 
 const filtered = computed(() => {
@@ -278,7 +278,7 @@ const segments = computed(() => ([
 const filterActive = computed(() => statusFilter.value !== 'all' || recurringOnly.value)
 const filterItems = computed(() => [
   ([
-    ['all', 'All statuses'],
+    ['all', 'All Statuses'],
     ['positive', 'Accepted / Signed'],
     ['inflight', 'Sent / Viewed'],
     ['draft', 'Draft'],
@@ -302,7 +302,7 @@ const sortItems = computed(() => [[
 ]])
 function rowMenuItems(a: Agreement) {
   const items: { label: string, icon: string, color?: 'error', onSelect?: () => void }[][] = [[
-    { label: 'Open In PandaDoc', icon: 'i-lucide-external-link' },
+    { label: 'Open in PandaDoc', icon: 'i-lucide-external-link' },
     { label: 'Copy Link', icon: 'i-lucide-link' },
     { label: 'Resend', icon: 'i-lucide-rotate-cw' }
   ]]
@@ -1051,7 +1051,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
                 color="primary"
                 class="flex-1 justify-center"
               >
-                Open In PandaDoc
+                Open in PandaDoc
               </UButton>
               <UButton
                 icon="i-lucide-download"

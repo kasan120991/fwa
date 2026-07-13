@@ -47,7 +47,7 @@ const nextAction = computed(() => {
     const d = daysFromNow(nextAt) ?? 0
     return { label: overdue ? `Follow-up · ${Math.abs(d)}d overdue` : `Follow up in ${d}d`, overdue, scheduled: true }
   }
-  if (props.lead.stage === 'qualified') return { label: 'Ready To Convert', overdue: false, scheduled: false }
+  if (props.lead.stage === 'qualified') return { label: 'Ready to Convert', overdue: false, scheduled: false }
   return { label: 'No Follow-Up Scheduled', overdue: false, scheduled: false }
 })
 

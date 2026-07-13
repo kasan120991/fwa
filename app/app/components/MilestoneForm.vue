@@ -146,7 +146,7 @@ async function save() {
                 class="w-full"
               />
             </UFormField>
-            <UFormField label="Target date">
+            <UFormField label="Target Date">
               <UInput
                 v-model="form.target_date"
                 type="date"

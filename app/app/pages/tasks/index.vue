@@ -86,8 +86,8 @@ watch(projectFilter, async (pf) => {
   }
 })
 const milestoneItems = computed(() => [
-  { label: 'All milestones', icon: milestoneFilter.value === 'all' ? 'i-lucide-check' : undefined, onSelect: () => { milestoneFilter.value = 'all' } },
-  { label: 'General (no milestone)', icon: milestoneFilter.value === 'none' ? 'i-lucide-check' : undefined, onSelect: () => { milestoneFilter.value = 'none' } },
+  { label: 'All Milestones', icon: milestoneFilter.value === 'all' ? 'i-lucide-check' : undefined, onSelect: () => { milestoneFilter.value = 'all' } },
+  { label: 'General (No Milestone)', icon: milestoneFilter.value === 'none' ? 'i-lucide-check' : undefined, onSelect: () => { milestoneFilter.value = 'none' } },
   ...milestones.value.map(m => ({
     label: m.title,
     icon: milestoneFilter.value === m.id ? 'i-lucide-check' : undefined,
@@ -257,7 +257,7 @@ function taskOverdue(t: Task) {
             variant="outline"
             class="rounded-full"
           >
-            {{ milestoneFilter === 'all' ? 'All milestones' : milestoneFilter === 'none' ? 'General' : (milestones.find(m => m.id === milestoneFilter)?.title || 'Milestone') }}
+            {{ milestoneFilter === 'all' ? 'All Milestones' : milestoneFilter === 'none' ? 'General' : (milestones.find(m => m.id === milestoneFilter)?.title || 'Milestone') }}
           </UButton>
         </UDropdownMenu>
       </div>

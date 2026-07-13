@@ -280,7 +280,7 @@ const siteLabel = (t: ApiTicket) => t.website_name || t.website_domain || ''
           class="size-6"
         /></span>
         <h3 class="font-display text-lg font-medium text-highlighted">
-          {{ tickets.length ? 'No tickets match' : 'No tickets yet' }}
+          {{ tickets.length ? 'No Tickets Match' : 'No Tickets Yet' }}
         </h3>
         <p class="mt-1.5 max-w-xs text-sm text-muted">
           {{ tickets.length ? 'Try a different search or status filter.' : 'Open a ticket to track a client request, site issue, or bug.' }}

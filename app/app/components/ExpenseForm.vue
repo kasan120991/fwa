@@ -36,8 +36,8 @@ const { upload, resolveUrl } = useUploads()
 const isEdit = computed(() => props.expenseId != null)
 
 const CATEGORY_ITEMS = [
-  { label: 'Client expense', value: 'client' },
-  { label: 'Business expense', value: 'business' },
+  { label: 'Client Expense', value: 'client' },
+  { label: 'Business Expense', value: 'business' },
   { label: 'Subscription', value: 'subscription' }
 ]
 const METHOD_ITEMS = [
@@ -390,7 +390,7 @@ async function remove() {
                   class="w-full"
                 />
               </UFormField>
-              <UFormField label="Project (optional)">
+              <UFormField label="Project (Optional)">
                 <USelect
                   v-model="projectId"
                   :items="projects"
@@ -498,7 +498,7 @@ async function remove() {
                 icon="i-lucide-ban"
                 @click="cancelSubscription"
               >
-                Cancel subscription
+                Cancel Subscription
               </UButton>
             </div>
             <div class="flex items-center gap-2.5">
