@@ -1,0 +1,195 @@
+<script setup lang="ts">
+const route = useRoute()
+const api = useApi()
+
+interface LineItem { id: number, description: string, quantity: number, unit_amount: number, amount: number }
+interface Payment { id: number, amount: number, method: string, status: string, paid_at: string | null }
+interface Invoice {
+  id: number
+  number: string | null
+  kind: string
+  status: 'open' | 'paid' | 'uncollectible' | 'void'
+  description: string | null
+  amount_due: number
+  amount_paid: number
+  is_overdue: boolean
+  due_date: string | null
+  finalized_at: string | null
+  paid_at: string | null
+  hosted_invoice_url: string | null
+  invoice_pdf: string | null
+  items?: LineItem[]
+  line_items?: LineItem[]
+  payments?: Payment[]
+}
+
+const invoice = ref<Invoice | null>(null)
+const pending = ref(true)
+const notFound = ref(false)
+
+useHead({ title: () => `${invoice.value?.number || 'Invoice'} · Francis Web Agency` })
+
+onMounted(async () => {
+  try {
+    const { data } = await api<{ data: Invoice }>(`/portal/invoices/${route.params.id}`)
+    invoice.value = data
+  } catch {
+    notFound.value = true
+  } finally {
+    pending.value = false
+  }
+})
+
+const items = computed(() => invoice.value?.items ?? invoice.value?.line_items ?? [])
+const payments = computed(() => invoice.value?.payments ?? [])
+const statusChip = computed(() => {
+  const i = invoice.value
+  if (!i) return { label: '', class: '' }
+  if (i.status === 'paid') return { label: 'Paid', class: 'bg-success/10 text-success' }
+  if (i.is_overdue) return { label: 'Overdue', class: 'bg-warning/10 text-warning' }
+  if (i.status === 'open') return { label: 'Open', class: 'bg-mist text-primary' }
+  return { label: i.status, class: 'bg-muted text-muted' }
+})
+</script>
+
+<template>
+  <div class="flex flex-col gap-6">
+    <NuxtLink
+      to="/invoices"
+      class="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-muted hover:text-highlighted"
+    >
+      <UIcon
+        name="i-lucide-arrow-left"
+        class="size-4"
+      />
+      Invoices
+    </NuxtLink>
+
+    <div
+      v-if="pending"
+      class="rounded-card bg-default px-6 py-16 text-center text-sm text-muted ring ring-default"
+    >
+      Loading…
+    </div>
+
+    <div
+      v-else-if="notFound || !invoice"
+      class="rounded-card bg-default px-6 py-16 text-center ring ring-default"
+    >
+      <h3 class="font-display text-lg font-medium text-highlighted">
+        Invoice not found
+      </h3>
+    </div>
+
+    <template v-else>
+      <!-- header -->
+      <div class="rounded-card bg-default p-6 ring ring-default">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p class="eyebrow text-primary">
+              Invoice
+            </p>
+            <h1 class="mt-1 font-display text-[1.75rem] font-medium tracking-tight text-highlighted">
+              {{ invoice.number || `#${invoice.id}` }}
+            </h1>
+            <p
+              v-if="invoice.due_date"
+              class="mt-1 text-[13.5px] text-muted"
+            >
+              Due {{ shortDate(invoice.due_date) }}
+              <span v-if="invoice.paid_at"> · Paid {{ shortDate(invoice.paid_at) }}</span>
+            </p>
+          </div>
+          <div class="flex items-center gap-2.5">
+            <span
+              class="rounded-full px-3 py-1.5 text-[12px] font-semibold"
+              :class="statusChip.class"
+            >{{ statusChip.label }}</span>
+          </div>
+        </div>
+
+        <div class="mt-5 flex flex-wrap items-center gap-3 border-t border-default pt-5">
+          <div class="me-auto">
+            <div class="text-[12.5px] text-muted">
+              Amount
+            </div>
+            <div class="font-display text-[1.6rem] font-medium tabular-nums text-highlighted">
+              {{ formatMoney(invoice.amount_due) }}
+            </div>
+          </div>
+          <UButton
+            v-if="invoice.status === 'open' && invoice.hosted_invoice_url"
+            :to="invoice.hosted_invoice_url"
+            target="_blank"
+            color="primary"
+            size="lg"
+            icon="i-lucide-credit-card"
+          >
+            Pay Invoice
+          </UButton>
+          <UButton
+            v-if="invoice.invoice_pdf"
+            :to="invoice.invoice_pdf"
+            target="_blank"
+            color="neutral"
+            variant="outline"
+            size="lg"
+            icon="i-lucide-download"
+          >
+            Download PDF
+          </UButton>
+        </div>
+      </div>
+
+      <!-- line items -->
+      <div
+        v-if="items.length"
+        class="overflow-hidden rounded-card bg-default ring ring-default"
+      >
+        <div class="border-b border-default px-5 py-3.5 font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+          Line items
+        </div>
+        <div
+          v-for="li in items"
+          :key="li.id"
+          class="flex items-center gap-4 border-b border-default px-5 py-3.5 last:border-0"
+        >
+          <span class="min-w-0 flex-1 text-[13.5px] text-default">{{ li.description }}</span>
+          <span
+            v-if="li.quantity > 1"
+            class="text-[12.5px] text-muted tabular-nums"
+          >× {{ li.quantity }}</span>
+          <span class="w-24 text-right text-[13.5px] font-medium tabular-nums text-highlighted">{{ formatMoney(li.amount) }}</span>
+        </div>
+      </div>
+
+      <!-- payments -->
+      <div
+        v-if="payments.length"
+        class="overflow-hidden rounded-card bg-default ring ring-default"
+      >
+        <div class="border-b border-default px-5 py-3.5 font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+          Payments
+        </div>
+        <div
+          v-for="p in payments"
+          :key="p.id"
+          class="flex items-center gap-4 border-b border-default px-5 py-3.5 last:border-0"
+        >
+          <UIcon
+            name="i-lucide-check-circle-2"
+            class="size-4 flex-none text-success"
+          />
+          <span class="min-w-0 flex-1 text-[13.5px] text-default">
+            {{ p.method === 'card' ? 'Card payment' : p.method === 'bank' ? 'Bank payment' : 'Payment' }}
+            <span
+              v-if="p.paid_at"
+              class="text-muted"
+            > · {{ shortDate(p.paid_at) }}</span>
+          </span>
+          <span class="w-24 text-right text-[13.5px] font-medium tabular-nums text-highlighted">{{ formatMoney(p.amount) }}</span>
+        </div>
+      </div>
+    </template>
+  </div>
+</template>
