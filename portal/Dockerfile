@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# FWA Ops admin app (Nuxt SPA, ssr:false). Served by the Nitro node server; the
+# FWA client portal (Nuxt SPA, ssr:false). Served by the Nitro node server; the
 # public API base is read from NUXT_PUBLIC_API_BASE at runtime (compose env).
 
 # ---- Build stage ----

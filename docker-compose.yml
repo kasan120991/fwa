@@ -32,7 +32,11 @@ services:
     environment:
       NODE_ENV: production
       PORT: "4000"
-      CORS_ORIGIN: https://${OPS_DOMAIN}
+      # Both front-ends share this API; same-origin proxying makes CORS mostly moot,
+      # but allow both origins as a safety net.
+      CORS_ORIGIN: https://${OPS_DOMAIN},https://${PORTAL_DOMAIN}
+      # Base URL used to build portal set-password links in invite emails.
+      PORTAL_BASE_URL: https://${PORTAL_DOMAIN}
       DB_HOST: mysql
       DB_PORT: "3306"
       DB_USER: root
@@ -69,6 +73,19 @@ services:
     environment:
       # ssr:false SPA served by Nitro — public runtimeConfig is injected at runtime.
       NUXT_PUBLIC_API_BASE: https://${OPS_DOMAIN}/api
+    networks: [internal, proxy]
+    depends_on:
+      - api
+
+  # Client portal — its own Nuxt SPA on PORTAL_DOMAIN, talking to the shared API
+  # same-origin (Caddy proxies /api,/socket.io,/uploads -> api:4000).
+  portal:
+    build:
+      context: ./portal
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NUXT_PUBLIC_API_BASE: https://${PORTAL_DOMAIN}/api
     networks: [internal, proxy]
     depends_on:
       - api
