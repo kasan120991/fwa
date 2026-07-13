@@ -114,7 +114,7 @@ async function onSubmit() {
           <UFormField name="password">
             <div class="mb-1 flex items-center justify-between">
               <span class="text-sm font-medium text-highlighted">Password</span>
-              <ULink to="#" class="text-[13px] font-medium text-primary">Forgot password?</ULink>
+              <ULink to="#" class="text-[13px] font-medium text-primary">Forgot Password?</ULink>
             </div>
             <UInput
               v-model="password"
@@ -140,7 +140,7 @@ async function onSubmit() {
           </UFormField>
 
           <!-- Remember me -->
-          <UCheckbox v-model="remember" label="Keep me signed in" class="mt-0.5" />
+          <UCheckbox v-model="remember" label="Keep Me Signed In" class="mt-0.5" />
 
           <!-- Submit -->
           <UButton

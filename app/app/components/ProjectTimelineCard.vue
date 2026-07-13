@@ -21,8 +21,8 @@ const countdown = computed(() => {
 
 const rows = computed(() => [
   { label: 'Start', value: props.project.start_date },
-  { label: 'Content deadline', value: props.project.content_deadline },
-  { label: 'Target launch', value: props.project.target_launch_date, launch: true }
+  { label: 'Content Deadline', value: props.project.content_deadline },
+  { label: 'Target Launch', value: props.project.target_launch_date, launch: true }
 ])
 </script>
 

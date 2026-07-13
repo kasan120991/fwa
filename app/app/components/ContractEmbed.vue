@@ -90,7 +90,7 @@ watch(() => props.contractId, () => loadSession())
           class="size-6"
         /></span>
         <h3 class="font-display text-lg font-medium text-highlighted">
-          Not sent yet
+          Not Sent Yet
         </h3>
         <p class="mt-1.5 max-w-md text-sm text-muted">
           The signed document appears here once the contract is sent to the client.
@@ -111,7 +111,7 @@ watch(() => props.contractId, () => loadSession())
           class="size-6"
         /></span>
         <h3 class="font-display text-lg font-medium text-highlighted">
-          No PandaDoc document
+          No PandaDoc Document
         </h3>
         <p class="mt-1.5 max-w-sm text-sm text-muted">
           This contract has no signable document to embed yet.

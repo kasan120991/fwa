@@ -59,7 +59,7 @@ const STATUS_ITEMS = [
 const CONTENT_BY_ITEMS = [
   { label: 'Client Provides Content', value: 'client' },
   { label: 'Developer Provides Content', value: 'developer' },
-  { label: 'Mix Of Both', value: 'mix' }
+  { label: 'Mix of Both', value: 'mix' }
 ]
 
 interface FormState {
@@ -476,14 +476,14 @@ const lockedContactLabel = computed(() => props.contactLabel || props.project?.c
                 />
               </UFormField>
 
-              <!-- Policy terms (collapsible) -->
+              <!-- Policy Terms (collapsible) -->
               <div class="rounded-card ring ring-default">
                 <button
                   type="button"
                   class="flex w-full items-center justify-between px-4 py-3 text-left"
                   @click="showPolicy = !showPolicy"
                 >
-                  <span class="text-[13.5px] font-semibold text-highlighted">Policy terms</span>
+                  <span class="text-[13.5px] font-semibold text-highlighted">Policy Terms</span>
                   <UIcon
                     :name="showPolicy ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
                     class="size-4 text-muted"

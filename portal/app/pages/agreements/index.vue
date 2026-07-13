@@ -109,7 +109,7 @@ function signable(a: Agreement) {
             <span
               v-if="signable(a)"
               class="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary"
-            >Review &amp; sign</span>
+            >Review &amp; Sign</span>
             <span
               class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
               :class="chip(a).class"
@@ -130,7 +130,7 @@ function signable(a: Agreement) {
           <span
             v-if="signable(a)"
             class="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary"
-          >Review &amp; sign</span>
+          >Review &amp; Sign</span>
           <span
             class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
             :class="chip(a).class"

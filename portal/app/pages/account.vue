@@ -136,7 +136,7 @@ async function changePassword() {
         </div>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <UFormField
-            label="Contact name"
+            label="Contact Name"
             required
           >
             <UInput
@@ -151,7 +151,7 @@ async function changePassword() {
             />
           </UFormField>
           <UFormField
-            label="Billing email"
+            label="Billing Email"
             help="Invoices go here when set; otherwise your main email."
           >
             <UInput
@@ -162,13 +162,13 @@ async function changePassword() {
           </UFormField>
         </div>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <UFormField label="Address line 1">
+          <UFormField label="Address Line 1">
             <UInput
               v-model="form.address_line1"
               class="w-full"
             />
           </UFormField>
-          <UFormField label="Address line 2">
+          <UFormField label="Address Line 2">
             <UInput
               v-model="form.address_line2"
               class="w-full"
@@ -187,7 +187,7 @@ async function changePassword() {
                 class="w-full"
               />
             </UFormField>
-            <UFormField label="Postal code">
+            <UFormField label="Postal Code">
               <UInput
                 v-model="form.postal_code"
                 class="w-full"
@@ -219,7 +219,7 @@ async function changePassword() {
           Password
         </div>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <UFormField label="Current password">
+          <UFormField label="Current Password">
             <UInput
               v-model="currentPw"
               type="password"
@@ -227,7 +227,7 @@ async function changePassword() {
               class="w-full"
             />
           </UFormField>
-          <UFormField label="New password">
+          <UFormField label="New Password">
             <UInput
               v-model="newPw"
               type="password"
@@ -236,7 +236,7 @@ async function changePassword() {
               class="w-full"
             />
           </UFormField>
-          <UFormField label="Confirm new password">
+          <UFormField label="Confirm New Password">
             <UInput
               v-model="confirmPw"
               type="password"

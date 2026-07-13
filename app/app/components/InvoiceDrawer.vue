@@ -261,7 +261,7 @@ async function submitPay() {
               icon="i-lucide-link"
               @click="copyLink(detail.hosted_invoice_url!)"
             >
-              Copy link
+              Copy Link
             </UButton>
             <UButton
               v-if="detail.hosted_invoice_url"
@@ -274,7 +274,7 @@ async function submitPay() {
               icon="i-simple-icons-stripe"
               trailing-icon="i-lucide-external-link"
             >
-              Open In Stripe
+              Open in Stripe
             </UButton>
             <UButton
               v-if="detail.invoice_pdf"

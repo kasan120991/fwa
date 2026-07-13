@@ -91,7 +91,7 @@ const tiles = computed(() => {
     { key: 'sites', label: 'Total sites', icon: 'i-lucide-globe', value: s ? String(s.total_sites) : '—', sub: 'across clients', delta: null as number | null },
     { key: 'visitors', label: 'Visitors · 30d', icon: 'i-lucide-users', value: s ? compactNum(s.visitors_30d) : '—', sub: 'all sites', delta: s?.visitors_delta_pct ?? null },
     { key: 'live', label: 'Live sites', icon: 'i-lucide-signal', value: s ? String(s.live_count) : '—', sub: 'in production', delta: null as number | null },
-    { key: 'connected', label: 'Analytics connected', icon: 'i-lucide-plug', value: s ? `${s.connected_count}/${s.total_sites}` : '—', sub: 'tracking', delta: null as number | null },
+    { key: 'connected', label: 'Analytics Connected', icon: 'i-lucide-plug', value: s ? `${s.connected_count}/${s.total_sites}` : '—', sub: 'tracking', delta: null as number | null },
     { key: 'hosting', label: 'Hosting cost · mo', icon: 'i-lucide-server', value: costs.value?.configured ? formatMoney(costs.value.monthly_cost ?? 0) : '—', sub: costs.value?.configured ? `${costs.value.droplet_count ?? 0} droplet${costs.value.droplet_count === 1 ? '' : 's'}` : 'DigitalOcean', delta: null as number | null }
   ]
 })
@@ -124,13 +124,13 @@ const clientOptions = computed(() => {
   return [...seen.entries()].map(([id, name]) => ({ id, name }))
 })
 const clientItems = computed(() => [[
-  { label: 'All clients', icon: clientFilter.value === null ? 'i-lucide-check' : undefined, onSelect: () => { clientFilter.value = null } },
+  { label: 'All Clients', icon: clientFilter.value === null ? 'i-lucide-check' : undefined, onSelect: () => { clientFilter.value = null } },
   ...clientOptions.value.map(o => ({ label: o.name, icon: clientFilter.value === o.id ? 'i-lucide-check' : undefined, onSelect: () => { clientFilter.value = o.id } }))
 ]])
 const connItems = computed(() => [[
   { label: 'All', icon: connFilter.value === 'all' ? 'i-lucide-check' : undefined, onSelect: () => { connFilter.value = 'all' } },
-  { label: 'Analytics connected', icon: connFilter.value === 'connected' ? 'i-lucide-check' : undefined, onSelect: () => { connFilter.value = 'connected' } },
-  { label: 'Not connected', icon: connFilter.value === 'not' ? 'i-lucide-check' : undefined, onSelect: () => { connFilter.value = 'not' } }
+  { label: 'Analytics Connected', icon: connFilter.value === 'connected' ? 'i-lucide-check' : undefined, onSelect: () => { connFilter.value = 'connected' } },
+  { label: 'Not Connected', icon: connFilter.value === 'not' ? 'i-lucide-check' : undefined, onSelect: () => { connFilter.value = 'not' } }
 ]])
 
 const filtered = computed(() => {
@@ -274,7 +274,7 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
         />
         <UDropdownMenu :items="clientItems" :ui="{ content: 'w-56' }">
           <UButton icon="i-lucide-building-2" color="neutral" variant="outline" class="rounded-full">
-            {{ clientFilter === null ? 'All clients' : (clientOptions.find(o => o.id === clientFilter)?.name || 'Client') }}
+            {{ clientFilter === null ? 'All Clients' : (clientOptions.find(o => o.id === clientFilter)?.name || 'Client') }}
           </UButton>
         </UDropdownMenu>
         <UDropdownMenu :items="connItems">
@@ -329,7 +329,7 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
                     <span class="text-sm font-semibold text-highlighted tabular-nums">{{ w.visitors_30d.toLocaleString() }}</span>
                     <span v-if="w.delta_pct != null" class="ml-1.5 text-xs font-semibold" :class="w.delta_pct >= 0 ? 'text-success' : 'text-muted'">{{ w.delta_pct >= 0 ? '+' : '' }}{{ w.delta_pct }}%</span>
                   </template>
-                  <span v-else class="text-[13px] text-muted">Not connected</span>
+                  <span v-else class="text-[13px] text-muted">Not Connected</span>
                 </td>
                 <td class="hidden whitespace-nowrap px-4 py-3.5 text-right text-[13.5px] text-default tabular-nums lg:table-cell">{{ w.connected ? w.conversions_30d.toLocaleString() : '—' }}</td>
                 <td class="hidden px-4 py-3.5 sm:table-cell">
@@ -355,7 +355,7 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
       <div v-else class="flex flex-col items-center px-6 py-16 text-center">
         <span class="mb-4 inline-flex size-12 items-center justify-center rounded-[12px] bg-muted text-muted"><UIcon name="i-lucide-globe" class="size-6" /></span>
         <h3 class="font-display text-lg font-medium text-highlighted">
-          {{ websites.length ? 'No sites match' : 'No websites yet' }}
+          {{ websites.length ? 'No Sites Match' : 'No Websites Yet' }}
         </h3>
         <p class="mt-1.5 max-w-xs text-sm text-muted">
           {{ websites.length ? 'Try a different filter or search.' : 'Add a website to start tracking its analytics.' }}
@@ -367,7 +367,7 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
           class="mt-5 rounded-full"
           @click="clearFilters"
         >
-          Clear filters
+          Clear Filters
         </UButton>
       </div>
     </div>

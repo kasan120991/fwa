@@ -131,7 +131,7 @@ function setClientFilter(v: number | 'all') {
 const clientFilterItems = computed(() => {
   const seen = new Map<number, string>()
   for (const f of files.value) if (f.clientId != null && f.client) seen.set(f.clientId, f.client)
-  const items = [[{ label: 'All clients', onSelect: () => setClientFilter('all') }]]
+  const items = [[{ label: 'All Clients', onSelect: () => setClientFilter('all') }]]
   const list = [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]))
     .map(([id, name]) => ({ label: name, onSelect: () => setClientFilter(id) }))
   if (list.length) items.push(list)
@@ -267,12 +267,12 @@ function rowMenuItems(f: FileRow) {
   <!-- stats -->
   <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
     <StatCard
-      label="Total files"
+      label="Total Files"
       :value="counts.all"
       :delta="null"
     />
     <StatCard
-      label="Storage used"
+      label="Storage Used"
       :value="formatBytes(totalSize)"
       :delta="null"
     />

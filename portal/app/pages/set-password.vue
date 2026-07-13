@@ -77,7 +77,7 @@ async function onSubmit() {
           />
 
           <UFormField
-            label="New password"
+            label="New Password"
             name="password"
           >
             <UInput
@@ -104,7 +104,7 @@ async function onSubmit() {
           </UFormField>
 
           <UFormField
-            label="Confirm password"
+            label="Confirm Password"
             name="confirm"
           >
             <UInput

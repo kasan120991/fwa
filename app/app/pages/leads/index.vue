@@ -199,7 +199,7 @@ function stageItems(c: Lead) {
 function rowMenuItems(c: Lead) {
   return [[
     { label: 'Edit Lead', icon: 'i-lucide-pencil', onSelect: () => navigateTo(`/leads/${c.id}/edit`) },
-    { label: 'Convert To Project', icon: 'i-lucide-folder-plus', onSelect: () => { convertTarget.value = c } },
+    { label: 'Convert to Project', icon: 'i-lucide-folder-plus', onSelect: () => { convertTarget.value = c } },
     { label: 'Add Tag', icon: 'i-lucide-tag' },
     { label: 'Move Section', icon: 'i-lucide-arrow-right' }
   ], [
@@ -412,7 +412,7 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
 
               <td class="w-24 px-3 py-3 text-right" @click.stop>
                 <div class="inline-flex items-center gap-0.5">
-                  <UButton icon="i-lucide-folder-plus" color="primary" variant="ghost" size="xs" title="Convert To Project" @click="convertTarget = row" />
+                  <UButton icon="i-lucide-folder-plus" color="primary" variant="ghost" size="xs" title="Convert to Project" @click="convertTarget = row" />
                   <UDropdownMenu :items="rowMenuItems(row)">
                     <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="ghost" size="xs" :aria-label="`Actions for ${row.name}`" />
                   </UDropdownMenu>
@@ -442,7 +442,7 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
   </div>
 
   <!-- convert-to-project modal -->
-  <UModal :open="!!convertTarget" title="Convert To Project" @update:open="v => { if (!v) convertTarget = null }">
+  <UModal :open="!!convertTarget" title="Convert to Project" @update:open="v => { if (!v) convertTarget = null }">
     <template #body>
       <span class="mb-4 inline-flex size-[46px] items-center justify-center rounded-xl bg-mist text-primary"><UIcon name="i-lucide-folder-plus" class="size-5" /></span>
       <p class="text-[14.5px] leading-relaxed text-default">
@@ -456,7 +456,7 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
     <template #footer>
       <div class="flex w-full justify-end gap-2.5">
         <UButton color="neutral" variant="outline" class="rounded-full" @click="convertTarget = null">Cancel</UButton>
-        <UButton icon="i-lucide-folder-plus" color="primary" class="rounded-full" :loading="converting" :disabled="!convertName.trim()" @click="confirmConvert">Convert To Project</UButton>
+        <UButton icon="i-lucide-folder-plus" color="primary" class="rounded-full" :loading="converting" :disabled="!convertName.trim()" @click="confirmConvert">Convert to Project</UButton>
       </div>
     </template>
   </UModal>

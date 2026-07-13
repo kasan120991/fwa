@@ -140,7 +140,7 @@ async function onSubmit() {
           </UFormField>
 
           <!-- Remember me -->
-          <UCheckbox v-model="remember" label="Keep me signed in" class="mt-0.5" />
+          <UCheckbox v-model="remember" label="Keep Me Signed In" class="mt-0.5" />
 
           <!-- Submit -->
           <UButton
