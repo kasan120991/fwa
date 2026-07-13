@@ -123,3 +123,11 @@ export function spark(arr: number[], w = 120, h = 34): { line: string, area: str
   const pts = arr.map((v, i) => `${(i * step).toFixed(1)},${(h - ((v - min) / span) * (h - 4) - 2).toFixed(1)}`)
   return { line: pts.join(' '), area: `0,${h} ${pts.join(' ')} ${w},${h}` }
 }
+
+// Title-case a raw status token for display ("in_progress" -> "In Progress",
+// "uncollectible" -> "Uncollectible"). Used as the fallback wherever a status
+// has no custom label.
+export function formatStatus(status?: string | null): string {
+  if (!status) return ''
+  return String(status).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}

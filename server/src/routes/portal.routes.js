@@ -89,18 +89,20 @@ portalRouter.get('/projects/:id', async (req, res) => {
   res.json({ data: { project, milestones } })
 })
 
-// ---- invoices (drafts stay internal) ----
+// ---- invoices (draft + voided stay internal) ----
+
+const HIDDEN_INVOICE_STATUSES = new Set(['draft', 'void'])
 
 // GET /api/portal/invoices
 portalRouter.get('/invoices', async (req, res) => {
   const result = await listInvoices({ client_id: req.clientId, limit: 200 })
-  res.json({ data: result.rows.filter(i => i.status !== 'draft') })
+  res.json({ data: result.rows.filter(i => !HIDDEN_INVOICE_STATUSES.has(i.status)) })
 })
 
 // GET /api/portal/invoices/:id — detail with line items + payments.
 portalRouter.get('/invoices/:id', async (req, res) => {
   const invoice = await getInvoice(parseId(req))
-  if (!invoice || Number(invoice.client_id) !== req.clientId || invoice.status === 'draft') {
+  if (!invoice || Number(invoice.client_id) !== req.clientId || HIDDEN_INVOICE_STATUSES.has(invoice.status)) {
     return res.status(404).json({ error: { message: 'Invoice not found' } })
   }
   res.json({ data: invoice })

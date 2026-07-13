@@ -28,7 +28,7 @@ onMounted(load)
 const STATUS_CHIP: Record<string, { label: string, class: string }> = {
   open: { label: 'Open', class: 'bg-mist text-primary' },
   in_progress: { label: 'In Progress', class: 'bg-mist text-primary' },
-  waiting: { label: 'Waiting on you', class: 'bg-warning/10 text-warning' },
+  waiting: { label: 'Waiting on You', class: 'bg-warning/10 text-warning' },
   resolved: { label: 'Resolved', class: 'bg-success/10 text-success' },
   closed: { label: 'Closed', class: 'bg-muted text-muted' }
 }

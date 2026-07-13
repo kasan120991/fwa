@@ -89,7 +89,7 @@ function pct(p: Project) {
             </p>
           </div>
           <span class="whitespace-nowrap rounded-full bg-mist px-2.5 py-1 text-[11px] font-semibold text-primary">
-            {{ STATUS_LABEL[p.status] || p.status }}
+            {{ STATUS_LABEL[p.status] || formatStatus(p.status) }}
           </span>
         </div>
         <div class="flex items-center gap-2.5">

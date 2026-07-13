@@ -28,7 +28,7 @@ onMounted(async () => {
 
 const STATUS_CHIP: Record<string, { label: string, class: string }> = {
   draft: { label: 'Draft', class: 'bg-muted text-muted' },
-  sent: { label: 'Awaiting you', class: 'bg-mist text-primary' },
+  sent: { label: 'Awaiting You', class: 'bg-mist text-primary' },
   viewed: { label: 'Viewed', class: 'bg-mist text-primary' },
   accepted: { label: 'Accepted', class: 'bg-success/10 text-success' },
   signed: { label: 'Signed', class: 'bg-success/10 text-success' },
@@ -37,7 +37,7 @@ const STATUS_CHIP: Record<string, { label: string, class: string }> = {
   voided: { label: 'Voided', class: 'bg-muted text-muted' }
 }
 function chip(a: Agreement) {
-  return STATUS_CHIP[a.status] || { label: a.status, class: 'bg-muted text-muted' }
+  return STATUS_CHIP[a.status] || { label: formatStatus(a.status), class: 'bg-muted text-muted' }
 }
 // Statuses where an embedded signing session can be minted.
 const SIGNABLE = new Set(['sent', 'viewed'])
