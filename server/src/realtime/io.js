@@ -42,9 +42,11 @@ export function initRealtime(httpServer) {
   })
 
   io.on('connection', (socket) => {
-    const { id, role } = socket.data.user
+    const { id, role, client_id } = socket.data.user
     socket.join(`user:${id}`)
     socket.join(`role:${role}`)
+    // Portal clients also join their client room for client-scoped live updates.
+    if (role === 'client' && client_id) socket.join(`client:${client_id}`)
   })
 
   return io
@@ -181,4 +183,28 @@ export function emitWebsiteChanged(id = null) {
 // later, the client/project Files tabs) refresh live.
 export function emitFileChanged(id = null) {
   io?.to('role:admin').emit('file:changed', { id })
+}
+
+// Fired when a proposal's status changes (PandaDoc webhook), giving the portal
+// proposal embed the same live-refresh parity contracts have.
+export function emitProposalChanged(id) {
+  io?.to('role:admin').emit('proposal:changed', { id })
+}
+
+// --- client-portal emitters ------------------------------------------------
+// Push to a single client's room (`client:<id>`) so an open portal page can
+// refetch. Payloads mirror the admin emitters; the portal listens for the same
+// event names, scoped to the logged-in client.
+
+export function emitClientTicketUpdated(clientId, id) {
+  if (clientId) io?.to(`client:${clientId}`).emit('ticket:updated', { id })
+}
+export function emitClientInvoiceChanged(clientId, id) {
+  if (clientId) io?.to(`client:${clientId}`).emit('invoice:changed', { id })
+}
+export function emitClientFileChanged(clientId, id = null) {
+  if (clientId) io?.to(`client:${clientId}`).emit('file:changed', { id })
+}
+export function emitClientAgreementChanged(clientId, id = null) {
+  if (clientId) io?.to(`client:${clientId}`).emit('agreement:changed', { id })
 }

@@ -1,4 +1,5 @@
 import { createNotification } from '../repositories/notifications.repo.js'
+import { getPortalUserForClient } from '../repositories/users.repo.js'
 import { emitNotificationNew } from '../realtime/io.js'
 
 // Minor words kept lowercase mid-title (standard title case).
@@ -34,4 +35,17 @@ export async function notify(data, actorUserId = null) {
   )
   emitNotificationNew(notification, actorUserId)
   return notification
+}
+
+/**
+ * Notify a client's portal user (if one exists). Resolves the client to its
+ * portal login and targets the notification to that user_id, so it lands only in
+ * that client's portal bell (`links` should be portal-relative). No-op when the
+ * client has no portal account. Best-effort — callers wrap in try/catch.
+ */
+export async function clientNotify(clientId, data) {
+  if (!clientId) return null
+  const user = await getPortalUserForClient(clientId)
+  if (!user) return null
+  return notify({ ...data, user_id: user.id })
 }

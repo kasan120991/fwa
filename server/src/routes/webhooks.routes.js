@@ -9,7 +9,10 @@ import { getInvoice, getInvoiceByStripeId, updateInvoice, upsertFromStripe } fro
 import { createPayment, getPaymentByIntentId } from '../repositories/payments.repo.js'
 import { createCall, getCallByVapiId } from '../repositories/calls.repo.js'
 import { listTickets, ticketCode } from '../repositories/tickets.repo.js'
-import { emitInvoiceChanged, emitPaymentCreated, emitCallCreated, emitContractChanged } from '../realtime/io.js'
+import {
+  emitInvoiceChanged, emitPaymentCreated, emitCallCreated, emitContractChanged, emitProposalChanged,
+  emitClientInvoiceChanged, emitClientAgreementChanged
+} from '../realtime/io.js'
 import { advanceProject } from '../services/projects.service.js'
 import { getProject } from '../repositories/projects.repo.js'
 import { issueDeposit } from '../services/projectBilling.js'
@@ -18,7 +21,7 @@ import {
   getContractByDocumentId, getContractByProposalId, generateContractFromProposal, updateContract
 } from '../repositories/contracts.repo.js'
 import { getActiveTemplate } from '../repositories/documentTemplates.repo.js'
-import { notify } from '../services/notifications.service.js'
+import { notify, clientNotify } from '../services/notifications.service.js'
 import { sendTemplateEmail, alertTimestamp, TEMPLATES } from '../services/email.js'
 
 export const webhooksRouter = Router()
@@ -196,6 +199,20 @@ webhooksRouter.post('/stripe', async (req, res) => {
         } catch (err) {
           console.error('invoice.paid notification failed:', err.message)
         }
+        // Mirror to the client's portal (live refresh + their own bell).
+        if (client) {
+          emitClientInvoiceChanged(client.id, local?.id ?? null)
+          try {
+            await clientNotify(client.id, {
+              category: 'payment', tone: 'success', icon: 'i-lucide-check-circle-2',
+              title: 'Payment received',
+              body: `Thanks — your $${m.amount_paid.toLocaleString('en-US')} payment was received.`,
+              link: local?.id ? `/invoices/${local.id}` : '/invoices'
+            })
+          } catch (err) {
+            console.error('client invoice.paid notify failed:', err.message)
+          }
+        }
         // Advance the project lifecycle: deposit paid -> in progress; final paid -> completed.
         if (local?.project_id) {
           if (local.kind === 'deposit') await advanceProject(local.project_id, 'in_progress')
@@ -347,7 +364,17 @@ async function handleDocumentEvent(doc) {
       if (STATUS_STAMP[internal]) patch[STATUS_STAMP[internal]] = new Date()
     }
     await updateProposal(proposal.id, patch)
-    if (internal === 'accepted') await generateProjectContract(proposal)
+    emitProposalChanged(proposal.id)
+    emitClientAgreementChanged(proposal.client_id, proposal.id)
+    if (internal === 'accepted') {
+      try {
+        await clientNotify(proposal.client_id, {
+          category: 'proposal', tone: 'success', icon: 'i-lucide-file-check-2',
+          title: 'Proposal accepted', body: proposal.title, link: '/agreements'
+        })
+      } catch (err) { console.error('client proposal notify failed:', err.message) }
+      await generateProjectContract(proposal)
+    }
     return
   }
 
@@ -361,6 +388,7 @@ async function handleDocumentEvent(doc) {
     }
     await updateContract(contract.id, patch)
     emitContractChanged(contract.id)
+    emitClientAgreementChanged(contract.client_id, contract.id)
 
     // A signed contract is a notable event — toast the owner (works for both
     // project and care-plan contracts; no actorUserId so it always surfaces).
@@ -377,6 +405,12 @@ async function handleDocumentEvent(doc) {
       } catch (err) {
         console.error(`contract.signed notification failed for contract ${contract.id}:`, err.message)
       }
+      try {
+        await clientNotify(contract.client_id, {
+          category: 'contract', tone: 'success', icon: 'i-lucide-file-check-2',
+          title: 'Contract signed', body: contract.title, link: '/agreements'
+        })
+      } catch (err) { console.error('client contract notify failed:', err.message) }
     }
 
     // Drive the project lifecycle off the contract's signature state.

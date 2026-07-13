@@ -52,6 +52,11 @@ const ADDITIVE_COLUMNS = {
   // table, handled by CREATE TABLE IF NOT EXISTS.
   users: [
     ['client_id', 'BIGINT UNSIGNED NULL AFTER role']
+  ],
+  // Distinguish client-uploaded files from admin-shared ones (mirrors
+  // ticket_attachments.uploaded_by).
+  files: [
+    ['uploaded_by', "ENUM('admin', 'client') NOT NULL DEFAULT 'admin' AFTER size_bytes"]
   ]
 }
 

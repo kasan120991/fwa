@@ -15,15 +15,21 @@ interface Invoice {
 }
 const invoices = ref<Invoice[]>([])
 const pending = ref(true)
+const socket = useSocket()
 
+async function load() {
+  const { data } = await api<{ data: Invoice[] }>('/portal/invoices')
+  invoices.value = data
+}
 onMounted(async () => {
   try {
-    const { data } = await api<{ data: Invoice[] }>('/portal/invoices')
-    invoices.value = data
+    await load()
   } finally {
     pending.value = false
   }
+  socket.on('invoice:changed', load)
 })
+onBeforeUnmount(() => socket.off('invoice:changed', load))
 
 function chip(i: Invoice) {
   if (i.status === 'paid') return { label: 'Paid', class: 'bg-success/10 text-success' }

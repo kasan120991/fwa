@@ -39,6 +39,11 @@ const STATUS_CHIP: Record<string, { label: string, class: string }> = {
 function chip(a: Agreement) {
   return STATUS_CHIP[a.status] || { label: a.status, class: 'bg-muted text-muted' }
 }
+// Statuses where an embedded signing session can be minted.
+const SIGNABLE = new Set(['sent', 'viewed'])
+function signable(a: Agreement) {
+  return SIGNABLE.has(a.status)
+}
 </script>
 
 <template>
@@ -78,10 +83,11 @@ function chip(a: Agreement) {
       v-else
       class="overflow-hidden rounded-card bg-default ring ring-default"
     >
-      <div
+      <NuxtLink
         v-for="a in agreements"
         :key="a.uid"
-        class="flex items-center gap-4 border-b border-default px-5 py-4 last:border-0"
+        :to="`/agreements/${a.uid}`"
+        class="flex items-center gap-4 border-b border-default px-5 py-4 transition-colors last:border-0 hover:bg-muted/50"
       >
         <span class="inline-flex size-9 flex-none items-center justify-center rounded-[9px] bg-mist text-primary">
           <UIcon
@@ -100,6 +106,10 @@ function chip(a: Agreement) {
           </div>
         </div>
         <span
+          v-if="signable(a)"
+          class="hidden rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary sm:inline"
+        >Review &amp; sign</span>
+        <span
           class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
           :class="chip(a).class"
         >{{ chip(a).label }}</span>
@@ -112,11 +122,11 @@ function chip(a: Agreement) {
             class="text-[11px] font-normal text-muted"
           >/mo</span>
         </span>
-      </div>
+        <UIcon
+          name="i-lucide-chevron-right"
+          class="size-4 flex-none text-muted"
+        />
+      </NuxtLink>
     </div>
-
-    <p class="text-center text-[12.5px] text-muted">
-      Signing from the portal is coming soon — for now, use the link in the email we sent you.
-    </p>
   </div>
 </template>

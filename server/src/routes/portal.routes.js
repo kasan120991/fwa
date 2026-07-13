@@ -3,17 +3,30 @@ import { listProjects, getProject } from '../repositories/projects.repo.js'
 import { listMilestones } from '../repositories/milestones.repo.js'
 import { listInvoices, getInvoice } from '../repositories/invoices.repo.js'
 import { listAgreements } from '../repositories/agreements.repo.js'
-import { listFiles } from '../repositories/files.repo.js'
+import { getProposal } from '../repositories/proposals.repo.js'
+import { getContract } from '../repositories/contracts.repo.js'
+import { listFiles, createFile } from '../repositories/files.repo.js'
 import {
-  listTickets, getTicket, listMessages, ticketCode, TICKET_TYPES
+  listTickets, getTicket, listMessages, listAttachments, getMessage, ticketCode, TICKET_TYPES
 } from '../repositories/tickets.repo.js'
-import { createTicket, addMessage } from '../services/tickets.service.js'
+import { createTicket, addMessage, addAttachment } from '../services/tickets.service.js'
 import {
   listWebsites, getWebsite, websiteSummary, websiteMetricsSeries, websiteChecksSeries
 } from '../repositories/websites.repo.js'
 import { getClient, updateClient } from '../repositories/clients.repo.js'
+import {
+  listOwnNotifications, setOwnRead, markAllOwnRead, clearOwnNotifications
+} from '../repositories/notifications.repo.js'
 import { updateStripeCustomer } from '../services/stripe.js'
 import { notify } from '../services/notifications.service.js'
+import { pandadocEnabled, getDocumentStatus, createDocumentSession } from '../services/pandadoc.js'
+import { portalUpload } from '../storage/local.js'
+import { emitClientTicketUpdated } from '../realtime/io.js'
+
+// PandaDoc statuses for which an embedded signing session can be minted.
+const EMBEDDABLE_STATUSES = new Set([
+  'document.sent', 'document.viewed', 'document.completed', 'document.paid'
+])
 
 // Client-portal API. Mounted behind requirePortal, so req.clientId is always the
 // logged-in client's own id — every query is scoped to it, never to a param.
@@ -101,12 +114,67 @@ portalRouter.get('/agreements', async (req, res) => {
   res.json({ data: result.rows })
 })
 
-// ---- files (curated: brand/contract/deliverable; 'other' stays internal) ----
+// ---- files (curated admin-shared + the client's own uploads) ----
 
-// GET /api/portal/files
+// GET /api/portal/files — brand/contract/deliverable that we shared, plus
+// anything the client uploaded themselves (any category).
 portalRouter.get('/files', async (req, res) => {
-  const result = await listFiles({ client_id: req.clientId, limit: 500 })
-  res.json({ data: (result.rows ?? result).filter(f => f.category !== 'other') })
+  const rows = await listFiles({ client_id: req.clientId, limit: 500 })
+  res.json({ data: (rows.rows ?? rows).filter(f => f.category !== 'other' || f.uploaded_by === 'client') })
+})
+
+// POST /api/portal/uploads — store a file (allowlisted type), return its path.
+portalRouter.post(
+  '/uploads',
+  (req, res, next) => {
+    portalUpload.single('file')(req, res, (err) => {
+      if (err) {
+        const e = new Error(err.code === 'LIMIT_FILE_SIZE' ? 'File is too large (max 10 MB)' : (err.message || 'Upload failed'))
+        e.status = 400
+        return next(e)
+      }
+      next()
+    })
+  },
+  (req, res, next) => {
+    if (!req.file) return next(badRequest('No file provided (expected field "file")'))
+    res.status(201).json({
+      data: { path: `/uploads/${req.file.filename}`, name: req.file.originalname, size: req.file.size, mime: req.file.mimetype }
+    })
+  }
+)
+
+// POST /api/portal/files — record a client upload (scoped, tagged client-provided).
+portalRouter.post('/files', async (req, res) => {
+  const b = req.body ?? {}
+  const filePath = String(b.path ?? '').trim()
+  const name = String(b.name ?? '').trim()
+  const fields = {}
+  if (!filePath.startsWith('/uploads/')) fields.path = 'a valid uploaded path is required'
+  if (!name) fields.name = 'a file name is required'
+  // Optional project tag — must be the client's own project.
+  let project_id = null
+  if (b.project_id != null && b.project_id !== '') {
+    const pid = Number(b.project_id)
+    const project = Number.isInteger(pid) ? await getProject(pid) : null
+    if (!project || Number(project.client_id) !== req.clientId) fields.project_id = 'not your project'
+    else project_id = pid
+  }
+  if (Object.keys(fields).length) throw badRequest('Validation failed', fields)
+
+  const size = Number(b.size)
+  const file = await createFile({
+    client_id: req.clientId,
+    project_id,
+    category: 'other',
+    path: filePath,
+    name,
+    mime: typeof b.mime === 'string' ? b.mime : null,
+    size_bytes: Number.isFinite(size) && size >= 0 ? size : null,
+    uploaded_by: 'client',
+    uploaded_user_id: req.user.id
+  })
+  res.status(201).json({ data: file })
 })
 
 // ---- support tickets (list/thread + create/reply) ----
@@ -126,11 +194,12 @@ portalRouter.get('/tickets', async (req, res) => {
   res.json({ data: result.rows })
 })
 
-// GET /api/portal/tickets/:id — ticket + full message thread.
+// GET /api/portal/tickets/:id — ticket + full message thread + attachments.
 portalRouter.get('/tickets/:id', async (req, res) => {
   const ticket = await ownTicket(req, res)
   if (!ticket) return
-  res.json({ data: { ticket, messages: await listMessages(ticket.id) } })
+  const [messages, attachments] = await Promise.all([listMessages(ticket.id), listAttachments(ticket.id)])
+  res.json({ data: { ticket, messages, attachments } })
 })
 
 // POST /api/portal/tickets — a client opens a ticket.
@@ -188,6 +257,107 @@ portalRouter.post('/tickets/:id/messages', async (req, res) => {
     console.error(`Portal reply notification failed for ticket ${ticket.id}:`, err.message)
   }
   res.status(201).json({ data: message })
+})
+
+// POST /api/portal/tickets/:id/attachments — attach an uploaded file to the
+// thread (optionally to a specific reply). Bytes come from POST /portal/uploads.
+portalRouter.post('/tickets/:id/attachments', async (req, res) => {
+  const ticket = await ownTicket(req, res)
+  if (!ticket) return
+  const b = req.body ?? {}
+  const filePath = String(b.path ?? '').trim()
+  const name = String(b.name ?? '').trim()
+  const fields = {}
+  if (!filePath.startsWith('/uploads/')) fields.path = 'a valid uploaded path is required'
+  if (!name) fields.name = 'a file name is required'
+  let message_id = null
+  if (b.message_id != null && b.message_id !== '') {
+    const mid = Number(b.message_id)
+    const msg = Number.isInteger(mid) ? await getMessage(mid) : null
+    if (!msg || Number(msg.ticket_id) !== ticket.id) fields.message_id = 'not a message on this ticket'
+    else message_id = mid
+  }
+  if (Object.keys(fields).length) throw badRequest('Validation failed', fields)
+
+  const size = Number(b.size)
+  const attachment = await addAttachment(ticket.id, {
+    message_id,
+    path: filePath,
+    name,
+    mime: typeof b.mime === 'string' ? b.mime : null,
+    size_bytes: Number.isFinite(size) && size >= 0 ? size : null,
+    uploaded_by: 'client',
+    uploaded_user_id: req.user.id
+  })
+  // Live-refresh the admin ticket + let the client's own other tabs update.
+  emitClientTicketUpdated(ticket.client_id, ticket.id)
+  res.status(201).json({ data: attachment })
+})
+
+// ---- agreements signing (embedded PandaDoc session) ----
+
+// GET /api/portal/agreements/:kind/:id/session — mint an embedded signing
+// session for the client's own proposal/contract. Recipient = the client's
+// email already on the PandaDoc doc; never a query param.
+portalRouter.get('/agreements/:kind/:id/session', async (req, res) => {
+  const kind = req.params.kind
+  if (kind !== 'proposal' && kind !== 'contract') throw badRequest('Unknown agreement kind')
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id) || id <= 0) throw badRequest('Invalid id')
+
+  const doc = kind === 'proposal' ? await getProposal(id) : await getContract(id)
+  if (!doc || Number(doc.client_id) !== req.clientId) {
+    return res.status(404).json({ error: { message: 'Agreement not found' } })
+  }
+  if (!pandadocEnabled() || !doc.pandadoc_document_id) {
+    return res.json({ data: { ready: false, reason: 'no_document' } })
+  }
+
+  let status
+  try {
+    status = await getDocumentStatus(doc.pandadoc_document_id)
+  } catch (err) {
+    return res.status(502).json({ error: { message: `PandaDoc status check failed: ${err.message}` } })
+  }
+  if (status === 'document.draft') return res.json({ data: { ready: false, reason: 'draft', status } })
+  if (!EMBEDDABLE_STATUSES.has(status)) return res.json({ data: { ready: false, reason: 'processing', status } })
+
+  const client = await getClient(req.clientId)
+  const recipient = client?.billing_email || client?.email
+  if (!recipient) return res.json({ data: { ready: false, reason: 'no_recipient', status } })
+  try {
+    const session = await createDocumentSession(doc.pandadoc_document_id, { recipient })
+    if (!session) return res.json({ data: { ready: false, reason: 'no_document' } })
+    return res.json({ data: { ready: true, embedUrl: `https://app.pandadoc.com/s/${session.id}/`, expiresAt: session.expiresAt, status } })
+  } catch (err) {
+    console.error(`Portal PandaDoc session failed for ${kind} ${id} (recipient ${recipient}):`, err.message)
+    return res.json({ data: { ready: false, reason: 'session_error', status, message: err.message } })
+  }
+})
+
+// ---- notifications (the client's own bell; strict per-user scope) ----
+
+// GET /api/portal/notifications
+portalRouter.get('/notifications', async (req, res) => {
+  const result = await listOwnNotifications(req.user.id, { limit: req.query.limit })
+  res.json({ data: result.rows, unread: result.unread })
+})
+
+// POST /api/portal/notifications/mark-all-read
+portalRouter.post('/notifications/mark-all-read', async (req, res) => {
+  res.json({ data: await markAllOwnRead(req.user.id) })
+})
+
+// DELETE /api/portal/notifications — clear the client's own notifications.
+portalRouter.delete('/notifications', async (req, res) => {
+  res.json({ data: await clearOwnNotifications(req.user.id) })
+})
+
+// PATCH /api/portal/notifications/:id  { read }
+portalRouter.patch('/notifications/:id', async (req, res) => {
+  const notification = await setOwnRead(req.user.id, parseId(req), req.body?.read !== false)
+  if (!notification) return res.status(404).json({ error: { message: 'Notification not found' } })
+  res.json({ data: notification })
 })
 
 // ---- websites (their sites' analytics/uptime rollups) ----
