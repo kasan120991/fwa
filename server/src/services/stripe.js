@@ -8,6 +8,9 @@ const stripe = config.stripe.secretKey ? new Stripe(config.stripe.secretKey) : n
 
 export const stripeEnabled = () => stripe !== null
 
+/** Publishable key (pk_…) — safe to hand to the browser for embedded Checkout. */
+export const publishableKey = () => config.stripe.publishableKey
+
 // Stripe wants ISO 3166-1 alpha-2 for address.country; map the countries the
 // client form offers, and omit anything we can't map cleanly.
 const COUNTRY_ISO = {
@@ -117,6 +120,42 @@ export async function voidStripeInvoice(stripeInvoiceId) {
 export async function payStripeInvoiceOutOfBand(stripeInvoiceId) {
   if (!stripe) return null
   return stripe.invoices.pay(stripeInvoiceId, { paid_out_of_band: true })
+}
+
+/**
+ * Mint an embedded Checkout Session so a portal client can pay an invoice
+ * without leaving the portal. Stripe Checkout can't "pay" an existing invoice,
+ * so we charge the amount via a one-off payment session (its own PaymentIntent)
+ * and reconcile the original invoice out-of-band on `checkout.session.completed`
+ * (see the webhook). `redirect_on_completion:'never'` keeps the client in-app —
+ * Checkout fires onComplete instead of redirecting, so no return_url is needed.
+ * The metadata carries the link back to our invoice/client for the webhook.
+ * Returns { clientSecret, sessionId } or null when Stripe is disabled.
+ */
+export async function createInvoiceCheckoutSession(client, invoice) {
+  if (!stripe) return null
+  const meta = {
+    fwa_invoice_id: String(invoice.id),
+    fwa_client_id: String(client.id),
+    stripe_invoice_id: invoice.stripe_invoice_id || ''
+  }
+  const session = await stripe.checkout.sessions.create({
+    ui_mode: 'embedded_page',
+    mode: 'payment',
+    customer: client.stripe_customer_id,
+    redirect_on_completion: 'never',
+    line_items: [{
+      quantity: 1,
+      price_data: {
+        currency: 'usd',
+        unit_amount: Math.round(Number(invoice.amount_due) * 100),
+        product_data: { name: invoice.number ? `Invoice ${invoice.number}` : `Invoice #${invoice.id}` }
+      }
+    }],
+    payment_intent_data: { metadata: meta },
+    metadata: meta
+  })
+  return { clientSecret: session.client_secret, sessionId: session.id }
 }
 
 /**
