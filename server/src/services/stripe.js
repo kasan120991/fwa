@@ -3,6 +3,20 @@
 // and every call no-ops, so the app runs fine without Stripe configured.
 import Stripe from 'stripe'
 import { config } from '../config/env.js'
+import { getCachedSettings } from './settings.service.js'
+
+// Build a one-line invoice footer from the agency's own details (Settings →
+// Agency & Branding). The invoice's logo/business-name header is Stripe account
+// branding (a dashboard setting) — the API only lets us set this footer + fields.
+function agencyFooter(s) {
+  if (!s) return undefined
+  const name = s.agency_display_name || s.agency_legal_name
+  const cityRegion = [s.agency_city, s.agency_region].filter(Boolean).join(', ')
+  const addr = [s.agency_address_line1, s.agency_address_line2, cityRegion, s.agency_postal_code]
+    .filter(Boolean).join(', ')
+  const parts = [name, addr, s.agency_support_email].filter(Boolean)
+  return parts.length ? parts.join('  ·  ') : undefined
+}
 
 const stripe = config.stripe.secretKey ? new Stripe(config.stripe.secretKey) : null
 
@@ -86,26 +100,34 @@ export function mapStripeInvoice(inv) {
  * urls, status, amounts, due_date) or null when Stripe is disabled. The caller
  * must ensure `client.stripe_customer_id` is set.
  */
-export async function createAndSendInvoice(client, { items, description, metadata = {}, daysUntilDue = 7 }) {
+export async function createAndSendInvoice(client, { items, description, metadata = {}, daysUntilDue }) {
   if (!stripe) return null
   const customer = client.stripe_customer_id
+  // Agency-wide billing defaults + branding (Settings → Agency & Branding / Preferences).
+  const settings = await getCachedSettings()
+  const currency = (settings?.invoice_currency || 'USD').toLowerCase()
+  const dueDays = daysUntilDue ?? settings?.invoice_due_days ?? 7
+  const footer = agencyFooter(settings)
+
   for (const li of items) {
-    await stripe.invoiceItems.create({ customer, amount: li.amountCents, currency: 'usd', description: li.description })
+    await stripe.invoiceItems.create({ customer, amount: li.amountCents, currency, description: li.description })
   }
   const invoice = await stripe.invoices.create({
     customer,
     collection_method: 'send_invoice',
-    days_until_due: daysUntilDue,
+    days_until_due: dueDays,
+    currency,
     description,
     metadata,
-    pending_invoice_items_behavior: 'include'
+    pending_invoice_items_behavior: 'include',
+    ...(footer ? { footer } : {})
   })
   const sent = await stripe.invoices.sendInvoice(invoice.id)
   return mapStripeInvoice(sent)
 }
 
 /** Convenience wrapper for a single-line invoice (e.g. a project deposit). */
-export async function sendDepositInvoice(client, { amountCents, description, metadata = {}, daysUntilDue = 7 }) {
+export async function sendDepositInvoice(client, { amountCents, description, metadata = {}, daysUntilDue }) {
   return createAndSendInvoice(client, { items: [{ amountCents, description }], description, metadata, daysUntilDue })
 }
 

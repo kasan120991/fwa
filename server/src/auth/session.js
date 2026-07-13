@@ -47,7 +47,7 @@ export async function createSession(userId, { userAgent, ip } = {}) {
 export async function getSessionUser(token) {
   if (!token) return null
   const rows = await query(
-    `SELECT u.id, u.email, u.name, u.role, u.client_id
+    `SELECT u.id, u.email, u.name, u.avatar_url, u.role, u.client_id
        FROM sessions s
        JOIN users u ON u.id = s.user_id
       WHERE s.token_hash = :tokenHash

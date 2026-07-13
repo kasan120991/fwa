@@ -23,6 +23,21 @@ function toParams(data) {
   return out
 }
 
+/**
+ * Every client with its portal-login status, for the Settings → Client Portal
+ * Access table. LEFT JOINs the client's portal user (role='client'), including
+ * revoked ones (is_active=0) so they still show. One portal user per client.
+ */
+export async function listClientsWithPortalStatus() {
+  return query(
+    `SELECT c.id, c.name, c.company, c.email,
+            u.email AS portal_email, u.is_active AS portal_active, u.last_login_at AS portal_last_login
+       FROM clients c
+       LEFT JOIN users u ON u.client_id = c.id AND u.role = 'client'
+      ORDER BY (u.id IS NULL) ASC, u.is_active DESC, COALESCE(c.company, c.name)`
+  )
+}
+
 export async function listClients(opts = {}) {
   const { statuses, q } = opts
   const limit = Math.min(Math.max(Number(opts.limit) || 50, 1), 200)

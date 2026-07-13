@@ -215,6 +215,7 @@ CREATE TABLE IF NOT EXISTS users (
   email          VARCHAR(254) NOT NULL,
   password_hash  VARCHAR(255) NOT NULL,
   name           VARCHAR(160) NOT NULL,
+  avatar_url     MEDIUMTEXT NULL,                -- profile photo (data: or /uploads URL)
   role           ENUM('admin', 'client') NOT NULL DEFAULT 'admin',
   client_id      BIGINT UNSIGNED NULL,
   is_active      TINYINT(1) NOT NULL DEFAULT 1,
@@ -274,6 +275,36 @@ CREATE TABLE IF NOT EXISTS portal_invites (
   CONSTRAINT fk_portal_invites_user FOREIGN KEY (user_id)
     REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- settings — a single app-wide config row (id is pinned to 1). Holds the
+-- agency's own identity (used on invoices/proposals), billing defaults,
+-- and admin notification preferences. There is one FWA; one row.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS settings (
+  id                   TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  agency_legal_name    VARCHAR(200) NULL,
+  agency_display_name  VARCHAR(160) NULL,
+  agency_support_email VARCHAR(254) NULL,
+  agency_phone         VARCHAR(40)  NULL,
+  agency_logo_url      MEDIUMTEXT   NULL,
+  agency_address_line1 VARCHAR(200) NULL,
+  agency_address_line2 VARCHAR(200) NULL,
+  agency_city          VARCHAR(120) NULL,
+  agency_region        VARCHAR(120) NULL,
+  agency_postal_code   VARCHAR(20)  NULL,
+  agency_country       VARCHAR(80)  NULL,
+  invoice_due_days     SMALLINT UNSIGNED NOT NULL DEFAULT 7,
+  invoice_currency     CHAR(3)      NOT NULL DEFAULT 'USD',
+  notification_prefs   JSON         NULL,          -- { "<category>": false, … } opt-out map
+  updated_at           TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
+                         ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  CONSTRAINT chk_settings_singleton CHECK (id = 1)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Ensure the singleton row always exists.
+INSERT IGNORE INTO settings (id) VALUES (1);
 
 -- =====================================================================
 -- Proposals & Contracts — the sales-paperwork layer (PandaDoc-driven).

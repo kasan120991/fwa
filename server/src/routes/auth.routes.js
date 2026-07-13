@@ -8,7 +8,7 @@ import {
   destroySession,
   cookieOptions
 } from '../auth/session.js'
-import { findLiveInvite, markInviteUsed, setUserPassword, getUserById } from '../repositories/users.repo.js'
+import { findLiveInvite, markInviteUsed, setUserPassword, getUserById, updateUser, findUserByEmail } from '../repositories/users.repo.js'
 
 export const authRouter = Router()
 
@@ -102,4 +102,38 @@ authRouter.post('/logout', async (req, res) => {
 // GET /api/auth/me — the current user (401 if not authenticated).
 authRouter.get('/me', requireAuth, (req, res) => {
   res.json({ user: req.user })
+})
+
+// PATCH /api/auth/me — update your own profile (name, email, avatar).
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+authRouter.patch('/me', requireAuth, async (req, res) => {
+  const body = req.body ?? {}
+  const patch = {}
+  const fields = {}
+
+  if (body.name !== undefined) {
+    const name = String(body.name).trim()
+    if (!name) fields.name = 'is required'
+    else patch.name = name
+  }
+  if (body.email !== undefined) {
+    const email = String(body.email).trim().toLowerCase()
+    if (!EMAIL_RE.test(email)) {
+      fields.email = 'must be a valid email'
+    } else {
+      const existing = await findUserByEmail(email)
+      if (existing && existing.id !== req.user.id) fields.email = 'is already in use'
+      else patch.email = email
+    }
+  }
+  if (body.avatar_url !== undefined) {
+    const v = typeof body.avatar_url === 'string' ? body.avatar_url.trim() : null
+    patch.avatar_url = v || null
+  }
+
+  if (Object.keys(fields).length) {
+    return res.status(400).json({ error: { message: 'Validation failed', fields } })
+  }
+  const user = await updateUser(req.user.id, patch)
+  res.json({ user })
 })

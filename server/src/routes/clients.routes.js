@@ -5,7 +5,7 @@ import {
 import { createStripeCustomer, updateStripeCustomer } from '../services/stripe.js'
 import { clientHosting } from '../services/hostingCosts.js'
 import { inviteClientToPortal } from '../services/portalInvite.service.js'
-import { getPortalUserForClient, findUserByEmail } from '../repositories/users.repo.js'
+import { getPortalUserForClient, findUserByEmail, setPortalAccess } from '../repositories/users.repo.js'
 
 export const clientsRouter = Router()
 
@@ -167,6 +167,24 @@ clientsRouter.post('/:id/invite', async (req, res) => {
   }
   const { setPasswordUrl } = await inviteClientToPortal(client, req.user?.id ?? null)
   res.json({ data: { status: 'invited', email: client.email, setPasswordUrl } })
+})
+
+// POST /api/clients/:id/portal/revoke — disable the client's portal login and log them out.
+clientsRouter.post('/:id/portal/revoke', async (req, res) => {
+  const id = parseId(req)
+  const client = await getClient(id)
+  if (!client) return res.status(404).json({ error: { message: 'Client not found' } })
+  await setPortalAccess(id, false)
+  res.json({ data: { status: 'revoked' } })
+})
+
+// POST /api/clients/:id/portal/restore — re-enable a previously revoked portal login.
+clientsRouter.post('/:id/portal/restore', async (req, res) => {
+  const id = parseId(req)
+  const client = await getClient(id)
+  if (!client) return res.status(404).json({ error: { message: 'Client not found' } })
+  await setPortalAccess(id, true)
+  res.json({ data: { status: 'active' } })
 })
 
 // POST /api/clients
