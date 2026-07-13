@@ -54,7 +54,7 @@ const statusChip = computed(() => {
   if (i.status === 'paid') return { label: 'Paid', class: 'bg-success/10 text-success' }
   if (i.is_overdue) return { label: 'Overdue', class: 'bg-warning/10 text-warning' }
   if (i.status === 'open') return { label: 'Open', class: 'bg-mist text-primary' }
-  return { label: i.status, class: 'bg-muted text-muted' }
+  return { label: formatStatus(i.status), class: 'bg-muted text-muted' }
 })
 </script>
 
