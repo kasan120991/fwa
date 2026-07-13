@@ -21,6 +21,12 @@ function isActive(to: string) {
   return to === '/' ? route.path === '/' : route.path === to || route.path.startsWith(to + '/')
 }
 
+// Mobile nav drawer — collapse on navigation.
+const menuOpen = ref(false)
+watch(() => route.path, () => {
+  menuOpen.value = false
+})
+
 async function onLogout() {
   closeSocket()
   await logout()
@@ -60,12 +66,16 @@ function onNotificationNew(raw: PortalNotification & { actor_user_id?: number | 
 async function markAllRead() {
   if (!unread.value) return
   notifications.value = notifications.value.map(n => ({ ...n, read: true }))
-  try { await api('/portal/notifications/mark-all-read', { method: 'POST' }) } catch { /* non-fatal */ }
+  try {
+    await api('/portal/notifications/mark-all-read', { method: 'POST' })
+  } catch { /* non-fatal */ }
 }
 async function openNotification(n: PortalNotification) {
   if (!n.read) {
     n.read = true
-    try { await api(`/portal/notifications/${n.id}`, { method: 'PATCH', body: { read: true } }) } catch { /* non-fatal */ }
+    try {
+      await api(`/portal/notifications/${n.id}`, { method: 'PATCH', body: { read: true } })
+    } catch { /* non-fatal */ }
   }
   if (n.link) await navigateTo(n.link)
 }
@@ -80,10 +90,10 @@ onBeforeUnmount(() => socket.off('notification:new', onNotificationNew))
 <template>
   <div class="flex min-h-screen w-full flex-col bg-muted">
     <header class="sticky top-0 z-30 border-b border-default bg-default/90 backdrop-blur">
-      <div class="mx-auto flex h-16 max-w-[1100px] items-center gap-6 px-5">
+      <div class="mx-auto flex h-16 max-w-[1100px] items-center gap-3 px-4 sm:gap-5 sm:px-5">
         <NuxtLink
           to="/"
-          class="flex items-center gap-2.5"
+          class="flex flex-none items-center gap-2.5"
         >
           <span class="inline-flex size-8 items-center justify-center rounded-[9px] bg-deep">
             <img
@@ -92,9 +102,10 @@ onBeforeUnmount(() => socket.off('notification:new', onNotificationNew))
               class="size-4"
             >
           </span>
-          <span class="font-display text-[15px] font-medium text-highlighted">Client Portal</span>
+          <span class="whitespace-nowrap font-display text-[15px] font-medium text-highlighted">Client Portal</span>
         </NuxtLink>
-        <nav class="flex items-center gap-1">
+        <!-- desktop nav -->
+        <nav class="hidden items-center gap-1 lg:flex">
           <NuxtLink
             v-for="item in nav"
             :key="item.to"
@@ -172,7 +183,10 @@ onBeforeUnmount(() => socket.off('notification:new', onNotificationNew))
             </template>
           </UPopover>
 
-          <UDropdownMenu :items="accountItems">
+          <UDropdownMenu
+            :items="accountItems"
+            class="hidden lg:block"
+          >
             <UButton
               color="neutral"
               variant="ghost"
@@ -181,6 +195,58 @@ onBeforeUnmount(() => socket.off('notification:new', onNotificationNew))
               {{ user?.name || 'Account' }}
             </UButton>
           </UDropdownMenu>
+
+          <!-- mobile menu toggle -->
+          <button
+            class="inline-flex size-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-muted hover:text-highlighted lg:hidden"
+            :aria-expanded="menuOpen"
+            aria-label="Menu"
+            @click="menuOpen = !menuOpen"
+          >
+            <UIcon
+              :name="menuOpen ? 'i-lucide-x' : 'i-lucide-menu'"
+              class="size-5"
+            />
+          </button>
+        </div>
+      </div>
+
+      <!-- mobile menu -->
+      <div
+        v-if="menuOpen"
+        class="border-t border-default bg-default px-4 pb-4 pt-2 lg:hidden"
+      >
+        <NuxtLink
+          v-for="item in nav"
+          :key="item.to"
+          :to="item.to"
+          class="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-[15px] font-medium transition-colors"
+          :class="isActive(item.to) ? 'bg-mist text-primary' : 'text-highlighted hover:bg-muted'"
+        >
+          <UIcon
+            :name="item.icon"
+            class="size-[18px] flex-none"
+          />
+          {{ item.label }}
+        </NuxtLink>
+        <div class="mt-2 flex items-center justify-between gap-2 border-t border-default pt-3">
+          <NuxtLink
+            to="/account"
+            class="flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[15px] font-medium text-highlighted hover:bg-muted"
+          >
+            <span class="inline-flex size-7 items-center justify-center rounded-full bg-mist text-[12px] font-semibold text-primary">
+              {{ (user?.name || 'C').slice(0, 1).toUpperCase() }}
+            </span>
+            {{ user?.name || 'Account' }}
+          </NuxtLink>
+          <UButton
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-log-out"
+            @click="onLogout"
+          >
+            Sign out
+          </UButton>
         </div>
       </div>
     </header>
