@@ -87,7 +87,7 @@ function signable(a: Agreement) {
         v-for="a in agreements"
         :key="a.uid"
         :to="`/agreements/${a.uid}`"
-        class="flex items-center gap-4 border-b border-default px-5 py-4 transition-colors last:border-0 hover:bg-muted/50"
+        class="flex items-start gap-4 border-b border-default px-5 py-4 transition-colors last:border-0 hover:bg-muted/50"
       >
         <span class="inline-flex size-9 flex-none items-center justify-center rounded-[9px] bg-mist text-primary">
           <UIcon
@@ -104,27 +104,50 @@ function signable(a: Agreement) {
             <span v-if="a.sent_at"> · Sent {{ shortDate(a.sent_at) }}</span>
             <span v-if="a.closed_at"> · Completed {{ shortDate(a.closed_at) }}</span>
           </div>
+          <!-- Mobile-only metadata line: chip + amount stack under the title -->
+          <div class="mt-2 flex flex-wrap items-center gap-2 sm:hidden">
+            <span
+              v-if="signable(a)"
+              class="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary"
+            >Review &amp; sign</span>
+            <span
+              class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+              :class="chip(a).class"
+            >{{ chip(a).label }}</span>
+            <span
+              v-if="a.total != null"
+              class="text-[14px] font-semibold tabular-nums text-highlighted"
+            >
+              {{ formatMoney(a.total) }}<span
+                v-if="a.recurring"
+                class="text-[11px] font-normal text-muted"
+              >/mo</span>
+            </span>
+          </div>
         </div>
-        <span
-          v-if="signable(a)"
-          class="hidden rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary sm:inline"
-        >Review &amp; sign</span>
-        <span
-          class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-          :class="chip(a).class"
-        >{{ chip(a).label }}</span>
-        <span
-          v-if="a.total != null"
-          class="w-24 text-right text-[14px] font-semibold tabular-nums text-highlighted"
-        >
-          {{ formatMoney(a.total) }}<span
-            v-if="a.recurring"
-            class="text-[11px] font-normal text-muted"
-          >/mo</span>
-        </span>
+        <!-- Desktop trailing group: single-line row on sm+ -->
+        <div class="hidden items-center gap-4 sm:flex">
+          <span
+            v-if="signable(a)"
+            class="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary"
+          >Review &amp; sign</span>
+          <span
+            class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            :class="chip(a).class"
+          >{{ chip(a).label }}</span>
+          <span
+            v-if="a.total != null"
+            class="w-24 text-right text-[14px] font-semibold tabular-nums text-highlighted"
+          >
+            {{ formatMoney(a.total) }}<span
+              v-if="a.recurring"
+              class="text-[11px] font-normal text-muted"
+            >/mo</span>
+          </span>
+        </div>
         <UIcon
           name="i-lucide-chevron-right"
-          class="size-4 flex-none text-muted"
+          class="mt-0.5 size-4 flex-none text-muted"
         />
       </NuxtLink>
     </div>
