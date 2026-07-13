@@ -13,3 +13,13 @@ app.franciswebagency.com {
 	reverse_proxy @ops api:4000
 	reverse_proxy app:3000
 }
+
+# Client portal. Same shared `api` container, same same-origin routing — the
+# portal SPA and the API share portal.franciswebagency.com so the session
+# cookie + websockets work with no CORS.
+portal.franciswebagency.com {
+	encode zstd gzip
+	@api path /api/* /socket.io/* /uploads/*
+	reverse_proxy @api api:4000
+	reverse_proxy portal:3000
+}
