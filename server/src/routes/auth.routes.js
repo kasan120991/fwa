@@ -8,6 +8,7 @@ import {
   destroySession,
   cookieOptions
 } from '../auth/session.js'
+import { findLiveInvite, markInviteUsed, setUserPassword, getUserById } from '../repositories/users.repo.js'
 
 export const authRouter = Router()
 
@@ -21,7 +22,7 @@ authRouter.post('/login', async (req, res) => {
   }
 
   const rows = await query(
-    `SELECT id, email, name, role, password_hash
+    `SELECT id, email, name, role, client_id, password_hash
        FROM users WHERE email = :email AND is_active = 1 LIMIT 1`,
     { email }
   )
@@ -40,7 +41,35 @@ authRouter.post('/login', async (req, res) => {
   await query('UPDATE users SET last_login_at = NOW() WHERE id = :id', { id: user.id })
 
   res.cookie(SESSION_COOKIE, token, cookieOptions(maxAgeMs))
-  res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role } })
+  res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, client_id: user.client_id } })
+})
+
+// POST /api/auth/set-password — consume a one-time invite token, set the
+// password, and start a session (auto-login). Backs the portal invite flow.
+authRouter.post('/set-password', async (req, res) => {
+  const token = typeof req.body?.token === 'string' ? req.body.token : ''
+  const password = typeof req.body?.password === 'string' ? req.body.password : ''
+  if (!token || password.length < 8) {
+    return res.status(400).json({ error: { message: 'A valid link and a password of at least 8 characters are required.' } })
+  }
+
+  const invite = await findLiveInvite(token)
+  if (!invite) {
+    return res.status(400).json({ error: { message: 'This link is invalid or has expired.' } })
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12)
+  await setUserPassword(invite.user_id, passwordHash)
+  await markInviteUsed(invite.id)
+
+  const { token: sessionToken, maxAgeMs } = await createSession(invite.user_id, {
+    userAgent: req.get('user-agent'),
+    ip: req.ip
+  })
+  await query('UPDATE users SET last_login_at = NOW() WHERE id = :id', { id: invite.user_id })
+
+  res.cookie(SESSION_COOKIE, sessionToken, cookieOptions(maxAgeMs))
+  res.json({ user: await getUserById(invite.user_id) })
 })
 
 // POST /api/auth/logout — revoke the current session.

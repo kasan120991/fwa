@@ -8,7 +8,14 @@ const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.
 export const config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT) || 4000,
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  // Allowed browser origin(s) for credentialed XHR. Comma-separated to permit
+  // both the admin app and the client portal (each on its own subdomain/port).
+  // In production they proxy /api same-origin, so this is mainly a dev + fallback.
+  corsOrigin: (process.env.CORS_ORIGIN || 'http://localhost:3000')
+    .split(',').map(s => s.trim()).filter(Boolean),
+  // Public base URL of the client portal app — used to build set-password links
+  // in invite emails. Dev default is the portal's local dev port.
+  portalBaseUrl: process.env.PORTAL_BASE_URL || 'http://localhost:3090',
   uploads: {
     // Where uploaded files live on disk, and the cap on a single upload.
     dir: process.env.UPLOADS_DIR || path.join(serverRoot, 'uploads'),
