@@ -78,7 +78,7 @@ const KIND_LABEL: Record<string, string> = { deposit: 'Deposit', balance: 'Final
         v-for="i in invoices"
         :key="i.id"
         :to="`/invoices/${i.id}`"
-        class="flex items-center gap-4 border-b border-default px-5 py-4 transition-colors last:border-0 hover:bg-muted/50"
+        class="flex items-start gap-4 border-b border-default px-5 py-4 transition-colors last:border-0 hover:bg-muted/50"
       >
         <span class="inline-flex size-9 flex-none items-center justify-center rounded-[9px] bg-mist text-primary">
           <UIcon
@@ -93,17 +93,30 @@ const KIND_LABEL: Record<string, string> = { deposit: 'Deposit', balance: 'Final
           <div class="text-[12.5px] text-muted">
             {{ KIND_LABEL[i.kind] }}<span v-if="i.due_date"> · Due {{ shortDate(i.due_date) }}</span>
           </div>
+          <!-- Mobile-only metadata line: chip + amount stack under the title -->
+          <div class="mt-2 flex flex-wrap items-center gap-2 sm:hidden">
+            <span
+              class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+              :class="chip(i).class"
+            >{{ chip(i).label }}</span>
+            <span class="text-[14px] font-semibold tabular-nums text-highlighted">
+              {{ formatMoney(i.amount_due) }}
+            </span>
+          </div>
         </div>
-        <span
-          class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
-          :class="chip(i).class"
-        >{{ chip(i).label }}</span>
-        <span class="w-24 text-right text-[14px] font-semibold tabular-nums text-highlighted">
-          {{ formatMoney(i.amount_due) }}
-        </span>
+        <!-- Desktop trailing group: single-line row on sm+ -->
+        <div class="hidden items-center gap-4 sm:flex">
+          <span
+            class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            :class="chip(i).class"
+          >{{ chip(i).label }}</span>
+          <span class="w-24 text-right text-[14px] font-semibold tabular-nums text-highlighted">
+            {{ formatMoney(i.amount_due) }}
+          </span>
+        </div>
         <UIcon
           name="i-lucide-chevron-right"
-          class="size-4 flex-none text-muted"
+          class="mt-0.5 size-4 flex-none text-muted"
         />
       </NuxtLink>
     </div>
