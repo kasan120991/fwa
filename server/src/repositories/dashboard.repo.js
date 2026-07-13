@@ -1,7 +1,7 @@
 import { query } from '../db/pool.js'
 import { invoiceStats } from './invoices.repo.js'
-import { ticketCode } from './tickets.repo.js'
 import { listActiveAlerts } from './infraAlerts.repo.js'
+import { titleCase } from '../utils/text.js'
 
 const num = v => Number(v ?? 0)
 
@@ -225,29 +225,29 @@ export async function dashboardAttention() {
     })
   }
 
-  // 6) Support tickets needing attention — active + (high priority OR stale 3+ days).
-  const TICKET_ATTN = `t.status NOT IN ('resolved', 'closed')
-      AND (t.priority = 'high' OR t.last_activity_at < (NOW() - INTERVAL 3 DAY))`
-  const [{ n: tkN }] = await query(`SELECT COUNT(*) AS n FROM tickets t WHERE ${TICKET_ATTN}`)
-  total += Number(tkN)
-  const attnTickets = await query(
-    `SELECT t.id, t.subject, t.priority, DATEDIFF(CURDATE(), t.last_activity_at) AS days_stale,
-            COALESCE(c.company, c.name) AS client
-       FROM tickets t JOIN clients c ON c.id = t.client_id
-      WHERE ${TICKET_ATTN}
-      ORDER BY (t.priority = 'high') DESC, t.last_activity_at ASC LIMIT 2`
-  )
-  for (const r of attnTickets) {
-    const high = r.priority === 'high'
-    const days = Number(r.days_stale) || 0
-    const reason = high ? 'High priority' : `${plural(days, 'day')} stale`
+  // 6) Support tickets — two aggregate signals: the total open queue, plus a
+  //    high-priority highlight. High-priority is a subset of open, so only the
+  //    open count feeds `total` (avoids double-counting the badge).
+  const TICKET_OPEN = `status IN ('open', 'in_progress', 'waiting')`
+  const [{ n: openN }] = await query(`SELECT COUNT(*) AS n FROM tickets WHERE ${TICKET_OPEN}`)
+  const [{ n: hiN }] = await query(`SELECT COUNT(*) AS n FROM tickets WHERE ${TICKET_OPEN} AND priority = 'high'`)
+  total += Number(openN)
+  if (Number(hiN) > 0) {
     items.push({
-      id: `ticket-${r.id}`,
-      title: r.subject,
-      meta: `${r.client} · ${ticketCode(r.id)} · ${reason}`,
-      icon: 'i-lucide-life-buoy', tone: high ? 'warning' : 'info',
-      chip: high ? 'warning' : 'info', chipText: high ? 'High' : 'Stale',
-      to: `/support/${r.id}`, priority: 3000 - (high ? 800 : 0) - Math.min(days, 30)
+      id: 'tickets-high',
+      title: `${plural(hiN, 'high priority ticket')}`,
+      meta: 'Support · needs attention',
+      icon: 'i-lucide-life-buoy', tone: 'warning', chip: 'warning', chipText: 'High',
+      to: '/support', priority: 2200
+    })
+  }
+  if (Number(openN) > 0) {
+    items.push({
+      id: 'tickets-open',
+      title: `${plural(openN, 'open ticket')}`,
+      meta: 'Support · in the queue',
+      icon: 'i-lucide-life-buoy', tone: 'info', chip: 'info', chipText: 'Open',
+      to: '/support', priority: 2900
     })
   }
 
@@ -314,5 +314,8 @@ export async function dashboardAttention() {
   }
 
   items.sort((a, b) => a.priority - b.priority)
-  return { items: items.slice(0, 6), total }
+  // Title-case every title so the feed reads uniformly regardless of the source
+  // signal's phrasing (e.g. "1 open ticket" -> "1 Open Ticket").
+  const shown = items.slice(0, 6).map(it => ({ ...it, title: titleCase(it.title) }))
+  return { items: shown, total }
 }

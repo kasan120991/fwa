@@ -32,17 +32,35 @@ async function loadNewCalls() {
     newCalls.value = data.count
   } catch { /* leave the badge hidden on failure */ }
 }
+// Open support-ticket count shown against Support Tickets. Live via the
+// ticket:created/updated/deleted socket events (same feed the list page uses).
+const openTickets = ref(0)
+async function loadOpenTickets() {
+  try {
+    const { data } = await api<{ data: { count: number } }>('/tickets/open-count')
+    openTickets.value = data.count
+  } catch { /* leave the badge hidden on failure */ }
+}
 function itemBadge(to: string) {
-  return to === '/receptionist' ? newCalls.value : 0
+  if (to === '/receptionist') return newCalls.value
+  if (to === '/support') return openTickets.value
+  return 0
 }
 onMounted(() => {
   loadNewCalls()
+  loadOpenTickets()
   socket.on('call:changed', loadNewCalls)
   socket.on('call:new', loadNewCalls)
+  socket.on('ticket:created', loadOpenTickets)
+  socket.on('ticket:updated', loadOpenTickets)
+  socket.on('ticket:deleted', loadOpenTickets)
 })
 onBeforeUnmount(() => {
   socket.off('call:changed', loadNewCalls)
   socket.off('call:new', loadNewCalls)
+  socket.off('ticket:created', loadOpenTickets)
+  socket.off('ticket:updated', loadOpenTickets)
+  socket.off('ticket:deleted', loadOpenTickets)
 })
 
 // Nav follows CLAUDE.md (source of truth), which includes Leads and AI Receptionist
@@ -199,6 +217,14 @@ function itemClass(to: string) {
             v-if="!collapsed"
             class="overflow-hidden"
           >{{ item.label }}</span>
+          <span
+            v-if="!collapsed && itemBadge(item.to) > 0"
+            class="ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-teal-500 px-1 text-[11px] font-semibold text-white tabular-nums"
+          >{{ itemBadge(item.to) }}</span>
+          <span
+            v-if="collapsed && itemBadge(item.to) > 0"
+            class="absolute right-1.5 top-1.5 size-2 rounded-full bg-teal-400 ring-2 ring-ink-900 dark:ring-ink-950"
+          />
         </NuxtLink>
       </div>
 

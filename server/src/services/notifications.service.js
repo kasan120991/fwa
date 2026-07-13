@@ -1,24 +1,7 @@
 import { createNotification } from '../repositories/notifications.repo.js'
 import { getPortalUserForClient } from '../repositories/users.repo.js'
 import { emitNotificationNew } from '../realtime/io.js'
-
-// Minor words kept lowercase mid-title (standard title case).
-const MINOR_WORDS = new Set(['a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'from', 'in', 'of', 'on', 'or', 'the', 'to', 'with'])
-
-/**
- * Normalize a notification title to Title Case so every alert reads uniformly
- * (producers can write plain sentence case). Words that already carry an
- * uppercase letter or a digit are left untouched, so codes/acronyms survive
- * (e.g. `SR-001`, `PDF`, `In Progress`).
- */
-function titleCase(str) {
-  return String(str).split(/\s+/).map((w, i) => {
-    if (!w) return w
-    if (/[A-Z0-9]/.test(w)) return w
-    if (i > 0 && MINOR_WORDS.has(w)) return w
-    return w[0].toUpperCase() + w.slice(1)
-  }).join(' ')
-}
+import { titleCase } from '../utils/text.js'
 
 /**
  * Create a notification and push it to its recipients in real time. Any feature
