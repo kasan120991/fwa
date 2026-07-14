@@ -69,7 +69,7 @@ function validateTask(body, { partial = false } = {}) {
   return data
 }
 
-// GET /api/tasks  ?project_id= ?no_project=1 ?status= ?overdue=1 ?due=today
+// GET /api/tasks  ?project_id= ?no_project=1 ?status= ?overdue=1 ?due=today|by_today
 tasksRouter.get('/', async (req, res) => {
   const status = typeof req.query.status === 'string' ? req.query.status : undefined
   if (status && !TASK_STATUSES.has(status)) throw badRequest(`Unknown status: ${status}`)
@@ -81,6 +81,7 @@ tasksRouter.get('/', async (req, res) => {
     status,
     overdue: req.query.overdue === '1' || req.query.overdue === 'true',
     dueToday: req.query.due === 'today',
+    dueByToday: req.query.due === 'by_today',
     limit: req.query.limit,
     offset: req.query.offset
   })
