@@ -1,4 +1,5 @@
 import { query, withTransaction } from '../db/pool.js'
+import { applyTemplateToProject, getDefaultTemplateId } from './projectTemplates.repo.js'
 
 export const PROJECT_STATUSES = new Set([
   'planning', 'awaiting_signature', 'awaiting_deposit', 'in_progress', 'in_review', 'awaiting_final', 'on_hold', 'completed'
@@ -68,17 +69,14 @@ export async function createProject(data) {
     const typeRows = await q('SELECT code_prefix FROM project_types WHERE id = :tid LIMIT 1', { tid: data.project_type_id })
     const prefix = typeRows[0]?.code_prefix || 'PRJ'
     await q('UPDATE projects SET code = :code WHERE id = :id', { code: `${prefix}-${String(projectId).padStart(4, '0')}`, id: projectId })
-    // Seed delivery milestones from this type's active templates (editable after).
-    const templates = await q(
-      `SELECT title, position FROM milestone_templates
-        WHERE project_type_id = :tid AND is_active = 1 ORDER BY position ASC, id ASC`,
-      { tid: data.project_type_id }
-    )
-    for (const t of templates) {
-      await q(
-        'INSERT INTO project_milestones (project_id, title, position) VALUES (:pid, :title, :position)',
-        { pid: projectId, title: t.title, position: t.position }
-      )
+    // Seed the delivery plan (milestones + tasks) from a template. An explicit
+    // template_id (number) uses it; explicit null means "(None)" → seed nothing;
+    // omitting it entirely falls back to this type's default template (if any).
+    const templateId = data.template_id === undefined
+      ? await getDefaultTemplateId(data.project_type_id)
+      : data.template_id
+    if (templateId) {
+      await applyTemplateToProject(q, templateId, projectId)
     }
     return projectId
   })

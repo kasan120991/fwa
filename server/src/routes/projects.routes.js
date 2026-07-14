@@ -144,7 +144,18 @@ projectsRouter.post('/', async (req, res) => {
   }
 
   const data = validateProject(body, { partial: false })
-  const project = await createProject({ ...data, client_id: clientId, project_type_id: type.id })
+  // Optional delivery-plan template to seed milestones + tasks from. Explicit
+  // null = "(None)" (seed nothing); a number picks that template; omitting the
+  // key entirely lets createProject fall back to the type's default template.
+  let template_id
+  if (body.template_id === null) {
+    template_id = null
+  } else if (body.template_id != null && body.template_id !== '') {
+    const n = Number(body.template_id)
+    if (!Number.isInteger(n) || n <= 0) throw badRequest('Validation failed', { template_id: 'must be a valid template' })
+    template_id = n
+  }
+  const project = await createProject({ ...data, client_id: clientId, project_type_id: type.id, template_id })
   res.status(201).json({ data: project })
 })
 

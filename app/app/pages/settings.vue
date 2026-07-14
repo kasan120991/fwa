@@ -5,10 +5,11 @@ useHead({ title: 'Settings · Francis Web Agency' })
 const route = useRoute()
 const router = useRouter()
 
-type Section = 'profile' | 'agency' | 'integrations' | 'preferences' | 'portal'
+type Section = 'profile' | 'agency' | 'templates' | 'integrations' | 'preferences' | 'portal'
 const SECTIONS: { id: Section, label: string, icon: string }[] = [
   { id: 'profile', label: 'Profile', icon: 'i-lucide-user' },
   { id: 'agency', label: 'Agency & Branding', icon: 'i-lucide-building-2' },
+  { id: 'templates', label: 'Project Templates', icon: 'i-lucide-list-checks' },
   { id: 'integrations', label: 'Integrations', icon: 'i-lucide-plug' },
   { id: 'preferences', label: 'Preferences', icon: 'i-lucide-sliders-horizontal' },
   { id: 'portal', label: 'Client Portal Access', icon: 'i-lucide-users' }
@@ -52,6 +53,7 @@ function go(id: Section) {
       <div class="min-w-0">
         <SettingsProfile v-if="active === 'profile'" />
         <SettingsAgency v-else-if="active === 'agency'" />
+        <SettingsProjectTemplates v-else-if="active === 'templates'" />
         <SettingsIntegrations v-else-if="active === 'integrations'" />
         <SettingsPreferences v-else-if="active === 'preferences'" />
         <SettingsPortalAccess v-else-if="active === 'portal'" />

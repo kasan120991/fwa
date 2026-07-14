@@ -65,6 +65,7 @@ const CONTENT_BY_ITEMS = [
 interface FormState {
   client_id: number | undefined
   project_type_id: number | undefined
+  template_id: number | null
   name: string
   status: string
   goals: string
@@ -91,6 +92,7 @@ function blank(): FormState {
   return {
     client_id: props.contactId ?? undefined,
     project_type_id: undefined,
+    template_id: null,
     name: '', status: 'planning', goals: '', pages_included: '', key_features: '',
     design_deliverables: '', content_provided_by: undefined, revision_rounds: 2, third_party_costs: '',
     project_fee: null, deposit_pct: 50, hourly_rate: null, content_deadline: '', start_date: '', target_launch_date: '',
@@ -98,14 +100,27 @@ function blank(): FormState {
   }
 }
 
+interface ProjectTemplate { id: number, name: string, project_type_id: number | null, is_default: boolean }
+
 const form = reactive<FormState>(blank())
 const types = ref<ProjectType[]>([])
+const templates = ref<ProjectTemplate[]>([])
 const contacts = ref<{ label: string, value: number }[]>([])
 const saving = ref(false)
 const showPolicy = ref(false)
 const errors = ref<Record<string, string>>({})
 
 const typeItems = computed(() => types.value.map(t => ({ label: t.name, value: t.id })))
+// Templates offered for the selected type (type-tagged for it, plus untyped
+// ones that work for any type), with a leading "(None)" for a blank project.
+const templateItems = computed(() => {
+  const forType = templates.value.filter(t => t.project_type_id == null || t.project_type_id === form.project_type_id)
+  return [{ label: '(None)', value: null }, ...forType.map(t => ({ label: t.name, value: t.id }))]
+})
+// The default template for the currently-selected type, if any.
+function defaultTemplateId() {
+  return templates.value.find(t => t.project_type_id === form.project_type_id && t.is_default)?.id ?? null
+}
 const deposit = computed(() => (form.project_fee == null ? null : Math.round((form.project_fee * (form.deposit_pct || 0) / 100) * 100) / 100))
 const balance = computed(() => (form.project_fee == null || deposit.value == null ? null : Math.round((form.project_fee - deposit.value) * 100) / 100))
 
@@ -136,6 +151,11 @@ async function init() {
       const { data } = await api<{ data: ProjectType[] }>('/project-types')
       types.value = data
     }
+    // Templates power the create-mode picker; harmless to keep loaded for edit.
+    if (props.mode === 'create' && !templates.value.length) {
+      const { data } = await api<{ data: ProjectTemplate[] }>('/project-templates', { query: { active: 1 } })
+      templates.value = data
+    }
     // Contact picker only when creating without a locked contact.
     if (props.mode === 'create' && !props.contactId && !contacts.value.length) {
       const { data } = await api<{ data: { id: number, company: string | null, name: string }[] }>('/clients', { query: { limit: 200 } })
@@ -150,11 +170,18 @@ async function init() {
   } else {
     Object.assign(form, blank())
     form.project_type_id = types.value[0]?.id ?? undefined
+    form.template_id = defaultTemplateId()
   }
 }
 
 watch(() => props.open, (o) => {
   if (o) init()
+})
+
+// Switching project type re-points the template to that type's default (create
+// mode only; templates don't apply on edit).
+watch(() => form.project_type_id, () => {
+  if (props.mode === 'create') form.template_id = defaultTemplateId()
 })
 
 function nn(v: string) {
@@ -204,7 +231,8 @@ async function save() {
   try {
     let project: ProjectRow
     if (props.mode === 'create') {
-      const { data } = await api<{ data: ProjectRow }>('/projects', { method: 'POST', body: payload() })
+      // template_id seeds the project's milestones + tasks; create-only.
+      const { data } = await api<{ data: ProjectRow }>('/projects', { method: 'POST', body: { ...payload(), template_id: form.template_id } })
       project = data
       toast.add({ title: 'Project created', description: `${project.name} was added.`, color: 'success' })
     } else {
@@ -326,6 +354,20 @@ const lockedContactLabel = computed(() => props.contactLabel || props.project?.c
                 :rows="2"
                 autoresize
                 placeholder="What is the site for? Primary objective."
+                class="w-full"
+              />
+            </UFormField>
+
+            <!-- Template seeds milestones + tasks on create; not editable after. -->
+            <UFormField
+              v-if="mode === 'create'"
+              label="Template"
+              help="Auto-sets-up milestones and tasks from a saved template. Manage templates in Settings."
+            >
+              <USelect
+                v-model="form.template_id"
+                :items="templateItems"
+                size="lg"
                 class="w-full"
               />
             </UFormField>

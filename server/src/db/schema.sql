@@ -601,9 +601,10 @@ CREATE TABLE IF NOT EXISTS project_types (
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
--- milestone_templates — per project_type default delivery milestones.
---   Copied into project_milestones at project creation, then editable.
---   Managed via seed/SQL for now (a Settings UI comes later).
+-- milestone_templates — SUPERSEDED by project_templates (named, selectable
+--   templates managed in Settings). Left defined so existing DBs don't error,
+--   but no longer read at project creation. New template data lives in the
+--   project_templates* tables below.
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS milestone_templates (
   id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -618,6 +619,70 @@ CREATE TABLE IF NOT EXISTS milestone_templates (
   KEY idx_milestone_templates_type (project_type_id, position),
   CONSTRAINT fk_milestone_templates_type
     FOREIGN KEY (project_type_id) REFERENCES project_types (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- project_templates — named, reusable delivery blueprints. Each holds an
+--   ordered set of milestones, each with an ordered set of tasks. Picked in
+--   the New Project form (or a type's default is applied when none is chosen)
+--   and copied into project_milestones + tasks at project creation. Managed in
+--   Settings → Project Templates.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS project_templates (
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  name            VARCHAR(160)    NOT NULL,
+  description     VARCHAR(255)    NULL,
+  project_type_id BIGINT UNSIGNED NULL,               -- optional grouping + default-per-type lookup
+  is_default      BOOLEAN         NOT NULL DEFAULT FALSE,  -- default for its project_type
+  is_active       BOOLEAN         NOT NULL DEFAULT TRUE,
+  sort_order      INT             NOT NULL DEFAULT 0,
+  created_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                  ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_project_templates_type (project_type_id),
+  KEY idx_project_templates_active (is_active),
+  CONSTRAINT fk_project_templates_type
+    FOREIGN KEY (project_type_id) REFERENCES project_types (id)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- project_template_milestones — the milestones inside a template.
+CREATE TABLE IF NOT EXISTS project_template_milestones (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  template_id BIGINT UNSIGNED NOT NULL,
+  title       VARCHAR(160)    NOT NULL,
+  position    INT             NOT NULL DEFAULT 0,
+  created_at  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                              ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_ptm_template (template_id, position),
+  CONSTRAINT fk_ptm_template
+    FOREIGN KEY (template_id) REFERENCES project_templates (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- project_template_tasks — the tasks inside a template. template_milestone_id
+--   NULL = a milestone-less "General" task (seeds a task with no milestone).
+CREATE TABLE IF NOT EXISTS project_template_tasks (
+  id                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  template_id           BIGINT UNSIGNED NOT NULL,
+  template_milestone_id BIGINT UNSIGNED NULL,
+  title                 VARCHAR(255)    NOT NULL,
+  position              INT             NOT NULL DEFAULT 0,
+  created_at            TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at            TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                        ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_ptt_template (template_id, position),
+  KEY idx_ptt_milestone (template_milestone_id),
+  CONSTRAINT fk_ptt_template
+    FOREIGN KEY (template_id) REFERENCES project_templates (id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_ptt_milestone
+    FOREIGN KEY (template_milestone_id) REFERENCES project_template_milestones (id)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
