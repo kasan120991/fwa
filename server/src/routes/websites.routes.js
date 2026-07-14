@@ -5,6 +5,7 @@ import {
   createWebsite, updateWebsite, deleteWebsite
 } from '../repositories/websites.repo.js'
 import { emitWebsiteChanged } from '../realtime/io.js'
+import { logClientActivity } from '../services/clientActivity.service.js'
 import { syncWebsite, syncAllWebsites } from '../services/websiteSync.js'
 import { isConfigured as doConfigured, listDroplets } from '../services/digitalocean.js'
 import { getWebsiteInfra } from '../services/websiteInfra.js'
@@ -112,6 +113,12 @@ websitesRouter.get('/:id', async (req, res) => {
 websitesRouter.post('/', async (req, res) => {
   const site = await createWebsite(req.body)
   emitWebsiteChanged(site.id)
+  await logClientActivity(site.client_id, {
+    category: 'website', icon: 'i-lucide-globe',
+    title: `Website “${site.name}” added`,
+    meta: site.domain,
+    link: `/websites/${site.id}`
+  })
   res.status(201).json({ data: site })
 })
 

@@ -13,6 +13,7 @@ interface ApiFile {
   category: Category
   path: string
   name: string
+  title: string | null
   mime: string | null
   size_bytes: number | string | null
   created_at: string
@@ -65,16 +66,17 @@ function extOf(name: string): string {
 function mapFile(f: ApiFile): FileRow {
   const who = f.uploaded_by_name || 'System'
   const size = f.size_bytes == null ? null : Number(f.size_bytes)
+  // Titled files lead with the title; the filename still drives the ext badge.
   return {
     id: f.id,
-    name: f.name,
+    name: f.title || f.name,
     ext: extOf(f.name),
     path: f.path,
     category: f.category,
     size: Number.isFinite(size as number) ? size : null,
     client: f.client_company || f.client_name || '',
     clientId: f.client_id,
-    meta: `Uploaded ${shortDate(f.created_at)} · ${who}`,
+    meta: `${f.title ? `${f.name} · ` : ''}Uploaded ${shortDate(f.created_at)} · ${who}`,
     createdAt: f.created_at
   }
 }

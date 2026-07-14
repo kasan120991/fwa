@@ -192,6 +192,14 @@ export function emitProposalChanged(id) {
 }
 
 // --- client-portal emitters ------------------------------------------------
+// --- client activity ---------------------------------------------------------
+// New timeline events broadcast to admins; an open client detail page checks
+// the payload's client_id and appends/refetches its Activity feed.
+
+export function emitClientActivityNew(activity) {
+  io?.to('role:admin').emit('client-activity:new', activity)
+}
+
 // Push to a single client's room (`client:<id>`) so an open portal page can
 // refetch. Payloads mirror the admin emitters; the portal listens for the same
 // event names, scoped to the logged-in client.

@@ -4,6 +4,7 @@ import { config } from '../config/env.js'
 import { upsertClientUser, createInvite } from '../repositories/users.repo.js'
 import { sendTemplateEmail, TEMPLATES } from './email.js'
 import { notify } from './notifications.service.js'
+import { logClientActivity } from './clientActivity.service.js'
 
 /**
  * Provision (or re-link) a client-portal login for a client and issue a
@@ -44,6 +45,13 @@ export async function inviteClientToPortal(client, actorUserId = null) {
   } catch (err) {
     console.error(`Portal invite notification failed for client ${client.id}:`, err.message)
   }
+
+  await logClientActivity(client.id, {
+    category: 'portal', icon: 'i-lucide-user-plus',
+    title: 'Invited to client portal',
+    meta: client.email,
+    link: `/clients/${client.id}`
+  })
 
   return { user, setPasswordUrl }
 }

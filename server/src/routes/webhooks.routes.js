@@ -14,6 +14,7 @@ import {
   emitClientInvoiceChanged, emitClientAgreementChanged
 } from '../realtime/io.js'
 import { advanceProject } from '../services/projects.service.js'
+import { logClientActivity } from '../services/clientActivity.service.js'
 import { getProject } from '../repositories/projects.repo.js'
 import { issueDeposit } from '../services/projectBilling.js'
 import { getProposalByDocumentId, updateProposal } from '../repositories/proposals.repo.js'
@@ -204,6 +205,14 @@ webhooksRouter.post('/stripe', async (req, res) => {
         } catch (err) {
           console.error('invoice.paid notification failed:', err.message)
         }
+        if (client) {
+          await logClientActivity(client.id, {
+            category: 'payment', icon: 'i-lucide-circle-check',
+            title: `Payment received — $${m.amount_paid.toLocaleString('en-US')}`,
+            meta: local?.number ? `${local.number} paid in full` : 'Invoice paid',
+            link: '/payments'
+          })
+        }
         // Mirror to the client's portal (live refresh + their own bell).
         if (client) {
           emitClientInvoiceChanged(client.id, local?.id ?? null)
@@ -238,6 +247,12 @@ webhooksRouter.post('/stripe', async (req, res) => {
           })
         } catch (err) {
           console.error('invoice.payment_failed notification failed:', err.message)
+        }
+        if (client) {
+          await logClientActivity(client.id, {
+            category: 'invoice', icon: 'i-lucide-triangle-alert',
+            title: 'Invoice payment failed', link: '/invoices'
+          })
         }
         break
       }
@@ -410,6 +425,12 @@ async function handleDocumentEvent(doc) {
       } catch (err) {
         console.error(`contract.signed notification failed for contract ${contract.id}:`, err.message)
       }
+      await logClientActivity(contract.client_id, {
+        category: 'agreement', icon: 'i-lucide-file-check-2',
+        title: `Contract signed: ${contract.title}`,
+        meta: contract.total ? `$${Number(contract.total).toLocaleString('en-US')}` : null,
+        link: '/agreements'
+      })
       try {
         await clientNotify(contract.client_id, {
           category: 'contract', tone: 'success', icon: 'i-lucide-file-check-2',
@@ -604,6 +625,15 @@ async function ingestEndOfCall(message) {
 
   // Live inbox update + a bell alert (per classification; spam/wrong_number stay silent).
   emitCallCreated(call)
+  if (call.client_id) {
+    await logClientActivity(call.client_id, {
+      category: 'call', icon: 'i-lucide-phone',
+      title: `Call from ${call.caller_name || call.caller_number || 'a caller'}`,
+      meta: call.summary ? String(call.summary).slice(0, 500) : null,
+      link: '/receptionist',
+      occurred_at: call.occurred_at
+    })
+  }
   const alert = CALL_ALERT[classification]
   if (alert) {
     try {

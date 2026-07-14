@@ -7,6 +7,7 @@ import { createTicket, updateTicket, deleteTicket, addMessage, addAttachment, re
 import { getClient } from '../repositories/clients.repo.js'
 import { getWebsite } from '../repositories/websites.repo.js'
 import { notify, clientNotify } from '../services/notifications.service.js'
+import { logClientActivity } from '../services/clientActivity.service.js'
 import { emitClientTicketUpdated } from '../realtime/io.js'
 
 const PRIORITY_TONE = { high: 'warning', medium: 'info', low: 'info' }
@@ -146,6 +147,12 @@ ticketsRouter.post('/', async (req, res) => {
     body: `${ticketWho(ticket)}: ${ticket.subject}`,
     tone: PRIORITY_TONE[ticket.priority] ?? 'info'
   }, req.user.id)
+  await logClientActivity(ticket.client_id, {
+    category: 'ticket', icon: 'i-lucide-life-buoy',
+    title: `Ticket opened: ${ticket.subject}`,
+    meta: `${ticketCode(ticket.id)} · ${ticket.priority} priority`,
+    link: `/support/${ticket.id}`
+  })
   res.status(201).json({ data: ticket })
 })
 
@@ -175,6 +182,11 @@ ticketsRouter.patch('/:id', async (req, res) => {
       body: `${ticketWho(ticket)}: ${ticket.subject}`,
       tone
     }, req.user.id)
+    await logClientActivity(ticket.client_id, {
+      category: 'ticket', icon: 'i-lucide-life-buoy',
+      title: `${ticketCode(ticket.id)} ${reopened ? 'reopened' : (STATUS_LABEL[ticket.status] ?? ticket.status).toLowerCase()}: ${ticket.subject}`,
+      link: `/support/${ticket.id}`
+    })
   }
 
   res.json({ data: ticket })

@@ -29,7 +29,7 @@ export async function listFiles(opts = {}) {
   if (opts.project_id) { where.push('f.project_id = :project_id'); params.project_id = opts.project_id }
   if (opts.category) { where.push('f.category = :category'); params.category = opts.category }
   if (opts.q) {
-    where.push('(f.name LIKE :q OR c.name LIKE :q OR c.company LIKE :q)')
+    where.push('(f.name LIKE :q OR f.title LIKE :q OR c.name LIKE :q OR c.company LIKE :q)')
     params.q = `%${opts.q}%`
   }
   const whereSql = where.length ? ` WHERE ${where.join(' AND ')}` : ''
@@ -55,9 +55,9 @@ export async function createFile(data) {
   return getFile(res.insertId)
 }
 
-// Partial update — rename and/or reassign client/project/category. Only the
-// keys present in `fields` are written.
-const UPDATABLE = ['client_id', 'project_id', 'category', 'name']
+// Partial update — rename/retitle and/or reassign client/project/category.
+// Only the keys present in `fields` are written.
+const UPDATABLE = ['client_id', 'project_id', 'category', 'name', 'title']
 
 export async function updateFile(id, fields) {
   const cols = UPDATABLE.filter(c => fields[c] !== undefined)

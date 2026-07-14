@@ -77,6 +77,74 @@ export async function getClient(id) {
   return rows[0] ?? null
 }
 
+/**
+ * One-pass rollup for the client detail page: metric strip + tab badges,
+ * without loading any of the underlying lists. Correlated COUNT subqueries all
+ * hit (client_id, …) indexes, so this stays one cheap round trip.
+ */
+export async function getClientSummary(id) {
+  const rows = await query(
+    `SELECT
+       (SELECT COUNT(*) FROM projects p
+         WHERE p.client_id = c.id AND p.status <> 'completed')             AS projects_active,
+       (SELECT COUNT(*) FROM projects p WHERE p.client_id = c.id)          AS projects_total,
+       (SELECT COUNT(*) FROM tickets t
+         WHERE t.client_id = c.id
+           AND t.status NOT IN ('resolved', 'closed'))                     AS tickets_open,
+       (SELECT COUNT(*) FROM tickets t WHERE t.client_id = c.id)           AS tickets_total,
+       (SELECT COUNT(*) FROM websites w WHERE w.client_id = c.id)          AS websites_total,
+       (SELECT COUNT(*) FROM websites w
+         WHERE w.client_id = c.id AND w.environment = 'live')              AS websites_live,
+       (SELECT COUNT(*) FROM invoices i
+         WHERE i.client_id = c.id AND i.status = 'open')                   AS invoices_open,
+       (SELECT COUNT(*) FROM invoices i WHERE i.client_id = c.id)          AS invoices_total,
+       (SELECT COALESCE(SUM(i.amount_due - i.amount_paid), 0) FROM invoices i
+         WHERE i.client_id = c.id AND i.status = 'open')                   AS outstanding,
+       (SELECT COALESCE(SUM(i.amount_due), 0) FROM invoices i
+         WHERE i.client_id = c.id
+           AND i.status NOT IN ('draft', 'void'))                          AS total_billed,
+       (SELECT COUNT(*) FROM calls k WHERE k.client_id = c.id)             AS calls_total,
+       (SELECT COUNT(*) FROM proposals pr WHERE pr.client_id = c.id)
+         + (SELECT COUNT(*) FROM contracts ct WHERE ct.client_id = c.id)   AS agreements_total,
+       (SELECT COUNT(*) FROM files f WHERE f.client_id = c.id)             AS files_total,
+       (SELECT COUNT(*) FROM client_activity a WHERE a.client_id = c.id)   AS activity_total
+     FROM clients c WHERE c.id = :id`,
+    { id }
+  )
+  const row = rows[0]
+  if (!row) return null
+
+  // Attention data for the Overview strips: the most overdue open invoice and
+  // the most pressing open ticket. Two indexed LIMIT-1 lookups.
+  const [overdue] = await query(
+    `SELECT id, number, amount_due, amount_paid, due_date,
+            DATEDIFF(CURDATE(), due_date) AS days_overdue
+     FROM invoices
+     WHERE client_id = :id AND status = 'open'
+       AND due_date IS NOT NULL AND due_date < CURDATE()
+     ORDER BY due_date ASC LIMIT 1`,
+    { id }
+  )
+  const [ticket] = await query(
+    `SELECT id, subject, priority, status, created_at
+     FROM tickets
+     WHERE client_id = :id AND status NOT IN ('resolved', 'closed')
+     ORDER BY FIELD(priority, 'high', 'medium', 'low'), created_at ASC LIMIT 1`,
+    { id }
+  )
+
+  // DECIMAL sums come back as strings from mysql2 — normalize to numbers.
+  return {
+    ...row,
+    outstanding: Number(row.outstanding),
+    total_billed: Number(row.total_billed),
+    overdue_invoice: overdue
+      ? { ...overdue, amount_due: Number(overdue.amount_due), amount_paid: Number(overdue.amount_paid) }
+      : null,
+    attention_ticket: ticket ?? null
+  }
+}
+
 /** Link a client to its DigitalOcean Project (resource group). Managed by the
  *  provisioning flow, not user-settable — hence a dedicated setter, not WRITABLE. */
 export async function setClientDoProject(id, doProjectId) {

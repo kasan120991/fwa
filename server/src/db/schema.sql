@@ -1133,6 +1133,7 @@ CREATE TABLE IF NOT EXISTS files (
   category         ENUM('brand', 'contract', 'deliverable', 'other') NOT NULL DEFAULT 'other',
   path             VARCHAR(512)    NOT NULL,
   name             VARCHAR(255)    NOT NULL,
+  title            VARCHAR(255)    NULL,     -- display title; NULL = show `name`
   mime             VARCHAR(120)    NULL,
   size_bytes       BIGINT UNSIGNED NULL,
   uploaded_by      ENUM('admin', 'client') NOT NULL DEFAULT 'admin',
@@ -1151,4 +1152,33 @@ CREATE TABLE IF NOT EXISTS files (
   CONSTRAINT fk_files_uploader
     FOREIGN KEY (uploaded_user_id) REFERENCES users (id)
     ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- client_activity — the per-client event timeline shown on the client detail
+-- page (Support & Calls tab). Append-only, written best-effort by
+-- services/clientActivity.service.js wherever a client-scoped event already
+-- raises a notification (invoice sent/paid, contract signed, ticket opened,
+-- call logged, …). CASCADE: the timeline is meaningless without its client.
+CREATE TABLE IF NOT EXISTS client_activity (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  client_id   BIGINT UNSIGNED NOT NULL,
+
+  category    ENUM('invoice', 'payment', 'project', 'agreement',
+                   'ticket', 'call', 'website', 'portal', 'file',
+                   'note', 'status') NOT NULL,
+  icon        VARCHAR(64)  NOT NULL,   -- lucide id, e.g. 'i-lucide-receipt-text'
+  title       VARCHAR(200) NOT NULL,
+  meta        VARCHAR(500) NULL,       -- secondary line ('$4,000 · due Jul 2')
+  link        VARCHAR(512) NULL,       -- in-app route to open on click
+
+  occurred_at DATETIME  NOT NULL,      -- event time (backfill uses source rows)
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  PRIMARY KEY (id),
+
+  -- Feed query: a client's timeline, newest first, paginated.
+  KEY idx_client_activity_feed (client_id, occurred_at),
+
+  CONSTRAINT fk_client_activity_client FOREIGN KEY (client_id)
+    REFERENCES clients (id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

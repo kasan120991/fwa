@@ -55,9 +55,11 @@ const ADDITIVE_COLUMNS = {
     ['avatar_url', 'MEDIUMTEXT NULL AFTER name']
   ],
   // Distinguish client-uploaded files from admin-shared ones (mirrors
-  // ticket_attachments.uploaded_by).
+  // ticket_attachments.uploaded_by). `title` is the user-set display name;
+  // NULL falls back to the original filename in `name`.
   files: [
-    ['uploaded_by', "ENUM('admin', 'client') NOT NULL DEFAULT 'admin' AFTER size_bytes"]
+    ['uploaded_by', "ENUM('admin', 'client') NOT NULL DEFAULT 'admin' AFTER size_bytes"],
+    ['title', 'VARCHAR(255) NULL AFTER name']
   ]
 }
 
@@ -137,6 +139,70 @@ async function ensureEnums(conn, database) {
   }
 }
 
+// One-time backfill: seed the client_activity timeline from existing rows so
+// client pages aren't empty on first deploy. Runs only when the table is empty
+// (idempotent — later events come from logClientActivity at write time).
+async function backfillClientActivity(conn) {
+  const [[{ n }]] = await conn.query('SELECT COUNT(*) AS n FROM client_activity')
+  if (n > 0) return
+  const inserts = [
+    // Invoices (skip drafts — they weren't client-visible events)
+    `INSERT INTO client_activity (client_id, category, icon, title, meta, link, occurred_at)
+     SELECT client_id, 'invoice', 'i-lucide-receipt-text',
+            CONCAT('Invoice ', COALESCE(number, '(draft)'), ' created'),
+            CONCAT('$', FORMAT(amount_due, 2)), '/invoices', created_at
+     FROM invoices WHERE status <> 'draft'`,
+    // Payments that succeeded
+    `INSERT INTO client_activity (client_id, category, icon, title, meta, link, occurred_at)
+     SELECT client_id, 'payment', 'i-lucide-circle-check',
+            CONCAT('Payment received — $', FORMAT(amount, 2)),
+            NULL, '/payments', COALESCE(paid_at, created_at)
+     FROM payments WHERE status = 'succeeded'`,
+    // Projects
+    `INSERT INTO client_activity (client_id, category, icon, title, meta, link, occurred_at)
+     SELECT client_id, 'project', 'i-lucide-folder-plus',
+            CONCAT('Project “', name, '” created'), NULL,
+            CONCAT('/projects/', id), created_at
+     FROM projects`,
+    // Tickets
+    `INSERT INTO client_activity (client_id, category, icon, title, meta, link, occurred_at)
+     SELECT client_id, 'ticket', 'i-lucide-life-buoy',
+            CONCAT('Ticket opened: ', subject), NULL,
+            CONCAT('/support/', id), created_at
+     FROM tickets WHERE client_id IS NOT NULL`,
+    // Calls linked to a client
+    `INSERT INTO client_activity (client_id, category, icon, title, meta, link, occurred_at)
+     SELECT client_id, 'call', 'i-lucide-phone',
+            CONCAT('Call from ', COALESCE(caller_name, caller_number)),
+            LEFT(summary, 500), '/receptionist', occurred_at
+     FROM calls WHERE client_id IS NOT NULL`,
+    // Signed contracts
+    `INSERT INTO client_activity (client_id, category, icon, title, meta, link, occurred_at)
+     SELECT client_id, 'agreement', 'i-lucide-file-check-2',
+            CONCAT('Contract signed: ', title),
+            CONCAT('$', FORMAT(total, 2)), '/agreements', signed_at
+     FROM contracts WHERE signed_at IS NOT NULL`,
+    // Accepted proposals
+    `INSERT INTO client_activity (client_id, category, icon, title, meta, link, occurred_at)
+     SELECT client_id, 'agreement', 'i-lucide-file-check-2',
+            CONCAT('Proposal accepted: ', title),
+            CONCAT('$', FORMAT(total, 2)), '/agreements', accepted_at
+     FROM proposals WHERE accepted_at IS NOT NULL`,
+    // Websites
+    `INSERT INTO client_activity (client_id, category, icon, title, meta, link, occurred_at)
+     SELECT client_id, 'website', 'i-lucide-globe',
+            CONCAT('Website “', name, '” added'), domain,
+            CONCAT('/websites/', id), created_at
+     FROM websites WHERE client_id IS NOT NULL`
+  ]
+  let total = 0
+  for (const sql of inserts) {
+    const [res] = await conn.query(sql)
+    total += res.affectedRows
+  }
+  if (total > 0) console.log(`  + client_activity backfilled (${total} events)`)
+}
+
 // Connect without selecting a database so we can create it first.
 const conn = await mysql.createConnection({
   host: config.db.host,
@@ -156,6 +222,7 @@ try {
   await ensureColumns(conn, config.db.database)
   await ensureIndexes(conn, config.db.database)
   await ensureEnums(conn, config.db.database)
+  await backfillClientActivity(conn)
   console.log(`✔ Schema applied to \`${config.db.database}\` at ${config.db.host}:${config.db.port}`)
 } finally {
   await conn.end()
