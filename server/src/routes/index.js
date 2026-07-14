@@ -12,6 +12,7 @@ import { projectsRouter } from './projects.routes.js'
 import { tasksRouter } from './tasks.routes.js'
 import { milestonesRouter } from './milestones.routes.js'
 import { projectTypesRouter } from './projectTypes.routes.js'
+import { projectTemplatesRouter } from './projectTemplates.routes.js'
 import { invoicesRouter } from './invoices.routes.js'
 import { paymentsRouter } from './payments.routes.js'
 import { expensesRouter } from './expenses.routes.js'
@@ -47,6 +48,7 @@ apiRouter.use('/projects', requireAdmin, projectsRouter) // Projects (SOW hub)
 apiRouter.use('/tasks', requireAdmin, tasksRouter) // Tasks
 apiRouter.use('/milestones', requireAdmin, milestonesRouter) // Delivery milestones (over tasks)
 apiRouter.use('/project-types', requireAdmin, projectTypesRouter) // Project type catalog
+apiRouter.use('/project-templates', requireAdmin, projectTemplatesRouter) // Delivery-plan templates
 apiRouter.use('/invoices', requireAdmin, invoicesRouter) // Billing — invoices
 apiRouter.use('/payments', requireAdmin, paymentsRouter) // Billing — payments
 apiRouter.use('/expenses', requireAdmin, expensesRouter) // Billing — expenses (money out)

@@ -225,13 +225,36 @@ try {
   )
   const [[websiteType]] = await pool.query("SELECT id FROM project_types WHERE `key` = 'website' LIMIT 1")
 
-  // Default delivery-milestone templates for the website type (config, not sample
-  // data). Seed once if none exist, like the project type above.
-  const [[{ mt }]] = await pool.query('SELECT COUNT(*) AS mt FROM milestone_templates WHERE project_type_id = ?', [websiteType.id])
-  if (mt === 0) {
-    const TEMPLATES = ['Discovery', 'Design', 'Build', 'Launch']
-    for (let i = 0; i < TEMPLATES.length; i++) {
-      await pool.query('INSERT INTO milestone_templates (project_type_id, title, position) VALUES (?, ?, ?)', [websiteType.id, TEMPLATES[i], i])
+  // Default delivery-plan template for the website type (config, not sample data).
+  // A named "Website Build" template with milestones + starter tasks, flagged as
+  // the type's default so it applies when a project is created without an explicit
+  // template pick (e.g. the lead→client conversion path). Seed once if none exist.
+  const [[{ pt }]] = await pool.query('SELECT COUNT(*) AS pt FROM project_templates WHERE project_type_id = ?', [websiteType.id])
+  if (pt === 0) {
+    const WEBSITE_TEMPLATE = [
+      ['Discovery', ['Kickoff call', 'Gather brand assets & content', 'Confirm sitemap & scope']],
+      ['Design', ['Homepage mockup', 'Interior page designs', 'Design review & sign-off']],
+      ['Build', ['Develop pages', 'Wire up forms & integrations', 'Responsive & cross-browser QA']],
+      ['Launch', ['Client review & revisions', 'Go-live & DNS', 'Post-launch check-in']]
+    ]
+    const [tplRes] = await pool.query(
+      'INSERT INTO project_templates (name, description, project_type_id, is_default, is_active, sort_order) VALUES (?, ?, ?, 1, 1, 0)',
+      ['Website Build', 'Standard delivery plan for a website project.', websiteType.id]
+    )
+    const templateId = tplRes.insertId
+    for (let i = 0; i < WEBSITE_TEMPLATE.length; i++) {
+      const [title, tasks] = WEBSITE_TEMPLATE[i]
+      const [mRes] = await pool.query(
+        'INSERT INTO project_template_milestones (template_id, title, position) VALUES (?, ?, ?)',
+        [templateId, title, i]
+      )
+      const milestoneId = mRes.insertId
+      for (let j = 0; j < tasks.length; j++) {
+        await pool.query(
+          'INSERT INTO project_template_tasks (template_id, template_milestone_id, title, position) VALUES (?, ?, ?, ?)',
+          [templateId, milestoneId, tasks[j], j]
+        )
+      }
     }
   }
 

@@ -194,7 +194,10 @@ leadsRouter.post('/:id/convert', async (req, res) => {
         project_type_id: projectType.id,
         name: projectName,
         status: p.status || 'planning',
-        goals: typeof p.goals === 'string' ? p.goals.trim() || null : null
+        goals: typeof p.goals === 'string' ? p.goals.trim() || null : null,
+        // Optional explicit template; when absent, createProject falls back to
+        // the project type's default template.
+        template_id: p.template_id ? Number(p.template_id) : undefined
       })
     }
 
