@@ -196,17 +196,41 @@ onBeforeUnmount(() => {
 
 const unreadCount = computed(() => notifications.value.filter(n => !n.read).length)
 
-// Popover + slide-over open state (the popover's "View all" opens the panel).
-const notifPopoverOpen = ref(false)
+// Slide-over open state (the bell opens it directly — no popover).
 const notifPanelOpen = ref(false)
 
-// Slide-over filter — All / Unread.
-const notifFilter = ref<'all' | 'unread'>('all')
+// Slide-over filter — Unread first, then All.
+const notifFilter = ref<'unread' | 'all'>('unread')
+
+// Ids that were unread when the drawer was last opened. We auto-mark them read
+// on open (clearing the bell), but keep them visible in the Unread tab for this
+// viewing session so it doesn't empty out from under the user.
+const sessionUnread = ref<Set<number>>(new Set())
+
 const visibleNotifications = computed(() =>
   notifFilter.value === 'unread'
-    ? notifications.value.filter(n => !n.read)
+    ? notifications.value.filter(n => !n.read || sessionUnread.value.has(n.id))
     : notifications.value
 )
+// Count shown on the Unread tab pill — tracks what's visible there (stays put
+// after the auto-mark-read on open).
+const unreadTabCount = computed(() =>
+  notifications.value.filter(n => !n.read || sessionUnread.value.has(n.id)).length
+)
+
+// Opening the drawer: snapshot the unread set, default to the Unread tab, and
+// auto-mark everything read so the bell clears. Closing resets the snapshot.
+watch(notifPanelOpen, (open) => {
+  if (open) {
+    notifFilter.value = 'unread'
+    sessionUnread.value = new Set(
+      notifications.value.filter(n => !n.read).map(n => n.id)
+    )
+    if (unreadCount.value) markAllRead()
+  } else {
+    sessionUnread.value = new Set()
+  }
+})
 
 // Icon tint per tone — reuses the semantic ramps from the design system.
 const toneClass: Record<NotifTone, string> = {
@@ -250,15 +274,6 @@ function markRead(n: Notification) {
   n.read = true
   api(`/notifications/${n.id}`, { method: 'PATCH', body: { read: true } })
     .catch(() => { n.read = false })
-}
-
-function onNotifClick(n: Notification) {
-  markRead(n)
-}
-
-function openNotifPanel() {
-  notifPopoverOpen.value = false
-  notifPanelOpen.value = true
 }
 
 // Slide-over row: mark read and dismiss the panel on navigate.
@@ -342,119 +357,20 @@ function onNotifOpen(n: Notification) {
         </ClientOnly>
       </button>
 
-      <UPopover
-        v-model:open="notifPopoverOpen"
-        :content="{ align: 'end', sideOffset: 8 }"
-        :ui="{ content: 'w-[380px] max-w-[calc(100vw-2rem)]' }"
+      <button
+        aria-label="Notifications"
+        class="relative inline-flex size-10 flex-none items-center justify-center rounded-[10px] border border-default bg-default text-highlighted transition-colors hover:bg-muted"
+        @click="notifPanelOpen = true"
       >
-        <button
-          aria-label="Notifications"
-          class="relative inline-flex size-10 flex-none items-center justify-center rounded-[10px] border border-default bg-default text-highlighted transition-colors hover:bg-muted"
-        >
-          <UIcon
-            name="i-lucide-bell"
-            class="size-[18px]"
-          />
-          <span
-            v-if="unreadCount"
-            class="absolute right-2.5 top-2 size-[7px] rounded-full border-[1.5px] border-[var(--ui-bg)] bg-error"
-          />
-        </button>
-
-        <template #content>
-          <!-- header -->
-          <div class="flex items-center justify-between gap-3 border-b border-default px-4 py-3">
-            <div class="flex items-center gap-2">
-              <h2 class="text-sm font-semibold text-highlighted">
-                Notifications
-              </h2>
-              <span
-                v-if="unreadCount"
-                class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-mist px-1.5 text-[11px] font-semibold text-primary"
-              >{{ unreadCount }}</span>
-            </div>
-            <div class="flex items-center gap-3">
-              <button
-                v-if="unreadCount"
-                class="text-[13px] font-medium text-primary transition-colors hover:text-primary/80"
-                @click="markAllRead"
-              >
-                Mark All Read
-              </button>
-              <button
-                v-if="notifications.length"
-                class="text-[13px] font-medium text-muted transition-colors hover:text-highlighted"
-                @click="clearAll"
-              >
-                Clear All
-              </button>
-            </div>
-          </div>
-
-          <!-- list -->
-          <div class="max-h-[380px] divide-y divide-default overflow-y-auto">
-            <NuxtLink
-              v-for="n in notifications"
-              :key="n.id"
-              :to="n.to"
-              class="flex gap-3 px-4 py-3 transition-colors hover:bg-muted"
-              :class="!n.read && 'bg-mist/40'"
-              @click="onNotifClick(n)"
-            >
-              <span
-                class="mt-0.5 inline-flex size-9 flex-none items-center justify-center rounded-full"
-                :class="toneClass[n.tone]"
-              >
-                <UIcon
-                  :name="n.icon"
-                  class="size-[18px]"
-                />
-              </span>
-              <div class="min-w-0 flex-1">
-                <div class="flex items-start justify-between gap-2">
-                  <p class="truncate text-[13px] font-semibold text-highlighted">{{ n.title }}</p>
-                  <span
-                    v-if="!n.read"
-                    class="mt-1.5 size-2 flex-none rounded-full bg-primary"
-                    aria-label="Unread"
-                  />
-                </div>
-                <p class="mt-0.5 text-[13px] leading-snug text-muted">{{ n.body }}</p>
-                <p class="mt-1 font-mono text-[11px] uppercase tracking-[0.05em] text-dimmed">{{ timeAgo(n.createdAt) }}</p>
-              </div>
-            </NuxtLink>
-
-            <!-- empty state -->
-            <div
-              v-if="!notifications.length"
-              class="flex flex-col items-center px-4 py-12 text-center"
-            >
-              <UIcon
-                name="i-lucide-bell-off"
-                class="size-6 text-dimmed"
-              />
-              <p class="mt-2 text-[13px] text-muted">
-                You're all caught up.
-              </p>
-            </div>
-          </div>
-
-          <!-- footer -->
-          <div class="border-t border-default px-2 py-1.5">
-            <UButton
-              block
-              variant="ghost"
-              color="neutral"
-              size="sm"
-              trailing-icon="i-lucide-arrow-right"
-              class="justify-center font-medium"
-              @click="openNotifPanel"
-            >
-              View All Notifications
-            </UButton>
-          </div>
-        </template>
-      </UPopover>
+        <UIcon
+          name="i-lucide-bell"
+          class="size-[18px]"
+        />
+        <span
+          v-if="unreadCount"
+          class="absolute right-2.5 top-2 size-[7px] rounded-full border-[1.5px] border-[var(--ui-bg)] bg-error"
+        />
+      </button>
 
       <!-- Notifications slide-over (full list) -->
       <USlideover
@@ -491,7 +407,7 @@ function onNotifOpen(n: Notification) {
               <div class="mt-4 flex items-center justify-between gap-3">
                 <div class="inline-flex items-center gap-1 rounded-xl border border-default bg-muted p-1">
                   <button
-                    v-for="f in (['all', 'unread'] as const)"
+                    v-for="f in (['unread', 'all'] as const)"
                     :key="f"
                     class="inline-flex items-center gap-2 rounded-[9px] px-3.5 py-1.5 text-[13px] font-semibold capitalize transition-colors"
                     :class="notifFilter === f ? 'bg-teal-800 text-white' : 'text-muted hover:text-highlighted'"
@@ -501,7 +417,7 @@ function onNotifOpen(n: Notification) {
                     <span
                       class="rounded-full px-1.5 py-px text-[11px] tabular-nums"
                       :class="notifFilter === f ? 'bg-white/20 text-white' : 'border border-default bg-default text-muted'"
-                    >{{ f === 'unread' ? unreadCount : notifications.length }}</span>
+                    >{{ f === 'unread' ? unreadTabCount : notifications.length }}</span>
                   </button>
                 </div>
                 <div class="flex items-center gap-3">
