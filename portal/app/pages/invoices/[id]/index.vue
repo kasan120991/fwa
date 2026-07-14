@@ -169,14 +169,6 @@ const statusChip = computed(() => {
         </div>
       </div>
 
-      <!-- pay in-portal via the Stripe Payment Element -->
-      <PortalInvoicePayElement
-        v-if="invoice.status === 'open' && showPay"
-        :invoice-id="invoice.id"
-        :amount="Number(invoice.amount_due)"
-        @paid="load"
-      />
-
       <!-- line items -->
       <div
         v-if="items.length"
@@ -204,6 +196,14 @@ const statusChip = computed(() => {
           <span class="w-24 flex-none text-right text-[13.5px] font-medium tabular-nums text-highlighted">{{ formatMoney(li.line_total) }}</span>
         </div>
       </div>
+
+      <!-- pay in-portal via the Stripe Payment Element (below the line items) -->
+      <PortalInvoicePayElement
+        v-if="invoice.status === 'open' && showPay"
+        :invoice-id="invoice.id"
+        :amount="Number(invoice.amount_due)"
+        @paid="load"
+      />
 
       <!-- payments -->
       <div
