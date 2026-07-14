@@ -16,7 +16,7 @@ interface Summary {
 }
 type PStatus = 'planning' | 'awaiting_signature' | 'awaiting_deposit' | 'in_progress' | 'in_review' | 'awaiting_final' | 'on_hold' | 'completed'
 interface ApiProject { id: number, name: string, status: PStatus, project_fee: number | null, client_company: string | null, client_name: string | null }
-interface DueTask { id: number, title: string, status: string, project_id: number | null, project_name: string | null }
+interface DueTask { id: number, title: string, status: string, due_date: string, project_id: number | null, project_name: string | null }
 interface RevenueMonth { label: string, ym: string, total: number, current: boolean }
 interface Revenue { months: RevenueMonth[], total: number, delta_pct: number | null, span: number }
 type ChipStatus = 'neutral' | 'info' | 'warning' | 'success' | 'error'
@@ -36,7 +36,7 @@ const PROJECT_META: Record<PStatus, { label: string, status: 'neutral' | 'info' 
 
 const summary = ref<Summary | null>(null)
 const activeProjects = ref<ApiProject[]>([])
-const dueToday = ref<DueTask[]>([])
+const dueTasks = ref<DueTask[]>([])
 const revenue = ref<Revenue | null>(null)
 const range = ref<6 | 12>(6) // window length toggle
 const hoverIdx = ref<number | null>(null) // hovered bar, drives tooltip + dim
@@ -89,9 +89,13 @@ async function loadProjects() {
   const { data } = await api<{ data: ApiProject[] }>('/projects', { query: { active: 1, limit: 5 } })
   activeProjects.value = data
 }
-async function loadDueToday() {
-  const { data } = await api<{ data: DueTask[] }>('/tasks', { query: { due: 'today' } })
-  dueToday.value = data
+// Everything whose due date has arrived — late or due today. Needs Attention
+// deliberately no longer carries tasks, so this card is their only home.
+// Re-sorted most-overdue-first: /tasks orders by `position` (the drag-to-reorder
+// sequence project boards rely on), which is arbitrary once dates are mixed.
+async function loadDueTasks() {
+  const { data } = await api<{ data: DueTask[] }>('/tasks', { query: { due: 'by_today' } })
+  dueTasks.value = [...data].sort((a, b) => a.due_date.localeCompare(b.due_date) || a.id - b.id)
 }
 async function loadRevenue() {
   const { data } = await api<{ data: Revenue }>('/dashboard/revenue', { query: { months: range.value } })
@@ -110,7 +114,7 @@ async function loadAttention() {
 const socket = useSocket()
 function onInvoice() { loadAttention(); loadSummary() }
 function onPayment() { loadAttention(); loadSummary(); loadRevenue() }
-function onTask() { loadAttention(); loadSummary(); loadDueToday() }
+function onTask() { loadAttention(); loadSummary(); loadDueTasks() }
 function onCall() { loadAttention() }
 function onProject() { loadSummary(); loadProjects() }
 function onTicket() { loadAttention() }
@@ -135,7 +139,7 @@ const SOCKET_EVENTS: [string, (...args: unknown[]) => void][] = [
 onMounted(() => {
   loadSummary()
   loadProjects()
-  loadDueToday()
+  loadDueTasks()
   loadRevenue()
   loadAttention()
   for (const [event, handler] of SOCKET_EVENTS) socket.on(event, handler)
@@ -156,7 +160,17 @@ const cards = computed(() => {
 
 async function toggleTask(t: DueTask) {
   await api(`/tasks/${t.id}`, { method: 'PATCH', body: { status: t.status === 'done' ? 'todo' : 'done' } })
-  await Promise.all([loadDueToday(), loadSummary()])
+  await Promise.all([loadDueTasks(), loadSummary()])
+}
+
+// due_date is a date-only 'YYYY-MM-DD' string, so compare it against the local
+// date the same way rather than via Date maths — parsing a bare date yields UTC
+// midnight, which would report a task due today as a day late west of UTC.
+const today = new Date().toLocaleDateString('en-CA')
+const daysLate = (due: string) => Math.round((Date.parse(today) - Date.parse(due)) / 86400e3)
+const dueMeta = (t: DueTask) => {
+  const d = daysLate(t.due_date)
+  return `${t.project_name || 'Standalone'} · ${d > 0 ? `${d} ${d === 1 ? 'day' : 'days'} late` : 'due today'}`
 }
 
 const attentionTone: Record<string, string> = {
@@ -380,7 +394,7 @@ const attentionTone: Record<string, string> = {
         </div>
       </div>
 
-      <!-- RIGHT: needs attention + due today -->
+      <!-- RIGHT: needs attention + tasks due -->
       <div class="flex min-w-0 flex-col gap-5">
         <!-- needs attention (live: overdue invoices, agreements, tasks, follow-ups, calls) -->
         <div class="overflow-hidden rounded-card bg-default ring ring-default">
@@ -440,44 +454,44 @@ const attentionTone: Record<string, string> = {
           </div>
         </div>
 
-        <!-- due today (wired) -->
+        <!-- tasks due (wired) — late or due today; the only home for tasks -->
         <div class="overflow-hidden rounded-card bg-default ring ring-default">
           <div class="flex items-center justify-between border-b border-default px-5 py-[18px]">
             <h2 class="text-base font-semibold text-highlighted">
-              Due Today
+              Tasks Due
             </h2>
-            <span class="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-mist px-[7px] text-xs font-bold text-primary tabular-nums">{{ dueToday.length }}</span>
+            <span class="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-mist px-[7px] text-xs font-bold text-primary tabular-nums">{{ dueTasks.length }}</span>
           </div>
           <div
-            v-if="dueToday.length"
+            v-if="dueTasks.length"
             class="flex flex-col"
           >
             <div
-              v-for="(t, i) in dueToday"
+              v-for="(t, i) in dueTasks"
               :key="t.id"
-              class="flex items-center gap-3 px-5 py-3.5"
-              :class="i < dueToday.length - 1 ? 'border-b border-default' : ''"
+              class="flex items-start gap-3 px-5 py-3.5"
+              :class="i < dueTasks.length - 1 ? 'border-b border-default' : ''"
             >
               <button
                 type="button"
-                class="flex size-[18px] flex-none items-center justify-center rounded-full border border-accented transition-colors hover:border-primary"
-                aria-label="Mark done"
+                class="mt-1 flex size-[18px] flex-none items-center justify-center rounded-full border border-accented transition-colors hover:border-primary"
+                :aria-label="`Mark “${t.title}” done`"
                 @click="toggleTask(t)"
               />
-              <div class="min-w-0 flex-1">
+              <NuxtLink
+                :to="t.project_id ? `/projects/${t.project_id}` : '/tasks'"
+                class="min-w-0 flex-1"
+              >
                 <div class="truncate text-sm font-medium text-highlighted">
                   {{ t.title }}
                 </div>
-                <NuxtLink
-                  v-if="t.project_id"
-                  :to="`/projects/${t.project_id}`"
-                  class="text-[12.5px] font-medium text-primary hover:opacity-80"
-                >{{ t.project_name }}</NuxtLink>
-                <span
-                  v-else
-                  class="text-[12.5px] text-muted"
-                >Standalone</span>
-              </div>
+                <div class="mt-0.5 truncate text-[13px] text-muted tabular-nums">
+                  {{ dueMeta(t) }}
+                </div>
+              </NuxtLink>
+              <StatusChip :status="daysLate(t.due_date) > 0 ? 'warning' : 'info'">
+                {{ daysLate(t.due_date) > 0 ? 'Overdue' : 'Today' }}
+              </StatusChip>
             </div>
           </div>
           <div
@@ -489,7 +503,7 @@ const attentionTone: Record<string, string> = {
               class="size-5"
             /></span>
             <p class="text-sm text-muted">
-              Nothing due today.
+              Nothing due right now.
             </p>
           </div>
         </div>

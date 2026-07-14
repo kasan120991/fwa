@@ -95,11 +95,12 @@ const money = n => `$${Number(n ?? 0).toLocaleString('en-US', { maximumFractionD
 const plural = (n, w) => `${n} ${w}${Number(n) === 1 ? '' : 's'}`
 
 // "Needs Attention" feed: a prioritized, cross-source list of things the owner
-// should act on — overdue invoices, agreements awaiting a close, overdue/due-today
-// tasks, overdue outreach follow-ups, and unreviewed calls. Each item carries
-// display fields + a deep link; lower `priority` sorts first. Per-signal item lists
-// are capped so no one source floods the card, while `total` is the true count
-// across every signal (so the badge can exceed the shown list).
+// should act on — overdue invoices, agreements awaiting a close, overdue outreach
+// follow-ups, and unreviewed calls. Tasks are excluded on purpose: the dashboard's
+// Tasks Due card is their sole home. Each item carries display fields + a deep
+// link; lower `priority` sorts first. Per-signal item lists are capped so no one
+// source floods the card, while `total` is the true count across every signal (so
+// the badge can exceed the shown list).
 export async function dashboardAttention() {
   const items = []
   let total = 0
@@ -128,30 +129,8 @@ export async function dashboardAttention() {
     })
   }
 
-  // 2) Overdue / due-today tasks — delivery slipping.
-  const [{ n: taskN }] = await query(
-    "SELECT COUNT(*) AS n FROM tasks WHERE status <> 'done' AND due_date IS NOT NULL AND due_date <= CURDATE()"
-  )
-  total += Number(taskN)
-  const tasks = await query(
-    `SELECT t.id, t.title, t.project_id, DATEDIFF(CURDATE(), t.due_date) AS days_late, p.name AS project_name
-       FROM tasks t LEFT JOIN projects p ON p.id = t.project_id
-      WHERE t.status <> 'done' AND t.due_date IS NOT NULL AND t.due_date <= CURDATE()
-      ORDER BY t.due_date ASC LIMIT 2`
-  )
-  for (const r of tasks) {
-    const d = Number(r.days_late)
-    const overdue = d > 0
-    items.push({
-      id: `task-${r.id}`,
-      title: r.title,
-      meta: `${r.project_name || 'Standalone'} · ${overdue ? `${plural(d, 'day')} late` : 'due today'}`,
-      icon: 'i-lucide-list-checks', tone: 'warning',
-      chip: overdue ? 'warning' : 'info', chipText: overdue ? 'Overdue' : 'Today',
-      to: r.project_id ? `/projects/${r.project_id}` : '/tasks',
-      priority: 2000 - Math.min(d, 90)
-    })
-  }
+  // NB: late/due-today tasks are deliberately NOT a signal here — the dashboard's
+  // Tasks Due card owns them outright, so listing them again would double up.
 
   // 3) Agreements awaiting a close — proposals/contracts sent or viewed.
   const [{ n: agrN }] = await query(
