@@ -20,6 +20,7 @@ interface ApiFile {
   category: Category
   path: string
   name: string
+  title: string | null
   mime: string | null
   size_bytes: number | string | null
   created_at: string
@@ -29,6 +30,8 @@ interface ApiFile {
 interface FileRow {
   id: number
   name: string
+  title: string | null
+  label: string
   ext: string
   path: string
   category: Category
@@ -69,14 +72,18 @@ function extOf(name: string): string {
 function mapFile(f: ApiFile): FileRow {
   const who = f.uploaded_by_name || 'System'
   const size = f.size_bytes == null ? null : Number(f.size_bytes)
+  // Titled files lead with the title and keep the filename in the meta line;
+  // untitled ones show the filename as before.
   return {
     id: f.id,
     name: f.name,
+    title: f.title,
+    label: f.title || f.name,
     ext: extOf(f.name),
     path: f.path,
     category: f.category,
     size: Number.isFinite(size as number) ? size : null,
-    meta: `Uploaded ${shortDate(f.created_at)} · ${who}`,
+    meta: `${f.title ? `${f.name} · ` : ''}Uploaded ${shortDate(f.created_at)} · ${who}`,
     createdAt: f.created_at
   }
 }
@@ -195,9 +202,43 @@ async function confirmDelete() {
   }
 }
 
+// ---- edit details (title + category) ----
+const editTarget = ref<FileRow | null>(null)
+const editTitle = ref('')
+const editCategory = ref<Category>('other')
+const saving = ref(false)
+
+function openEdit(f: FileRow) {
+  editTitle.value = f.title || ''
+  editCategory.value = f.category
+  editTarget.value = f
+}
+
+async function submitEdit() {
+  if (!editTarget.value || saving.value) return
+  saving.value = true
+  try {
+    await api(`/files/${editTarget.value.id}`, {
+      method: 'PATCH',
+      body: { title: editTitle.value.trim(), category: editCategory.value }
+    })
+    toast.add({ title: 'File updated', color: 'success' })
+    editTarget.value = null
+    await load()
+  } catch (err: unknown) {
+    const e = err as { data?: { error?: { message?: string } } }
+    toast.add({ title: 'Could not update that file', description: e?.data?.error?.message, color: 'error' })
+  } finally {
+    saving.value = false
+  }
+}
+
 function rowMenuItems(f: FileRow) {
   return [
-    [{ label: 'Download', icon: 'i-lucide-download', onSelect: () => { window.open(resolveUrl(f.path), '_blank') } }],
+    [
+      { label: 'Download', icon: 'i-lucide-download', onSelect: () => { window.open(resolveUrl(f.path), '_blank') } },
+      { label: 'Edit Details', icon: 'i-lucide-pencil', onSelect: () => openEdit(f) }
+    ],
     [{ label: 'Delete', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => { deleteTarget.value = f } }]
   ]
 }
@@ -258,7 +299,7 @@ function rowMenuItems(f: FileRow) {
               target="_blank"
               rel="noopener"
               class="block truncate text-sm font-medium text-highlighted hover:text-primary hover:underline"
-            >{{ f.name }}</a>
+            >{{ f.label }}</a>
             <div class="mt-0.5 text-[12.5px] text-muted">
               {{ f.meta }}
             </div>
@@ -270,7 +311,7 @@ function rowMenuItems(f: FileRow) {
               color="neutral"
               variant="ghost"
               size="xs"
-              :aria-label="`Actions for ${f.name}`"
+              :aria-label="`Actions for ${f.label}`"
             />
           </UDropdownMenu>
         </div>
@@ -390,6 +431,58 @@ function rowMenuItems(f: FileRow) {
       </template>
     </UModal>
 
+    <!-- edit details -->
+    <UModal
+      :open="!!editTarget"
+      title="Edit File Details"
+      :ui="{ content: 'max-w-md' }"
+      @update:open="v => { if (!v) editTarget = null }"
+    >
+      <template #body>
+        <div class="flex flex-col gap-4">
+          <UFormField
+            label="Title"
+            :hint="editTarget?.name"
+            help="Shown instead of the filename. Leave blank to show the filename."
+          >
+            <UInput
+              v-model="editTitle"
+              placeholder="e.g. Signed Storefront SOW"
+              size="lg"
+              class="w-full"
+              @keydown.enter="submitEdit"
+            />
+          </UFormField>
+          <UFormField label="Category">
+            <USelect
+              v-model="editCategory"
+              :items="categoryItems"
+              size="lg"
+              class="w-full"
+            />
+          </UFormField>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton
+            color="neutral"
+            variant="outline"
+            @click="() => { editTarget = null }"
+          >
+            Cancel
+          </UButton>
+          <UButton
+            color="primary"
+            :loading="saving"
+            @click="submitEdit"
+          >
+            Save Changes
+          </UButton>
+        </div>
+      </template>
+    </UModal>
+
     <!-- delete confirm -->
     <UModal
       :open="!!deleteTarget"
@@ -405,7 +498,7 @@ function rowMenuItems(f: FileRow) {
             />
           </span>
           <div class="text-sm text-default">
-            <p><span class="font-semibold text-highlighted">{{ deleteTarget?.name }}</span> will be permanently removed — both the record and the file itself. This can’t be undone.</p>
+            <p><span class="font-semibold text-highlighted">{{ deleteTarget?.label }}</span> will be permanently removed — both the record and the file itself. This can’t be undone.</p>
           </div>
         </div>
       </template>

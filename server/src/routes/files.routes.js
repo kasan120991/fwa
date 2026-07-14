@@ -94,7 +94,7 @@ filesRouter.post('/', async (req, res) => {
   res.status(201).json({ data: file })
 })
 
-// PATCH /api/files/:id  { name?, client_id?, project_id?, category? }
+// PATCH /api/files/:id  { name?, title?, client_id?, project_id?, category? }
 filesRouter.patch('/:id', async (req, res) => {
   const id = parseId(req)
   const existing = await getFile(id)
@@ -107,6 +107,11 @@ filesRouter.patch('/:id', async (req, res) => {
     const name = String(b.name).trim()
     if (!name) fields.name = 'a file name is required'
     else patch.name = name
+  }
+  // Display title — empty string clears it (falls back to the filename).
+  if (b.title !== undefined) {
+    const title = String(b.title ?? '').trim().slice(0, 255)
+    patch.title = title || null
   }
   if (b.client_id !== undefined) {
     patch.client_id = await resolveLink(b.client_id, { exists: async cid => !!await getClient(cid), label: 'client' }, fields, 'client_id')

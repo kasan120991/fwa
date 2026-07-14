@@ -1,5 +1,6 @@
 import * as repo from '../repositories/projects.repo.js'
 import { emitProjectCreated, emitProjectUpdated, emitProjectDeleted } from '../realtime/io.js'
+import { logClientActivity } from './clientActivity.service.js'
 
 // Write-path wrapper: persist via the repo, then push the change to admins live.
 // Reads go straight to the repo.
@@ -7,6 +8,11 @@ import { emitProjectCreated, emitProjectUpdated, emitProjectDeleted } from '../r
 export async function createProject(data) {
   const project = await repo.createProject(data)
   emitProjectCreated(project)
+  await logClientActivity(project.client_id, {
+    category: 'project', icon: 'i-lucide-folder-plus',
+    title: `Project “${project.name}” created`,
+    link: `/projects/${project.id}`
+  })
   return project
 }
 

@@ -9,6 +9,7 @@ import {
   stripeEnabled, createStripeCustomer, createAndSendInvoice, voidStripeInvoice, payStripeInvoiceOutOfBand
 } from '../services/stripe.js'
 import { notify } from '../services/notifications.service.js'
+import { logClientActivity } from '../services/clientActivity.service.js'
 import { emitInvoiceChanged, emitPaymentCreated } from '../realtime/io.js'
 
 export const invoicesRouter = Router()
@@ -102,6 +103,12 @@ invoicesRouter.post('/', async (req, res) => {
     })
   }
   emitInvoiceChanged(invoice.id)
+  await logClientActivity(clientId, {
+    category: 'invoice', icon: 'i-lucide-receipt-text',
+    title: `Invoice ${invoice.number || '(draft)'} sent`,
+    meta: `$${total.toLocaleString('en-US')}${invoice.due_date ? ` · due ${invoice.due_date}` : ''}`,
+    link: '/invoices'
+  })
   res.status(201).json({ data: invoice })
 })
 
@@ -165,6 +172,12 @@ invoicesRouter.post('/:id/pay', async (req, res) => {
   } catch (err) {
     console.error(`Payment notification failed for invoice ${id}:`, err.message)
   }
+  await logClientActivity(invoice.client_id, {
+    category: 'payment', icon: 'i-lucide-circle-check',
+    title: `Payment received — $${amount.toLocaleString('en-US')}`,
+    meta: invoice.number ? `${invoice.number} · recorded manually` : 'Recorded manually',
+    link: '/payments'
+  })
   emitInvoiceChanged(id)
   emitPaymentCreated(payment.id)
   res.json({ data: updated })

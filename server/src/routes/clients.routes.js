@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import {
-  listClients, getClient, createClient, updateClient, deleteClient
+  listClients, getClient, createClient, updateClient, deleteClient, getClientSummary
 } from '../repositories/clients.repo.js'
+import { listClientActivity } from '../repositories/clientActivity.repo.js'
 import { createStripeCustomer, updateStripeCustomer } from '../services/stripe.js'
 import { clientHosting } from '../services/hostingCosts.js'
 import { inviteClientToPortal } from '../services/portalInvite.service.js'
@@ -142,6 +143,20 @@ clientsRouter.get('/:id', async (req, res) => {
   const client = await getClient(parseId(req))
   if (!client) return res.status(404).json({ error: { message: 'Client not found' } })
   res.json({ data: client })
+})
+
+// GET /api/clients/:id/summary — one-pass counts + rollups for the detail
+// page's metric strip and tab badges (no lists loaded).
+clientsRouter.get('/:id/summary', async (req, res) => {
+  const summary = await getClientSummary(parseId(req))
+  if (!summary) return res.status(404).json({ error: { message: 'Client not found' } })
+  res.json({ data: summary })
+})
+
+// GET /api/clients/:id/activity?limit=&offset= — the client's event timeline,
+// newest first.
+clientsRouter.get('/:id/activity', async (req, res) => {
+  res.json({ data: await listClientActivity(parseId(req), req.query) })
 })
 
 // GET /api/clients/:id/hosting — monthly DigitalOcean hosting cost vs care-plan margin.
