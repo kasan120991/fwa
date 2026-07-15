@@ -22,13 +22,21 @@ import {
 } from '../services/stripe.js'
 import { notify } from '../services/notifications.service.js'
 import { pandadocEnabled, getDocumentStatus, createDocumentSession } from '../services/pandadoc.js'
+import { sendTemplateEmail, alertTimestamp, TEMPLATES } from '../services/email.js'
 import { portalUpload } from '../storage/local.js'
 import { emitClientTicketUpdated } from '../realtime/io.js'
+import { config } from '../config/env.js'
 
 // PandaDoc statuses for which an embedded signing session can be minted.
 const EMBEDDABLE_STATUSES = new Set([
   'document.sent', 'document.viewed', 'document.completed', 'document.paid'
 ])
+
+// Ticket enum → display label for the admin alert email (mirrors the /support page).
+const TICKET_TYPE_LABEL = {
+  update: 'Site Update', issue: 'Site Issue', bug: 'Bug', question: 'Question', other: 'Other'
+}
+const TICKET_PRIORITY_LABEL = { low: 'Low', medium: 'Medium', high: 'High' }
 
 // Client-portal API. Mounted behind requirePortal, so req.clientId is always the
 // logged-in client's own id — every query is scoped to it, never to a param.
@@ -257,6 +265,27 @@ portalRouter.post('/tickets', async (req, res) => {
     })
   } catch (err) {
     console.error(`Portal ticket notification failed for ticket ${ticket.id}:`, err.message)
+  }
+  // Email the owner too — the bell only lands if the admin app is open. Kept a
+  // separate best-effort channel from notify(), and never gated by notification
+  // prefs (those govern in-app alerts only).
+  try {
+    await sendTemplateEmail({
+      template: TEMPLATES.supportTicket,
+      to: config.resend.alertsTo,
+      variables: {
+        ticket_code: ticketCode(ticket.id),
+        client: ticket.client_company || ticket.client_name || 'A client',
+        subject: ticket.subject,
+        type: TICKET_TYPE_LABEL[ticket.type] || ticket.type,
+        priority: TICKET_PRIORITY_LABEL[ticket.priority] || ticket.priority,
+        description: ticket.description || '—',
+        submitted_at: alertTimestamp(),
+        ticket_url: `${config.appBaseUrl}/support/${ticket.id}`
+      }
+    })
+  } catch (err) {
+    console.error(`Portal ticket email failed for ticket ${ticket.id}:`, err.message)
   }
   res.status(201).json({ data: ticket })
 })
