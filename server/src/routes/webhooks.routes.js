@@ -2,7 +2,7 @@ import crypto from 'node:crypto'
 import { Router } from 'express'
 import { config } from '../config/env.js'
 import { constructWebhookEvent, createStripeCustomer, mapStripeInvoice, getInvoicePaymentIntentId } from '../services/stripe.js'
-import { verifyWebhookSignature, pandadocEnabled, createDocumentFromTemplate, sendDocument } from '../services/pandadoc.js'
+import { verifyWebhookSignature, pandadocEnabled, createDocumentFromTemplate, sendDocument, hasViewedDocument } from '../services/pandadoc.js'
 import { getClient, getClientByStripeCustomerId, getClientByPhone, updateClient } from '../repositories/clients.repo.js'
 import { createLead, getRecentWebsiteLeadByEmail } from '../repositories/leads.repo.js'
 import { getInvoice, getInvoiceByStripeId, updateInvoice, upsertFromStripe } from '../repositories/invoices.repo.js'
@@ -309,6 +309,42 @@ const STATUS_STAMP = {
   sent: 'sent_at', viewed: 'viewed_at', accepted: 'accepted_at', signed: 'signed_at', declined: 'declined_at'
 }
 
+/**
+ * Should a `document.viewed` event count as *the client* having read the doc?
+ *
+ * PandaDoc's viewed status is document-level — it fires for whoever opens the
+ * document first and never says who that was. When an owner/agency signer is on
+ * the document (PANDADOC_OWNER_ROLE, for in-app countersign), the agency's own
+ * preview trips it, which made every contract read "viewed" seconds after it was
+ * sent, before the client had touched it. The audit trail is the only per-actor
+ * record, so it's what we ask.
+ *
+ * Returns true (trust the event) when there is no owner recipient to confuse it
+ * with, or when the trail can't be read — never block a real status update on a
+ * best-effort attribution call.
+ */
+async function clientDidView(doc) {
+  const recipients = Array.isArray(doc?.recipients) ? doc.recipients : []
+  const roleOf = r => r?.role || (Array.isArray(r?.roles) ? r.roles[0] : null)
+  const ownerRole = config.pandadoc.ownerRole
+  // No owner signer on the doc -> only the client could have viewed it.
+  if (!ownerRole || !recipients.some(r => roleOf(r) === ownerRole)) return true
+
+  const clientRole = config.pandadoc.clientRole
+  const clientEmails = recipients
+    .filter(r => (clientRole ? roleOf(r) === clientRole : roleOf(r) !== ownerRole))
+    .map(r => r.email)
+    .filter(Boolean)
+  if (!clientEmails.length) return true
+
+  try {
+    return await hasViewedDocument(doc.id, clientEmails)
+  } catch (err) {
+    console.error(`PandaDoc audit-trail check failed for document ${doc.id}:`, err.message)
+    return true
+  }
+}
+
 // Generate the project contract from an accepted proposal (Model B). Idempotent:
 // if a contract already exists for the proposal, returns it untouched. The
 // PandaDoc document creation/send is best-effort and never blocks the DB write.
@@ -375,9 +411,13 @@ async function handleDocumentEvent(doc) {
   const raw = doc.status
   const mapped = STATUS_MAP[raw]
 
+  // `viewed` is the one status PandaDoc can't attribute for us — drop it when the
+  // view was the agency's own, but keep mirroring pandadoc_status either way.
+  const suppressViewed = raw === 'document.viewed' && !(await clientDidView(doc))
+
   const proposal = await getProposalByDocumentId(doc.id)
   if (proposal) {
-    const internal = mapped?.proposal
+    const internal = suppressViewed ? undefined : mapped?.proposal
     const patch = { pandadoc_status: raw, last_webhook_at: new Date() }
     if (internal) {
       patch.status = internal
@@ -400,7 +440,7 @@ async function handleDocumentEvent(doc) {
 
   const contract = await getContractByDocumentId(doc.id)
   if (contract) {
-    const internal = mapped?.contract
+    const internal = suppressViewed ? undefined : mapped?.contract
     const patch = { pandadoc_status: raw, last_webhook_at: new Date() }
     if (internal) {
       patch.status = internal

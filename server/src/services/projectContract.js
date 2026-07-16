@@ -92,8 +92,13 @@ async function resolveTemplate(project) {
  * Returns the created contract.
  */
 export async function generateProjectContract(project, client, overrides = {}) {
+  // Default title is the project code + a fixed label, e.g. "PROJ-0001 - Service
+  // Agreement". Falls back to the client when a project has no code (shouldn't
+  // happen — codes are assigned on project create).
   const title = (overrides.title && String(overrides.title).trim())
-    || `Website Design & Development Agreement — ${client.company || client.name}`
+    || (project.code
+      ? `${project.code} - Service Agreement`
+      : `Service Agreement — ${client.company || client.name}`)
   const billing_interval = overrides.billing_interval || 'one_time'
   const start_date = overrides.start_date ?? project.start_date ?? null
 
