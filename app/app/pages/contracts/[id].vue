@@ -366,7 +366,7 @@ onBeforeUnmount(() => {
                 :loading="sessionLoading"
                 @click="loadSession"
               >
-                Countersign
+                Sign Contract
               </UButton>
             </div>
             <iframe
