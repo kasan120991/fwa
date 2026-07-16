@@ -8,14 +8,11 @@ const force = process.argv.includes('--force')
 const pool = getPool()
 
 const now = Date.now()
-// Local wall-clock 'YYYY-MM-DD HH:MM:SS' — matches MySQL's CURRENT_TIMESTAMP
-// (session tz) and the frontend's timeAgo(), which parses these as local. Using
-// toISOString() here would write UTC and skew every relative time by the tz offset.
-const pad = n => String(n).padStart(2, '0')
-const fmt = (ms) => {
-  const d = new Date(ms)
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
-}
+// UTC wall-clock 'YYYY-MM-DD HH:MM:SS' — the API's timezone contract (see
+// db/pool.js). Matches MySQL's CURRENT_TIMESTAMP under the pool's UTC session and
+// the frontend's timeAgo(), which parses these as UTC. Writing local wall-clock
+// here would skew every relative time by the host's offset.
+const fmt = ms => new Date(ms).toISOString().slice(0, 19).replace('T', ' ')
 const daysAgo = d => fmt(now - d * 86400e3)
 const hoursAgo = h => fmt(now - h * 3600e3)
 const daysAhead = d => fmt(now + d * 86400e3)
