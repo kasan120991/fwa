@@ -11,13 +11,6 @@ import { query } from '../db/pool.js'
 
 export const leadsRouter = Router()
 
-// MySQL DATETIME 'YYYY-MM-DD HH:MM:SS' in local time (matches the seed + timeAgo).
-function nowDatetime() {
-  const d = new Date()
-  const p = n => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
-}
-
 const SOURCES = ['website', 'manual']
 const STAGES = ['new', 'qualifying', 'to_contact', 'contacted', 'engaged', 'qualified', 'lost']
 
@@ -243,7 +236,7 @@ leadsRouter.post('/:id/touches', async (req, res) => {
   const fields = {}
   const channel = body.channel
   if (!TOUCH_CHANNELS.has(channel)) fields.channel = `must be one of ${[...TOUCH_CHANNELS].join(', ')}`
-  const occurred_at = body.occurred_at || nowDatetime()
+  const occurred_at = body.occurred_at || new Date()
   if (body.occurred_at != null && Number.isNaN(Date.parse(occurred_at))) fields.occurred_at = 'must be a valid date string'
   const note = typeof body.body === 'string' ? body.body.trim() || null : null
   if (body.next_action_at != null && typeof body.next_action_at === 'string' && Number.isNaN(Date.parse(body.next_action_at))) {
