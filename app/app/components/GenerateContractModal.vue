@@ -5,6 +5,7 @@
 // draft and routes to the contract viewer. Mirrors InvoiceForm's modal shape.
 interface ProjectLike {
   id: number
+  code: string | null
   name: string
   client_id: number
   client_company: string | null
@@ -46,7 +47,9 @@ const money = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigi
 function reset() {
   const p = props.project
   errors.value = {}
-  title.value = p ? `Website Design & Development Agreement — ${p.client_company || p.client_name}` : ''
+  // Pre-fill "PROJ-0001 - Service Agreement" (matches the backend default in
+  // projectContract.js); editable before generating.
+  title.value = p ? (p.code ? `${p.code} - Service Agreement` : `Service Agreement — ${p.client_company || p.client_name}`) : ''
   startDate.value = p?.start_date ? p.start_date.slice(0, 10) : ''
   depositPct.value = p?.deposit_pct ?? 50
   billingInterval.value = 'one_time'
