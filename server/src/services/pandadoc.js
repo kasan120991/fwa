@@ -7,11 +7,13 @@ import crypto from 'node:crypto'
 import { config } from '../config/env.js'
 
 const API_BASE = 'https://api.pandadoc.com/public/v1'
+// The audit trail is only served from v2 (v1 returns 404 for it).
+const API_BASE_V2 = 'https://api.pandadoc.com/public/v2'
 
 export const pandadocEnabled = () => Boolean(config.pandadoc.apiKey)
 
-async function pandadocFetch(path, { method = 'GET', body } = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
+async function pandadocFetch(path, { method = 'GET', body, base = API_BASE } = {}) {
+  const res = await fetch(`${base}${path}`, {
     method,
     headers: {
       Authorization: `API-Key ${config.pandadoc.apiKey}`,
@@ -73,8 +75,19 @@ export async function createDocumentFromTemplate({ templateUuid, name, client, t
   // Optional agency/owner signer for in-app countersign — only added when an
   // owner role is configured (PANDADOC_OWNER_ROLE) AND the template declares it.
   // Left off by default so document creation is unchanged without the config.
+  //
+  // `delivery_methods.email: false` stops PandaDoc emailing the owner their own
+  // recipient link. Opening that link registers a *recipient view*, which flips the
+  // document to `document.viewed` — indistinguishable from the client reading it.
+  // The owner countersigns in-app instead (contracts/:id/session), so the email is
+  // pure downside. See handleDocumentEvent() in routes/webhooks.routes.js.
   if (owner?.email && owner?.role) {
-    recipients.push({ role: owner.role, email: owner.email, ...splitName(owner.name) })
+    recipients.push({
+      role: owner.role,
+      email: owner.email,
+      ...splitName(owner.name),
+      delivery_methods: { email: false, sms: false }
+    })
   }
   const doc = await pandadocFetch('/documents', {
     method: 'POST',
@@ -96,6 +109,56 @@ export async function getDocumentStatus(documentId) {
   if (!pandadocEnabled()) return null
   const doc = await pandadocFetch(`/documents/${documentId}`)
   return doc.status
+}
+
+/** Full document details (recipients, roles, fields). Null when disabled. */
+export async function getDocument(documentId) {
+  if (!pandadocEnabled()) return null
+  return pandadocFetch(`/documents/${documentId}/details`)
+}
+
+/**
+ * Download a document as a PDF (Buffer), or null when disabled. This is an
+ * API-key call, NOT a recipient session — it does not register a view against any
+ * recipient, which is exactly why the admin viewer previews with it rather than
+ * embedding a session (see routes/contracts.routes.js).
+ */
+export async function downloadDocument(documentId) {
+  if (!pandadocEnabled()) return null
+  const res = await fetch(`${API_BASE}/documents/${documentId}/download`, {
+    headers: { Authorization: `API-Key ${config.pandadoc.apiKey}` }
+  })
+  if (!res.ok) {
+    throw new Error(`PandaDoc GET /documents/${documentId}/download failed (${res.status}): ${res.statusText}`)
+  }
+  return Buffer.from(await res.arrayBuffer())
+}
+
+// Audit-trail action codes we care about. Full list:
+// https://developers.pandadoc.com/reference/audit-trail-actions
+const AUDIT_ACTION_VIEWED = 8
+
+/** Audit-trail entries ({ user: { email }, action, date_created }), newest last. */
+export async function getDocumentAuditTrail(documentId) {
+  if (!pandadocEnabled()) return []
+  const data = await pandadocFetch(`/documents/${documentId}/audit-trail`, { base: API_BASE_V2 })
+  return Array.isArray(data?.results) ? data.results : []
+}
+
+/**
+ * Did one of `emails` actually open the document? PandaDoc's `document.viewed`
+ * status is document-level: it says *someone* looked, never who, and the payload
+ * carries no per-recipient view timestamp. The audit trail is the only place that
+ * attributes a view to an email, so it's the only way to tell the client reading
+ * a contract from the agency previewing its own paperwork.
+ */
+export async function hasViewedDocument(documentId, emails = []) {
+  const wanted = emails.filter(Boolean).map(e => String(e).toLowerCase())
+  if (!wanted.length) return false
+  const trail = await getDocumentAuditTrail(documentId)
+  return trail.some(e =>
+    e?.action === AUDIT_ACTION_VIEWED && wanted.includes(String(e?.user?.email || '').toLowerCase())
+  )
 }
 
 /**
