@@ -1,16 +1,45 @@
 // Formatting helpers for API datetime strings ('YYYY-MM-DD HH:MM:SS').
+// Keep in sync with ../../../portal/app/utils/format.ts
 
+import { reactiveNow } from './now'
+
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/
+const HAS_ZONE_RE = /(?:Z|[+-]\d{2}:?\d{2})$/i
+
+/**
+ * Parse an API datetime string. The two shapes need opposite handling:
+ *   - 'YYYY-MM-DD HH:MM:SS' is an instant, sent as UTC wall-clock per the API's
+ *     timezone contract (see server/src/db/pool.js) — parse as UTC, render local.
+ *   - 'YYYY-MM-DD' is a DATE column: a calendar date with no instant attached.
+ *     It must be local midnight, because bare `new Date('2026-07-15')` is UTC
+ *     midnight per spec, which renders as the *previous* day west of Greenwich.
+ */
 function toDate(input?: string | null): Date | null {
   if (!input) return null
-  const d = new Date(input.replace(' ', 'T'))
+  const s = input.trim()
+  if (!s) return null
+  let d: Date
+  if (DATE_ONLY_RE.test(s)) {
+    d = new Date(`${s}T00:00:00`)
+  } else {
+    const iso = s.replace(' ', 'T')
+    d = new Date(HAS_ZONE_RE.test(iso) ? iso : `${iso}Z`)
+  }
   return Number.isNaN(d.getTime()) ? null : d
 }
 
-/** "12m ago", "5h ago", "3d ago", "2w ago", "2mo ago". */
+/** "12m ago", "5h ago", "3d ago", "2w ago", "2mo ago". Ticks as time passes. */
 export function timeAgo(input?: string | null): string {
   const d = toDate(input)
   if (!d) return ''
-  const s = Math.max(0, (Date.now() - d.getTime()) / 1000)
+  const raw = (reactiveNow() - d.getTime()) / 1000
+  // A few seconds of client clock drift should read "just now"; hours means the
+  // UTC contract is broken somewhere, and silently clamping that is what hid it
+  // for months. Surface it in dev rather than rendering a plausible lie.
+  if (import.meta.dev && raw < -120) {
+    console.warn('[timeAgo] timestamp is in the future — timezone contract broken?', input)
+  }
+  const s = Math.max(0, raw)
   if (s < 60) return 'just now'
   const m = s / 60
   if (m < 60) return `${Math.round(m)}m ago`

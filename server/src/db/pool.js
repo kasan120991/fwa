@@ -3,7 +3,22 @@ import { config } from '../config/env.js'
 
 let pool
 
-/** Lazily-created shared connection pool. */
+/**
+ * Lazily-created shared connection pool.
+ *
+ * TIMEZONE CONTRACT: every DATETIME/TIMESTAMP string crossing the API is UTC
+ * wall-clock ('YYYY-MM-DD HH:MM:SS', no zone marker); the frontend parses it as
+ * UTC (see app/app/utils/format.ts). This is pinned here rather than left to the
+ * host, because the environments disagree — prod's MySQL runs in a UTC container,
+ * local dev's runs on the Mac (host tz). Both settings below are required:
+ *
+ *   - `timezone: 'Z'` makes mysql2 serialize JS `Date` query params as UTC.
+ *     It defaults to 'local' (Node's tz) and does NOT touch the session.
+ *   - `SET time_zone` pins the MySQL session, so NOW()/CURRENT_TIMESTAMP and
+ *     every TIMESTAMP-column read render UTC. `timezone:` has no effect on this.
+ *
+ * Drop either one and writes skew against reads on any non-UTC host.
+ */
 export function getPool() {
   if (!pool) {
     pool = mysql.createPool({
@@ -16,7 +31,13 @@ export function getPool() {
       waitForConnections: true,
       namedPlaceholders: true,
       enableKeepAlive: true,
-      dateStrings: true
+      dateStrings: true,
+      timezone: 'Z'
+    })
+    // Fires once per new pooled connection. mysql2 queues commands per connection,
+    // so this lands before any query issued on it — no await needed.
+    pool.on('connection', (conn) => {
+      conn.query("SET time_zone = '+00:00'")
     })
   }
   return pool
