@@ -37,6 +37,8 @@ services:
       CORS_ORIGIN: https://${OPS_DOMAIN},https://${PORTAL_DOMAIN}
       # Base URL used to build portal set-password links in invite emails.
       PORTAL_BASE_URL: https://${PORTAL_DOMAIN}
+      # Base URL used to deep-link alert emails at the admin record they're about.
+      APP_BASE_URL: https://${OPS_DOMAIN}
       DB_HOST: mysql
       DB_PORT: "3306"
       DB_USER: root
@@ -58,6 +60,7 @@ services:
       DIGITALOCEAN_API_TOKEN: ${DIGITALOCEAN_API_TOKEN:-}
       DIGITALOCEAN_BASE_URL: ${DIGITALOCEAN_BASE_URL:-https://api.digitalocean.com}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM: "${RESEND_FROM:-Francis Web Agency <info@franciswebagency.com>}"
       ALERTS_EMAIL: ${ALERTS_EMAIL:-info@franciswebagency.com}
     volumes:
       - api_uploads:/app/uploads

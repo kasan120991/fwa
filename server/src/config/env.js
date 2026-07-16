@@ -16,6 +16,9 @@ export const config = {
   // Public base URL of the client portal app — used to build set-password links
   // in invite emails. Dev default is the portal's local dev port.
   portalBaseUrl: process.env.PORTAL_BASE_URL || 'http://localhost:3090',
+  // Public base URL of the admin app — used to deep-link alert emails at the
+  // record they're about. Dev default is the admin app's local dev port.
+  appBaseUrl: process.env.APP_BASE_URL || 'http://localhost:3000',
   uploads: {
     // Where uploaded files live on disk, and the cap on a single upload.
     dir: process.env.UPLOADS_DIR || path.join(serverRoot, 'uploads'),
