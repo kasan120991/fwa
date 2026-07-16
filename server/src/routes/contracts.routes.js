@@ -6,7 +6,7 @@ import {
 import { getClient } from '../repositories/clients.repo.js'
 import { getActiveTemplate } from '../repositories/documentTemplates.repo.js'
 import { resolveLineItems } from '../services/lineItems.js'
-import { pandadocEnabled, createDocumentFromTemplate, sendDocument, getDocumentStatus, createDocumentSession } from '../services/pandadoc.js'
+import { pandadocEnabled, createDocumentFromTemplate, sendDocument, getDocumentStatus, createDocumentSession, downloadDocument } from '../services/pandadoc.js'
 import { advanceProject } from '../services/projects.service.js'
 import { emitContractChanged } from '../realtime/io.js'
 
@@ -80,35 +80,92 @@ contractsRouter.get('/:id', async (req, res) => {
   res.json({ data: contract })
 })
 
+/**
+ * Resolve a contract's PandaDoc document readiness. Shared by /document, /pdf and
+ * /session so they can't disagree about what "ready" means.
+ * Returns { contract, state } — state is { ready, reason?, status? }.
+ *   reason: not_found | no_document (PandaDoc off or not created)
+ *           | draft (not sent yet) | processing (still generating)
+ */
+async function resolveDocument(req) {
+  const contract = await getContract(parseId(req))
+  if (!contract) return { contract: null, state: { ready: false, reason: 'not_found' } }
+  if (!pandadocEnabled() || !contract.pandadoc_document_id) {
+    return { contract, state: { ready: false, reason: 'no_document' } }
+  }
+  let status
+  try {
+    status = await getDocumentStatus(contract.pandadoc_document_id)
+  } catch (err) {
+    return { contract, state: { ready: false, reason: 'status_error', message: err.message } }
+  }
+  // A draft can't be embedded (PandaDoc requires a sent document) — the owner
+  // sends it (or previews in PandaDoc) first. Distinguish that from a doc that's
+  // still being generated (uploaded), which the page polls on.
+  if (status === 'document.draft') return { contract, state: { ready: false, reason: 'draft', status } }
+  if (!EMBEDDABLE_STATUSES.has(status)) return { contract, state: { ready: false, reason: 'processing', status } }
+  return { contract, state: { ready: true, status } }
+}
+
+// GET /api/contracts/:id/document — document readiness/status only.
+//
+// Exists so the viewer can decide what to render WITHOUT minting a session:
+// creating + opening a session registers a recipient view (see /session below).
+contractsRouter.get('/:id/document', async (req, res) => {
+  const { contract, state } = await resolveDocument(req)
+  if (!contract) return res.status(404).json({ error: { message: 'Contract not found' } })
+  if (state.reason === 'status_error') {
+    return res.status(502).json({ error: { message: `PandaDoc status check failed: ${state.message}` } })
+  }
+  return res.json({ data: state })
+})
+
+// GET /api/contracts/:id/pdf — the document as a PDF, for read-only preview.
+//
+// Deliberately NOT /session: a session opens the document *as a recipient*, and
+// the owner is a recipient (PANDADOC_OWNER_ROLE, for countersign), so previewing
+// through one registers a real view and flips the doc to `document.viewed` —
+// indistinguishable from the client reading it. This is an API-key download, so
+// it registers nothing. Use /session only for a deliberate countersign.
+contractsRouter.get('/:id/pdf', async (req, res) => {
+  const contract = await getContract(parseId(req))
+  if (!contract) return res.status(404).json({ error: { message: 'Contract not found' } })
+  if (!pandadocEnabled() || !contract.pandadoc_document_id) {
+    return res.status(404).json({ error: { message: 'No PandaDoc document for this contract' } })
+  }
+  try {
+    const pdf = await downloadDocument(contract.pandadoc_document_id)
+    if (!pdf) return res.status(404).json({ error: { message: 'No PandaDoc document for this contract' } })
+    res.setHeader('Content-Type', 'application/pdf')
+    // inline so the viewer can frame it rather than trigger a download.
+    const filename = String(contract.title || `contract-${contract.id}`).replace(/[^\w. -]+/g, '').trim() || `contract-${contract.id}`
+    res.setHeader('Content-Disposition', `inline; filename="${filename}.pdf"`)
+    return res.send(pdf)
+  } catch (err) {
+    // A doc still being generated (document.uploaded) has no PDF yet — the page polls.
+    console.error(`PandaDoc download failed for contract ${contract.id}:`, err.message)
+    return res.status(502).json({ error: { message: `PandaDoc download failed: ${err.message}` } })
+  }
+})
+
 // GET /api/contracts/:id/session — mint a short-lived embedded PandaDoc session
-// for in-app preview/sign. Never hard-fails the viewer: returns { ready:false, reason }
+// for in-app signing. Never hard-fails the viewer: returns { ready:false, reason }
 // for the degraded cases so the page can show a local summary / poll / fall back.
 //   reason: no_document (PandaDoc off or not created) | processing (not yet draft)
 //           | session_error (recipient not on doc, etc. — see message)
 // ?recipient= overrides the signer email (defaults to the owner, for countersign;
 // the future client portal will pass the client's email).
+//
+// NB: opening the returned embedUrl registers a recipient view. Call this only on
+// a deliberate user action (countersign) — never on page load. Use /pdf to preview.
 contractsRouter.get('/:id/session', async (req, res) => {
-  const contract = await getContract(parseId(req))
+  const { contract, state } = await resolveDocument(req)
   if (!contract) return res.status(404).json({ error: { message: 'Contract not found' } })
-  if (!pandadocEnabled() || !contract.pandadoc_document_id) {
-    return res.json({ data: { ready: false, reason: 'no_document' } })
+  if (state.reason === 'status_error') {
+    return res.status(502).json({ error: { message: `PandaDoc status check failed: ${state.message}` } })
   }
-
-  let status
-  try {
-    status = await getDocumentStatus(contract.pandadoc_document_id)
-  } catch (err) {
-    return res.status(502).json({ error: { message: `PandaDoc status check failed: ${err.message}` } })
-  }
-  // A draft can't be embedded (PandaDoc requires a sent document) — the owner
-  // sends it (or previews in PandaDoc) first. Distinguish that from a doc that's
-  // still being generated (uploaded), which the page polls on.
-  if (status === 'document.draft') {
-    return res.json({ data: { ready: false, reason: 'draft', status } })
-  }
-  if (!EMBEDDABLE_STATUSES.has(status)) {
-    return res.json({ data: { ready: false, reason: 'processing', status } })
-  }
+  if (!state.ready) return res.json({ data: state })
+  const status = state.status
 
   const recipient = (typeof req.query.recipient === 'string' && req.query.recipient) || req.user.email
   try {
