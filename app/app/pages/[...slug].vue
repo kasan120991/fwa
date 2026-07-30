@@ -12,7 +12,7 @@ useHead({ title: `${meta.title} · Francis Web Agency` })
       <span class="mb-5 inline-flex size-12 items-center justify-center rounded-[12px] bg-mist text-primary">
         <UIcon name="i-lucide-hammer" class="size-6" />
       </span>
-      <h2 class="font-display text-2xl font-medium tracking-tight text-highlighted">{{ meta.title }}</h2>
+      <h2 class="font-display text-2xl font-semibold tracking-tight text-highlighted">{{ meta.title }}</h2>
       <p class="mt-2 text-[15px] leading-relaxed text-muted">
         This section isn't built yet. It's part of a later phase — the design and data model come after the current pages ship.
       </p>

@@ -256,10 +256,10 @@ async function remove() {
         <div class="flex-none border-b border-default px-6 py-5">
           <div class="flex items-start justify-between gap-3">
             <div>
-              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+              <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
                 Billing · Expense
               </div>
-              <h2 class="mt-1 font-display text-[22px] font-medium tracking-tight text-highlighted">
+              <h2 class="mt-1 font-display text-[22px] font-semibold tracking-tight text-highlighted">
                 {{ isEdit ? 'Edit Expense' : 'New Expense' }}
               </h2>
             </div>
@@ -439,7 +439,7 @@ async function remove() {
             <!-- receipt -->
             <UFormField label="Receipt">
               <div class="flex items-center gap-3">
-                <label class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-default bg-default px-3.5 py-1.5 text-[13px] font-medium text-default transition-colors hover:border-accented">
+                <label class="inline-flex cursor-pointer items-center gap-2 rounded-chip border border-default bg-default px-3.5 py-1.5 text-[13px] font-medium text-default transition-colors hover:border-accented">
                   <UIcon
                     :name="uploading ? 'i-lucide-loader-circle' : 'i-lucide-paperclip'"
                     class="size-4"

@@ -144,7 +144,7 @@ onBeforeUnmount(() => {
           <span class="text-base font-semibold text-highlighted">Invoices</span>
           <span
             v-if="outstanding > 0"
-            class="inline-flex items-center gap-1.5 rounded-full bg-error/10 px-3 py-1 text-[13px] font-semibold text-error tabular-nums"
+            class="inline-flex items-center gap-1.5 rounded-chip bg-error/10 px-3 py-1 text-[13px] font-semibold text-error tabular-nums"
           >{{ formatMoney(outstanding) }} outstanding</span>
         </div>
         <UButton
@@ -182,22 +182,22 @@ onBeforeUnmount(() => {
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default bg-muted/40">
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Invoice
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Issued
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Due
                 </th>
-                <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Amount
                 </th>
-                <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Balance
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Status
                 </th>
               </tr>
@@ -314,7 +314,7 @@ onBeforeUnmount(() => {
       <div class="rounded-card bg-default p-[18px] ring ring-default">
         <div class="mb-3 flex items-center justify-between">
           <span class="text-[15px] font-semibold text-highlighted">Hosting Margin</span>
-          <span class="font-mono text-[10px] uppercase tracking-[0.05em] text-muted">Monthly</span>
+          <span class="text-[10px] font-medium uppercase tracking-[0.06em] text-muted">Monthly</span>
         </div>
         <p
           v-if="!hosting"

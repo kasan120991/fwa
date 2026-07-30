@@ -317,9 +317,9 @@ onBeforeUnmount(() => {
     <div class="-mx-1 overflow-x-auto px-1">
       <div class="flex min-w-min gap-3">
         <div v-for="s in stats" :key="s.label" class="min-w-[170px] flex-1 rounded-[14px] bg-default p-4 ring ring-default">
-          <div class="whitespace-nowrap font-mono text-[10.5px] uppercase tracking-[0.05em] text-muted">{{ s.label }}</div>
+          <div class="whitespace-nowrap text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted">{{ s.label }}</div>
           <div class="mt-2 flex items-baseline gap-2">
-            <div class="font-display text-[26px] font-medium leading-none tracking-tight text-highlighted tabular-nums">{{ s.value }}</div>
+            <div class="font-display text-[26px] font-semibold leading-none tracking-tight text-highlighted tabular-nums">{{ s.value }}</div>
             <span v-if="s.trend" class="text-xs font-semibold text-success tabular-nums">{{ s.trend }}</span>
           </div>
         </div>
@@ -337,7 +337,7 @@ onBeforeUnmount(() => {
           @click="activeTab = t.key"
         >
           {{ t.label }}
-          <span class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums" :class="activeTab === t.key ? 'bg-mist text-primary' : 'bg-elevated text-muted'">{{ t.count }}</span>
+          <span class="rounded-chip px-1.5 py-px text-[11px] font-semibold tabular-nums" :class="activeTab === t.key ? 'bg-mist text-primary' : 'bg-elevated text-muted'">{{ t.count }}</span>
         </button>
       </div>
       <UInput v-model="search" icon="i-lucide-search" placeholder="Search caller, number, transcript…" class="w-full sm:w-[260px]" :ui="{ base: 'rounded-full' }" />
@@ -357,7 +357,7 @@ onBeforeUnmount(() => {
             </span>
             {{ visibleCalls.length }} {{ visibleCalls.length === 1 ? 'call' : 'calls' }}
           </button>
-          <span class="font-mono text-[11px] uppercase tracking-[0.04em] text-muted">{{ unreadCount > 0 ? `${unreadCount} unread` : 'All reviewed' }}</span>
+          <span class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">{{ unreadCount > 0 ? `${unreadCount} unread` : 'All reviewed' }}</span>
         </div>
 
         <button
@@ -365,7 +365,7 @@ onBeforeUnmount(() => {
           class="flex flex-none items-center gap-2.5 border-b border-primary/20 bg-mist px-4 py-2.5 text-left text-[13px] font-semibold text-primary transition-colors hover:bg-mist"
           @click="newCall = false; load()"
         >
-          <span class="size-2 flex-none animate-pulse rounded-full bg-teal-500" />New call just came in — tap to load
+          <span class="size-2 flex-none animate-pulse rounded-full bg-citrine" />New call just came in — tap to load
         </button>
 
         <div class="min-h-0 flex-1 overflow-y-auto">
@@ -375,7 +375,7 @@ onBeforeUnmount(() => {
               v-for="c in visibleCalls"
               :key="c.id"
               class="flex cursor-pointer gap-3 border-b border-l-[3px] border-default px-4 py-3.5 transition-colors"
-              :class="selectedId === c.id ? 'border-l-teal-500 bg-mist' : (selected[c.id] ? 'border-l-transparent bg-mist' : 'border-l-transparent hover:bg-muted')"
+              :class="selectedId === c.id ? 'border-l-citrine bg-mist' : (selected[c.id] ? 'border-l-transparent bg-mist' : 'border-l-transparent hover:bg-muted')"
               @click="selectCall(c)"
             >
               <div class="flex w-[22px] flex-none items-start justify-center pt-0.5" @click.stop>
@@ -389,7 +389,7 @@ onBeforeUnmount(() => {
                 >
                   <UIcon v-if="selected[c.id]" name="i-lucide-check" class="size-3 text-white" />
                 </button>
-                <span v-else-if="c.unread" class="size-2 rounded-full bg-teal-500" />
+                <span v-else-if="c.unread" class="size-2 rounded-full bg-citrine" />
               </div>
               <div class="min-w-0 flex-1">
                 <div class="flex items-center justify-between gap-2">
@@ -399,7 +399,7 @@ onBeforeUnmount(() => {
                 <div class="mt-px truncate text-[12.5px] text-muted">{{ c.business || (c.name ? '' : 'Unknown caller') }}</div>
                 <div class="mt-1.5 line-clamp-2 text-[13px] leading-snug text-default">{{ c.summary }}</div>
                 <div class="mt-2 flex items-center gap-2.5">
-                  <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-semibold" :class="TYPE_CHIP[c.type]">{{ TYPE_LABEL[c.type] }}</span>
+                  <span class="inline-flex items-center rounded-chip px-2 py-0.5 text-[11.5px] font-semibold" :class="TYPE_CHIP[c.type]">{{ TYPE_LABEL[c.type] }}</span>
                   <span class="inline-flex items-center gap-1 text-xs text-muted tabular-nums"><UIcon name="i-lucide-clock" class="size-3" />{{ c.duration }}</span>
                   <UIcon name="i-lucide-mic" class="size-[13px] text-muted" />
                 </div>
@@ -408,7 +408,7 @@ onBeforeUnmount(() => {
           </template>
           <div v-else class="flex flex-col items-center px-7 py-16 text-center">
             <span class="mb-3.5 inline-flex size-12 items-center justify-center rounded-xl bg-muted text-muted"><UIcon name="i-lucide-search" class="size-5" /></span>
-            <h3 class="font-display text-[17px] font-medium text-highlighted">No Matching Calls</h3>
+            <h3 class="font-display text-[17px] font-semibold text-highlighted">No Matching Calls</h3>
             <p class="mt-1 text-[13px] text-muted">Try a different search or filter.</p>
             <UButton color="neutral" variant="outline" size="xs" class="mt-3.5 rounded-full" @click="search = ''; activeTab = 'all'">Clear Filters</UButton>
           </div>
@@ -438,7 +438,7 @@ onBeforeUnmount(() => {
                 </div>
               </div>
               <UDropdownMenu :items="reclassItems">
-                <button class="inline-flex flex-none items-center gap-1 rounded-full px-2.5 py-1.5 text-[11.5px] font-semibold" :class="TYPE_CHIP[cur.type]">
+                <button class="inline-flex flex-none items-center gap-1 rounded-chip px-2.5 py-1.5 text-[11.5px] font-semibold" :class="TYPE_CHIP[cur.type]">
                   {{ TYPE_LABEL[cur.type] }}<UIcon name="i-lucide-chevron-down" class="size-3 opacity-60" />
                 </button>
               </UDropdownMenu>
@@ -466,7 +466,7 @@ onBeforeUnmount(() => {
               <UButton :icon="playing ? 'i-lucide-pause' : 'i-lucide-play'" color="primary" :ui="{ base: 'rounded-full size-11 justify-center' }" :aria-label="playing ? 'Pause recording' : 'Play recording'" @click="togglePlay" />
               <div class="min-w-0 flex-1">
                 <div class="flex h-[26px] items-center gap-px">
-                  <span v-for="(b, i) in waveform" :key="i" class="flex-1 rounded-full" :class="b.played ? 'bg-teal-600' : 'bg-accented'" :style="{ height: b.h + 'px' }" />
+                  <span v-for="(b, i) in waveform" :key="i" class="flex-1 rounded-full" :class="b.played ? 'bg-primary' : 'bg-accented'" :style="{ height: b.h + 'px' }" />
                 </div>
                 <div class="mt-1.5 flex justify-between text-[11.5px] text-muted tabular-nums">
                   <span>{{ durationMMSS(Math.floor(currentTime)) }}</span><span>{{ cur.duration }}</span>
@@ -475,10 +475,10 @@ onBeforeUnmount(() => {
               <UButton :to="cur.recordingUrl" external target="_blank" icon="i-lucide-download" color="neutral" variant="outline" square size="sm" aria-label="Download recording" />
             </div>
 
-            <div class="mb-2 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">Summary</div>
+            <div class="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Summary</div>
             <p class="mb-6 text-[14.5px] leading-relaxed text-default">{{ cur.summary }}</p>
 
-            <div v-if="cur.captured.length" class="mb-2.5 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">Captured details</div>
+            <div v-if="cur.captured.length" class="mb-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Captured details</div>
             <div v-if="cur.captured.length" class="mb-6 overflow-hidden rounded-xl bg-default ring ring-default">
               <div v-for="(f, i) in cur.captured" :key="f[0]" class="flex items-center justify-between gap-4 px-4 py-2.5" :class="i > 0 ? 'border-t border-default' : ''">
                 <span class="w-[140px] flex-none text-[13px] text-muted">{{ f[0] }}</span>
@@ -487,13 +487,13 @@ onBeforeUnmount(() => {
             </div>
 
             <div class="mb-3 flex items-center justify-between">
-              <div class="font-mono text-[11px] uppercase tracking-[0.05em] text-muted">Transcript</div>
+              <div class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Transcript</div>
               <span class="text-xs text-muted">{{ cur.transcript.length }} turns</span>
             </div>
             <div class="flex flex-col gap-3.5">
               <div v-for="(t, i) in cur.transcript" :key="i" class="flex max-w-[86%] flex-col gap-1" :class="t.r ? 'self-start' : 'self-end'">
-                <div class="px-1 font-mono text-[10px] uppercase tracking-[0.05em] text-muted" :class="t.r ? 'text-left' : 'text-right'">{{ t.r ? 'Receptionist' : 'Caller' }}</div>
-                <div class="rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed" :class="t.r ? 'rounded-bl-sm bg-default text-default ring ring-default' : 'rounded-br-sm bg-teal-800 text-white'">{{ t.t }}</div>
+                <div class="px-1 text-[10px] font-medium uppercase tracking-[0.06em] text-muted" :class="t.r ? 'text-left' : 'text-right'">{{ t.r ? 'Receptionist' : 'Caller' }}</div>
+                <div class="rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed" :class="t.r ? 'rounded-bl-sm bg-default text-default ring ring-default' : 'rounded-br-sm bg-primary text-inverted'">{{ t.t }}</div>
               </div>
             </div>
           </div>
@@ -503,9 +503,9 @@ onBeforeUnmount(() => {
             <NuxtLink
               v-else-if="curLink"
               :to="curLink.href"
-              class="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-mist px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-mist"
+              class="inline-flex items-center gap-2 rounded-chip border border-primary/20 bg-mist px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-mist"
             >
-              <span class="size-[7px] flex-none rounded-full" :class="curLink.kind === 'client' ? 'bg-info' : 'bg-teal-600'" />{{ curLink.label }}
+              <span class="size-[7px] flex-none rounded-full" :class="curLink.kind === 'client' ? 'bg-info' : 'bg-primary'" />{{ curLink.label }}
               <UIcon name="i-lucide-arrow-up-right" class="size-3.5 opacity-60" />
             </NuxtLink>
             <div class="flex-1" />
@@ -521,10 +521,10 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- bulk toolbar -->
-      <div v-if="anySelected" class="absolute bottom-5 left-1/2 z-20 flex max-w-[calc(100vw-1.5rem)] flex-wrap items-center justify-center gap-2 rounded-[22px] bg-ink-900 px-3 py-2 shadow-lg dark:bg-ink-700 sm:flex-nowrap sm:rounded-full sm:pl-4 sm:pr-2">
+      <div v-if="anySelected" class="absolute bottom-5 left-1/2 z-20 flex max-w-[calc(100vw-1.5rem)] flex-wrap items-center justify-center gap-2 rounded-[22px] bg-ink-900 px-3 py-2 shadow-lg dark:bg-ink-700 sm:flex-nowrap sm:rounded-chip sm:pl-4 sm:pr-2">
         <span class="whitespace-nowrap text-[13px] font-semibold text-white">{{ selCount }} selected</span>
         <span class="mx-1 h-5 w-px bg-white/20" />
-        <button class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/10" @click="bulkMarkReviewed"><UIcon name="i-lucide-check" class="size-[15px]" />Mark Reviewed</button>
+        <button class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/10" @click="bulkMarkReviewed"><UIcon name="i-lucide-check" class="size-[15px]" />Mark Reviewed</button>
         <UDropdownMenu :items="bulkReclassItems">
           <button class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/10"><UIcon name="i-lucide-tag" class="size-[15px]" />Reclassify<UIcon name="i-lucide-chevron-down" class="size-3 opacity-60" /></button>
         </UDropdownMenu>

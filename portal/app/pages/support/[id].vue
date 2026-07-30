@@ -142,7 +142,7 @@ async function sendReply() {
       v-else-if="notFound || !ticket"
       class="rounded-card bg-default px-6 py-16 text-center ring ring-default"
     >
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         Ticket not found
       </h3>
     </div>
@@ -155,7 +155,7 @@ async function sendReply() {
             <p class="eyebrow text-primary">
               {{ code(ticket.id) }}
             </p>
-            <h1 class="mt-1 font-display text-[1.6rem] font-medium leading-tight tracking-tight text-highlighted">
+            <h1 class="mt-1 font-display text-[1.6rem] font-semibold leading-tight tracking-tight text-highlighted">
               {{ ticket.subject }}
             </h1>
             <p class="mt-1 text-[13px] text-muted">
@@ -163,7 +163,7 @@ async function sendReply() {
             </p>
           </div>
           <span
-            class="rounded-full px-3 py-1.5 text-[12px] font-semibold"
+            class="rounded-lg px-3 py-1.5 text-[12px] font-semibold"
             :class="(STATUS_CHIP[ticket.status] || STATUS_CHIP.open)!.class"
           >{{ (STATUS_CHIP[ticket.status] || STATUS_CHIP.open)!.label }}</span>
         </div>
@@ -183,7 +183,7 @@ async function sendReply() {
             :href="resolveUrl(att.path)"
             target="_blank"
             rel="noopener"
-            class="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[12px] font-medium text-primary"
+            class="inline-flex items-center gap-1.5 rounded-chip bg-muted px-2.5 py-1 text-[12px] font-medium text-primary"
           >
             <UIcon
               name="i-lucide-paperclip"
@@ -221,7 +221,7 @@ async function sendReply() {
               :href="resolveUrl(att.path)"
               target="_blank"
               rel="noopener"
-              class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-default/70 px-2.5 py-1 text-[12px] font-medium text-primary ring ring-default"
+              class="mt-2 inline-flex items-center gap-1.5 rounded-chip bg-default/70 px-2.5 py-1 text-[12px] font-medium text-primary ring ring-default"
             >
               <UIcon
                 name="i-lucide-paperclip"

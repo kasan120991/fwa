@@ -33,7 +33,7 @@ useHead({ title: () => `${project.value?.name || 'Project'} · Francis Web Agenc
 
 const STATE_META: Record<MilestoneState, { label: string, dot: string, chip: string }> = {
   upcoming: { label: 'Upcoming', dot: 'bg-muted-foreground/40', chip: 'bg-muted text-muted' },
-  in_progress: { label: 'In Progress', dot: 'bg-teal-500', chip: 'bg-mist text-primary' },
+  in_progress: { label: 'In Progress', dot: 'bg-info', chip: 'bg-mist text-primary' },
   complete: { label: 'Complete', dot: 'bg-success', chip: 'bg-success/10 text-success' }
 }
 
@@ -80,7 +80,7 @@ const overallPct = computed(() => project.value && project.value.task_total
       v-else-if="notFound || !project"
       class="rounded-card bg-default px-6 py-16 text-center ring ring-default"
     >
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         Project not found
       </h3>
       <p class="mt-1.5 text-sm text-muted">
@@ -97,7 +97,7 @@ const overallPct = computed(() => project.value && project.value.task_total
         >
           {{ project.code }}
         </p>
-        <h1 class="mt-1 font-display text-[1.9rem] font-medium leading-tight tracking-tight text-highlighted">
+        <h1 class="mt-1 font-display text-[1.9rem] font-semibold leading-tight tracking-tight text-highlighted">
           {{ project.name }}
         </h1>
         <p class="mt-1 text-[0.9375rem] text-muted">
@@ -105,10 +105,10 @@ const overallPct = computed(() => project.value && project.value.task_total
         </p>
 
         <div class="mt-5 flex items-center gap-3 border-t border-default pt-4">
-          <span class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Progress</span>
+          <span class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Progress</span>
           <div class="h-2 flex-1 overflow-hidden rounded-full bg-muted">
             <div
-              class="h-full rounded-full bg-teal-500 transition-[width] duration-500"
+              class="h-full rounded-full bg-primary transition-[width] duration-500"
               :style="{ width: overallPct + '%' }"
             />
           </div>
@@ -124,7 +124,7 @@ const overallPct = computed(() => project.value && project.value.task_total
 
       <!-- milestone timeline -->
       <div>
-        <h2 class="mb-3 font-display text-[1.15rem] font-medium text-highlighted">
+        <h2 class="mb-3 font-display text-[1.15rem] font-semibold text-highlighted">
           Milestones
         </h2>
 
@@ -159,12 +159,12 @@ const overallPct = computed(() => project.value && project.value.task_total
             <div class="mb-0 flex-1 rounded-card bg-default p-4 ring ring-default">
               <div class="flex flex-wrap items-center gap-2.5">
                 <span
-                  class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+                  class="rounded-chip px-2.5 py-1 text-[11px] font-semibold"
                   :class="STATE_META[m.state].chip"
                 >
                   {{ STATE_META[m.state].label }}
                 </span>
-                <span class="font-display text-[15px] font-medium text-highlighted">{{ m.title }}</span>
+                <span class="font-display text-[15px] font-semibold text-highlighted">{{ m.title }}</span>
                 <span
                   v-if="m.target_date"
                   class="ms-auto inline-flex items-center gap-1 whitespace-nowrap text-[12px] text-muted"
@@ -185,7 +185,7 @@ const overallPct = computed(() => project.value && project.value.task_total
               <div class="mt-3 flex items-center gap-2.5">
                 <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                   <div
-                    class="h-full rounded-full bg-teal-500"
+                    class="h-full rounded-full bg-primary"
                     :style="{ width: pct(m) + '%' }"
                   />
                 </div>

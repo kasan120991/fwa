@@ -29,10 +29,10 @@ const rows = computed(() => [
 <template>
   <div class="rounded-card bg-default p-[18px] ring ring-default">
     <div class="mb-3 flex items-center justify-between">
-      <span class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Timeline</span>
+      <span class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Timeline</span>
       <span
         v-if="countdown"
-        class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-semibold tabular-nums"
+        class="inline-flex items-center gap-1 rounded-chip px-2 py-0.5 text-[11.5px] font-semibold tabular-nums"
         :class="overdueLaunch ? 'bg-warning/10 text-warning' : 'bg-mist text-primary'"
       >
         <UIcon

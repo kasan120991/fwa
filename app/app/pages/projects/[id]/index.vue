@@ -104,7 +104,7 @@ const DOC_STATUS: Record<string, 'neutral' | 'info' | 'warning' | 'success' | 'e
   draft: 'neutral', sent: 'info', viewed: 'info', signed: 'success', accepted: 'success',
   declined: 'error', expired: 'warning', voided: 'error'
 }
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-primary text-inverted', 'bg-elevated text-default', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 
 const project = ref<ApiProject | null>(null)
 const tasks = ref<Task[]>([])
@@ -601,7 +601,7 @@ const scopeFields = computed(() => project.value
           class="size-6"
         />
       </span>
-      <h2 class="font-display text-2xl font-medium tracking-tight text-highlighted">
+      <h2 class="font-display text-2xl font-semibold tracking-tight text-highlighted">
         Project Not Found
       </h2>
       <UButton
@@ -635,13 +635,13 @@ const scopeFields = computed(() => project.value
           <!-- title row -->
           <div class="mt-3 flex flex-wrap items-start justify-between gap-4">
             <div class="min-w-0">
-              <h1 class="font-display text-[28px] font-medium leading-tight tracking-tight text-highlighted">
+              <h1 class="font-display text-[28px] font-semibold leading-tight tracking-tight text-highlighted">
                 {{ project.name }}
               </h1>
               <div class="mt-2 flex flex-wrap items-center gap-3.5">
                 <span
                   v-if="project.code"
-                  class="font-mono text-[12px] tracking-[0.03em] text-muted"
+                  class="text-[12px] tracking-[0.03em] text-muted"
                 >{{ project.code }}</span>
                 <NuxtLink
                   :to="`/clients/${project.client_id}`"
@@ -697,10 +697,10 @@ const scopeFields = computed(() => project.value
 
           <!-- progress bar -->
           <div class="mt-5 flex items-center gap-3 border-t border-default pt-4">
-            <span class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Progress</span>
+            <span class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Progress</span>
             <div class="h-2 flex-1 overflow-hidden rounded-full bg-muted">
               <div
-                class="h-full rounded-full bg-teal-500 transition-[width] duration-500"
+                class="h-full rounded-full bg-primary transition-[width] duration-500"
                 :style="{ width: pct + '%' }"
               />
             </div>
@@ -719,13 +719,13 @@ const scopeFields = computed(() => project.value
                 v-for="t in tabs"
                 :key="t.key"
                 class="inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 pb-3 pt-2.5 text-sm transition-colors"
-                :class="activeTab === t.key ? 'border-teal-400 font-semibold text-highlighted' : 'border-transparent font-medium text-muted hover:text-highlighted'"
+                :class="activeTab === t.key ? 'border-citrine font-semibold text-highlighted' : 'border-transparent font-medium text-muted hover:text-highlighted'"
                 @click="activeTab = t.key"
               >
                 {{ t.label }}
                 <span
                   v-if="t.badge != null"
-                  class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums"
+                  class="rounded-chip px-1.5 py-px text-[11px] font-semibold tabular-nums"
                   :class="activeTab === t.key ? 'bg-mist text-primary' : 'bg-muted text-muted'"
                 >{{ t.badge }}</span>
               </button>
@@ -738,7 +738,7 @@ const scopeFields = computed(() => project.value
             >
               <!-- toolbar -->
               <div class="flex items-center justify-between gap-2">
-                <span class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Milestones &amp; tasks</span>
+                <span class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Milestones &amp; tasks</span>
                 <UButton
                   size="xs"
                   color="neutral"
@@ -789,7 +789,7 @@ const scopeFields = computed(() => project.value
                   name="i-lucide-milestone"
                   class="size-6"
                 /></span>
-                <h3 class="font-display text-lg font-medium text-highlighted">
+                <h3 class="font-display text-lg font-semibold text-highlighted">
                   No Milestones Yet
                 </h3>
                 <p class="mt-1.5 max-w-xs text-sm text-muted">
@@ -818,10 +818,10 @@ const scopeFields = computed(() => project.value
                       <StatusChip :status="MILESTONE_STATE_META[board.milestone.state].status">
                         {{ MILESTONE_STATE_META[board.milestone.state].label }}
                       </StatusChip>
-                      <span class="font-display text-[15px] font-medium text-highlighted">{{ board.milestone.title }}</span>
+                      <span class="font-display text-[15px] font-semibold text-highlighted">{{ board.milestone.title }}</span>
                     </template>
                     <template v-else>
-                      <span class="font-display text-[15px] font-medium text-highlighted">General</span>
+                      <span class="font-display text-[15px] font-semibold text-highlighted">General</span>
                       <span class="text-[12px] text-muted">Unassigned</span>
                     </template>
                     <span class="text-[12px] text-muted tabular-nums">{{ board.count }}</span>
@@ -858,7 +858,7 @@ const scopeFields = computed(() => project.value
                   >
                     <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                       <div
-                        class="h-full rounded-full bg-teal-500 transition-[width] duration-500"
+                        class="h-full rounded-full bg-primary transition-[width] duration-500"
                         :style="{ width: milestonePct(board.milestone) + '%' }"
                       />
                     </div>
@@ -925,7 +925,7 @@ const scopeFields = computed(() => project.value
               class="rounded-card bg-default ring ring-default"
             >
               <div class="flex items-center justify-between border-b border-default px-5 py-4">
-                <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+                <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
                   Statement of work
                 </div>
                 <UButton
@@ -981,7 +981,7 @@ const scopeFields = computed(() => project.value
                     name="i-lucide-file-text"
                     class="size-6"
                   /></span>
-                  <h3 class="font-display text-lg font-medium text-highlighted">
+                  <h3 class="font-display text-lg font-semibold text-highlighted">
                     No Contracts Yet
                   </h3>
                   <p class="mt-1.5 max-w-xs text-sm text-muted">
@@ -1046,7 +1046,7 @@ const scopeFields = computed(() => project.value
             <!-- contract mini -->
             <div class="rounded-card bg-default p-[18px] ring ring-default">
               <div class="mb-3 flex items-center justify-between gap-2">
-                <span class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">Contract</span>
+                <span class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Contract</span>
                 <StatusChip
                   v-if="contract"
                   :status="DOC_STATUS[contract.status] || 'neutral'"

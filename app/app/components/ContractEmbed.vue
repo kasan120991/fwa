@@ -95,7 +95,7 @@ watch(() => props.contractId, () => loadDocument())
           name="i-lucide-loader-circle"
           class="mb-4 size-8 animate-spin text-primary"
         />
-        <h3 class="font-display text-lg font-medium text-highlighted">
+        <h3 class="font-display text-lg font-semibold text-highlighted">
           Preparing the document…
         </h3>
         <p class="mt-1.5 max-w-sm text-sm text-muted">
@@ -107,7 +107,7 @@ watch(() => props.contractId, () => loadDocument())
           name="i-lucide-file-signature"
           class="size-6"
         /></span>
-        <h3 class="font-display text-lg font-medium text-highlighted">
+        <h3 class="font-display text-lg font-semibold text-highlighted">
           Not Sent Yet
         </h3>
         <p class="mt-1.5 max-w-md text-sm text-muted">
@@ -128,7 +128,7 @@ watch(() => props.contractId, () => loadDocument())
           name="i-lucide-file-text"
           class="size-6"
         /></span>
-        <h3 class="font-display text-lg font-medium text-highlighted">
+        <h3 class="font-display text-lg font-semibold text-highlighted">
           No PandaDoc Document
         </h3>
         <p class="mt-1.5 max-w-sm text-sm text-muted">
@@ -140,7 +140,7 @@ watch(() => props.contractId, () => loadDocument())
           name="i-lucide-triangle-alert"
           class="size-6"
         /></span>
-        <h3 class="font-display text-lg font-medium text-highlighted">
+        <h3 class="font-display text-lg font-semibold text-highlighted">
           Can't load the document
         </h3>
         <p class="mt-1.5 max-w-md text-sm text-muted">

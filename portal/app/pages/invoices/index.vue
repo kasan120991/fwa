@@ -46,7 +46,7 @@ const KIND_LABEL: Record<string, string> = { deposit: 'Deposit', balance: 'Final
       <p class="eyebrow text-primary">
         Billing
       </p>
-      <h1 class="mt-1 font-display text-[2rem] font-medium leading-tight tracking-tight text-highlighted">
+      <h1 class="mt-1 font-display text-[2rem] font-semibold leading-tight tracking-tight text-highlighted">
         Invoices
       </h1>
     </div>
@@ -62,7 +62,7 @@ const KIND_LABEL: Record<string, string> = { deposit: 'Deposit', balance: 'Final
       v-else-if="!invoices.length"
       class="rounded-card bg-default px-6 py-16 text-center ring ring-default"
     >
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         No invoices yet
       </h3>
       <p class="mt-1.5 text-sm text-muted">
@@ -96,7 +96,7 @@ const KIND_LABEL: Record<string, string> = { deposit: 'Deposit', balance: 'Final
           <!-- Mobile-only metadata line: chip + amount stack under the title -->
           <div class="mt-2 flex flex-wrap items-center gap-2 sm:hidden">
             <span
-              class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+              class="rounded-chip px-2.5 py-1 text-[11px] font-semibold"
               :class="chip(i).class"
             >{{ chip(i).label }}</span>
             <span class="text-[14px] font-semibold tabular-nums text-highlighted">
@@ -107,7 +107,7 @@ const KIND_LABEL: Record<string, string> = { deposit: 'Deposit', balance: 'Final
         <!-- Desktop trailing group: single-line row on sm+ -->
         <div class="hidden items-center gap-4 sm:flex">
           <span
-            class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            class="rounded-chip px-2.5 py-1 text-[11px] font-semibold"
             :class="chip(i).class"
           >{{ chip(i).label }}</span>
           <span class="w-24 text-right text-[14px] font-semibold tabular-nums text-highlighted">

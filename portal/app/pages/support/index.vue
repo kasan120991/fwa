@@ -78,7 +78,7 @@ async function submit() {
         <p class="eyebrow text-primary">
           We're here to help
         </p>
-        <h1 class="mt-1 font-display text-[2rem] font-medium leading-tight tracking-tight text-highlighted">
+        <h1 class="mt-1 font-display text-[2rem] font-semibold leading-tight tracking-tight text-highlighted">
           Support
         </h1>
       </div>
@@ -154,7 +154,7 @@ async function submit() {
       v-else-if="!tickets.length"
       class="rounded-card bg-default px-6 py-16 text-center ring ring-default"
     >
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         No tickets yet
       </h3>
       <p class="mt-1.5 text-sm text-muted">
@@ -172,7 +172,7 @@ async function submit() {
         :to="`/support/${t.id}`"
         class="flex items-center gap-4 border-b border-default px-5 py-4 transition-colors last:border-0 hover:bg-muted/50"
       >
-        <span class="font-mono text-[12px] text-muted">{{ code(t.id) }}</span>
+        <span class="text-[12px] text-muted">{{ code(t.id) }}</span>
         <div class="min-w-0 flex-1">
           <div class="truncate text-[14px] font-medium text-highlighted">
             {{ t.subject }}
@@ -182,7 +182,7 @@ async function submit() {
           </div>
         </div>
         <span
-          class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+          class="rounded-chip px-2.5 py-1 text-[11px] font-semibold"
           :class="(STATUS_CHIP[t.status] || STATUS_CHIP.open)!.class"
         >{{ (STATUS_CHIP[t.status] || STATUS_CHIP.open)!.label }}</span>
         <UIcon

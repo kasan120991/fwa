@@ -106,7 +106,7 @@ function normSources(raw: Site['top_sources']) {
       v-else-if="notFound || !site"
       class="rounded-card bg-default px-6 py-16 text-center ring ring-default"
     >
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         Website not found
       </h3>
     </div>
@@ -116,7 +116,7 @@ function normSources(raw: Site['top_sources']) {
       <div class="rounded-card bg-default p-6 ring ring-default">
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div class="min-w-0">
-            <h1 class="font-display text-[1.75rem] font-medium leading-tight tracking-tight text-highlighted">
+            <h1 class="font-display text-[1.75rem] font-semibold leading-tight tracking-tight text-highlighted">
               {{ site.name }}
             </h1>
             <a
@@ -135,7 +135,7 @@ function normSources(raw: Site['top_sources']) {
           </div>
           <div class="flex items-center gap-3">
             <span
-              class="rounded-full px-3 py-1.5 text-[12px] font-semibold"
+              class="rounded-lg px-3 py-1.5 text-[12px] font-semibold"
               :class="(HEALTH[site.health_state] || HEALTH.unknown)!.class"
             >{{ (HEALTH[site.health_state] || HEALTH.unknown)!.label }}</span>
             <div
@@ -166,7 +166,7 @@ function normSources(raw: Site['top_sources']) {
           <div class="text-[12.5px] text-muted">
             {{ s.label }} <span class="text-[11px]">· 30d</span>
           </div>
-          <div class="mt-1 font-display text-[1.4rem] font-medium tabular-nums text-highlighted">
+          <div class="mt-1 font-display text-[1.4rem] font-semibold tabular-nums text-highlighted">
             {{ s.value }}
           </div>
         </div>
@@ -177,7 +177,7 @@ function normSources(raw: Site['top_sources']) {
         v-if="sparkPath"
         class="rounded-card bg-default p-6 ring ring-default"
       >
-        <div class="mb-3 font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+        <div class="mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
           Visitors · last 30 days
         </div>
         <svg
@@ -188,7 +188,7 @@ function normSources(raw: Site['top_sources']) {
           <path
             :d="sparkPath"
             fill="none"
-            stroke="#0FA08C"
+            stroke="var(--ui-primary)"
             stroke-width="2.5"
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -206,7 +206,7 @@ function normSources(raw: Site['top_sources']) {
           v-if="normPages(site.top_pages).length"
           class="overflow-hidden rounded-card bg-default ring ring-default"
         >
-          <div class="border-b border-default px-5 py-3.5 font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+          <div class="border-b border-default px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
             Top pages
           </div>
           <div
@@ -225,7 +225,7 @@ function normSources(raw: Site['top_sources']) {
           v-if="normSources(site.top_sources).length"
           class="overflow-hidden rounded-card bg-default ring ring-default"
         >
-          <div class="border-b border-default px-5 py-3.5 font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+          <div class="border-b border-default px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
             Top sources
           </div>
           <div

@@ -11,8 +11,10 @@ const props = withDefaults(defineProps<{
   height?: number
 }>(), {
   formatValue: (n: number) => String(n),
-  color: 'var(--color-teal-500)',
-  areaColor: 'var(--color-mist)',
+  // Highlighter dataviz: ink line on paper; citrine only marks *the*
+  // highlighted series/point (callers opt in via props).
+  color: 'var(--ui-primary)',
+  areaColor: 'var(--surface-mist)',
   height: 150
 })
 
@@ -93,7 +95,7 @@ const marker = computed(() => {
         <div class="text-[13px] font-semibold text-white tabular-nums">
           {{ formatValue(marker.value) }}
         </div>
-        <div class="font-mono text-[10px] uppercase tracking-[0.04em] text-white/60">
+        <div class="text-[10px] font-medium uppercase tracking-[0.06em] text-white/60">
           {{ marker.label }}
         </div>
       </div>

@@ -254,7 +254,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
           class="size-6"
         />
       </span>
-      <h2 class="font-display text-2xl font-medium tracking-tight text-highlighted">
+      <h2 class="font-display text-2xl font-semibold tracking-tight text-highlighted">
         Client Not Found
       </h2>
       <p class="mt-2 text-[15px] text-muted">
@@ -284,12 +284,12 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
         >
         <span
           v-else
-          class="inline-flex size-[58px] flex-none items-center justify-center rounded-[14px] font-display text-2xl font-medium tracking-tight"
+          class="inline-flex size-[58px] flex-none items-center justify-center rounded-[14px] font-display text-2xl font-semibold tracking-tight"
           :class="client.avatar"
         >{{ client.initials }}</span>
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-3">
-            <h1 class="font-display text-[28px] font-medium tracking-tight text-highlighted">
+            <h1 class="font-display text-[28px] font-semibold tracking-tight text-highlighted">
               {{ client.name }}
             </h1>
             <StatusChip :status="STAGE_META[client.stage].status">
@@ -353,7 +353,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
         </div>
         <div class="flex items-baseline gap-2">
           <span
-            class="font-display text-2xl font-medium leading-none tracking-tight tabular-nums"
+            class="font-display text-2xl font-semibold leading-none tracking-tight tabular-nums"
             :class="m.tone"
           >{{ m.value }}</span>
           <span
@@ -370,7 +370,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
       <div class="flex flex-col gap-4 lg:sticky lg:top-4">
         <div class="overflow-hidden rounded-card bg-default ring ring-default">
           <div class="border-b border-default p-[18px]">
-            <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+            <div class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Primary contact
             </div>
             <div class="mt-2.5 flex items-center gap-3">
@@ -418,7 +418,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
           </div>
 
           <div class="border-b border-default p-[18px]">
-            <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+            <div class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Billing address
             </div>
             <div class="mt-2.5 text-[13.5px] leading-relaxed text-default">
@@ -432,7 +432,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
           </div>
 
           <div class="border-b border-default p-[18px]">
-            <div class="mb-3 font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+            <div class="mb-3 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Tags
             </div>
             <div class="flex flex-wrap gap-2">
@@ -460,7 +460,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
         <!-- notes -->
         <div class="rounded-card bg-default p-[18px] ring ring-default">
           <div class="mb-2.5 flex items-center justify-between">
-            <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+            <div class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Internal notes
             </div>
             <span class="text-xs text-muted">{{ notes.length }} chars</span>
@@ -483,13 +483,13 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
             v-for="t in tabs"
             :key="t.key"
             class="inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 pb-3 pt-2.5 text-sm transition-colors"
-            :class="activeTab === t.key ? 'border-teal-400 font-semibold text-highlighted' : 'border-transparent font-medium text-muted hover:text-highlighted'"
+            :class="activeTab === t.key ? 'border-citrine font-semibold text-highlighted' : 'border-transparent font-medium text-muted hover:text-highlighted'"
             @click="showTab(t.key)"
           >
             {{ t.label }}
             <span
               v-if="t.badge != null"
-              class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums"
+              class="rounded-chip px-1.5 py-px text-[11px] font-semibold tabular-nums"
               :class="activeTab === t.key ? 'bg-mist text-primary' : 'bg-muted text-muted'"
             >{{ t.badge }}</span>
           </button>

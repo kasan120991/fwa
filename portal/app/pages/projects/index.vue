@@ -45,7 +45,7 @@ function pct(p: Project) {
       <p class="eyebrow text-primary">
         Your work
       </p>
-      <h1 class="mt-1 font-display text-[2rem] font-medium leading-tight tracking-tight text-highlighted">
+      <h1 class="mt-1 font-display text-[2rem] font-semibold leading-tight tracking-tight text-highlighted">
         Projects
       </h1>
     </div>
@@ -61,7 +61,7 @@ function pct(p: Project) {
       v-else-if="!projects.length"
       class="rounded-card bg-default px-6 py-16 text-center ring ring-default"
     >
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         No projects yet
       </h3>
       <p class="mt-1.5 text-sm text-muted">
@@ -81,21 +81,21 @@ function pct(p: Project) {
       >
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <h2 class="font-display text-[1.05rem] font-medium text-highlighted">
+            <h2 class="font-display text-[1.05rem] font-semibold text-highlighted">
               {{ p.name }}
             </h2>
             <p class="mt-0.5 text-[12.5px] text-muted">
               {{ p.type_name || 'Project' }}
             </p>
           </div>
-          <span class="whitespace-nowrap rounded-full bg-mist px-2.5 py-1 text-[11px] font-semibold text-primary">
+          <span class="whitespace-nowrap rounded-chip bg-mist px-2.5 py-1 text-[11px] font-semibold text-primary">
             {{ STATUS_LABEL[p.status] || formatStatus(p.status) }}
           </span>
         </div>
         <div class="flex items-center gap-2.5">
           <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
             <div
-              class="h-full rounded-full bg-teal-500"
+              class="h-full rounded-full bg-primary"
               :style="{ width: pct(p) + '%' }"
             />
           </div>

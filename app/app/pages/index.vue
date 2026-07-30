@@ -193,7 +193,7 @@ const attentionTone: Record<string, string> = {
           />
         </span>
         <div class="min-w-0">
-          <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
+          <h1 class="font-display text-[26px] font-semibold tracking-tight text-highlighted">
             {{ greeting }}{{ firstName ? `, ${firstName}` : '' }}
           </h1>
           <p class="mt-1.5 text-sm text-muted">
@@ -237,11 +237,11 @@ const attentionTone: Record<string, string> = {
         <div class="rounded-card bg-default p-5 ring ring-default">
           <div class="mb-[22px] flex items-start justify-between gap-4">
             <div>
-              <div class="mb-2 font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+              <div class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
                 Revenue collected
               </div>
               <div class="flex items-baseline gap-2.5">
-                <span class="font-display text-[30px] font-medium leading-none tracking-tight text-highlighted tabular-nums">{{ revenue ? compactMoney(revenue.total) : '—' }}</span>
+                <span class="font-display text-[30px] font-semibold leading-none tracking-tight text-highlighted tabular-nums">{{ revenue ? compactMoney(revenue.total) : '—' }}</span>
                 <span
                   v-if="revenue && revenue.delta_pct != null"
                   class="text-[13px] font-semibold"
@@ -264,7 +264,7 @@ const attentionTone: Record<string, string> = {
                 >{{ r }}M</button>
               </div>
               <span class="hidden items-center gap-1.5 text-xs text-muted sm:inline-flex">
-                <span class="size-[9px] rounded-[2px] bg-teal-600" />This month (to date)
+                <span class="size-[9px] rounded-[2px] bg-citrine" />This month (to date)
               </span>
             </div>
           </div>
@@ -287,17 +287,17 @@ const attentionTone: Record<string, string> = {
                 <div class="text-[13px] font-semibold text-white tabular-nums">
                   {{ formatMoney(bar.total) }}
                 </div>
-                <div class="font-mono text-[10px] uppercase tracking-[0.04em] text-white/60">
+                <div class="text-[10px] font-medium uppercase tracking-[0.06em] text-white/60">
                   {{ bar.label }}{{ bar.current ? ' · to date' : '' }}
                 </div>
               </div>
               <div
                 class="w-full max-w-[44px] rounded-t-[7px] transition-[height,opacity] duration-300"
-                :class="[bar.current ? 'bg-teal-600' : 'bg-teal-400', hoverIdx !== null && hoverIdx !== i ? 'opacity-40' : 'opacity-100']"
+                :class="[bar.current ? 'bg-citrine' : 'bg-primary/25', hoverIdx !== null && hoverIdx !== i ? 'opacity-40' : 'opacity-100']"
                 :style="{ height: (bar.total / revenueMax * 100) + '%' }"
               />
               <span
-                class="font-mono text-[11px]"
+                class="text-[11px]"
                 :class="bar.current ? 'font-semibold text-highlighted' : 'text-muted'"
               >{{ bar.label }}</span>
             </div>
@@ -346,16 +346,16 @@ const attentionTone: Record<string, string> = {
             <table class="w-full border-collapse">
               <thead>
                 <tr>
-                  <th class="px-[22px] py-[11px] text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                  <th class="px-[22px] py-[11px] text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                     Project
                   </th>
-                <th class="px-[22px] py-[11px] text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-[22px] py-[11px] text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Client
                 </th>
-                <th class="px-[22px] py-[11px] text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-[22px] py-[11px] text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Status
                 </th>
-                <th class="px-[22px] py-[11px] text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-[22px] py-[11px] text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Value
                 </th>
               </tr>
@@ -403,7 +403,7 @@ const attentionTone: Record<string, string> = {
               Needs Attention
             </h2>
             <span
-              class="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full px-[7px] text-xs font-bold tabular-nums"
+              class="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-chip px-[7px] text-xs font-bold tabular-nums"
               :class="attentionTotal > 0 ? 'bg-error/10 text-error' : 'bg-mist text-primary'"
             >{{ attentionTotal }}</span>
           </div>
@@ -460,7 +460,7 @@ const attentionTone: Record<string, string> = {
             <h2 class="text-base font-semibold text-highlighted">
               Tasks Due
             </h2>
-            <span class="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-mist px-[7px] text-xs font-bold text-primary tabular-nums">{{ dueTasks.length }}</span>
+            <span class="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-chip bg-mist px-[7px] text-xs font-bold text-primary tabular-nums">{{ dueTasks.length }}</span>
           </div>
           <div
             v-if="dueTasks.length"

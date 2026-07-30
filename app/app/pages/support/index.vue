@@ -41,7 +41,7 @@ const PRIO: Record<Priority, { label: string, dot: string }> = {
 const TYPE_LABEL: Record<string, string> = {
   update: 'Site Update', issue: 'Site Issue', bug: 'Bug', question: 'Question', other: 'Other'
 }
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-primary text-inverted', 'bg-elevated text-default', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 
 const api = useApi()
 const socket = useSocket()
@@ -138,13 +138,13 @@ const siteLabel = (t: ApiTicket) => t.website_name || t.website_domain || ''
         <button
           v-for="t in statusTabs"
           :key="t.key"
-          class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
+          class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-colors"
           :class="statusTab === t.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
           @click="statusTab = t.key"
         >
           {{ t.label }}
           <span
-            class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
+            class="rounded-chip px-1.5 text-[11px] font-semibold tabular-nums"
             :class="statusTab === t.key ? 'bg-default text-primary' : 'bg-muted text-muted'"
           >{{ t.count }}</span>
         </button>
@@ -173,7 +173,7 @@ const siteLabel = (t: ApiTicket) => t.website_name || t.website_domain || ''
             <span class="inline-flex size-9 flex-none items-center justify-center rounded-[8px] text-[12px] font-semibold" :class="AVATAR[t.client_id % AVATAR.length]">{{ initials(clientLabel(t)) }}</span>
             <div class="min-w-0 flex-1">
               <div class="truncate text-sm font-semibold text-highlighted">{{ t.subject }}</div>
-              <div class="truncate font-mono text-[11px] tracking-[0.03em] text-muted">{{ ticketCode(t.id) }} · {{ clientLabel(t) }}</div>
+              <div class="truncate text-[11px] tracking-[0.03em] text-muted">{{ ticketCode(t.id) }} · {{ clientLabel(t) }}</div>
             </div>
             <StatusChip :status="STATUS[t.status].chip">{{ STATUS[t.status].label }}</StatusChip>
           </li>
@@ -184,19 +184,19 @@ const siteLabel = (t: ApiTicket) => t.website_name || t.website_domain || ''
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default">
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Ticket
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Client
                 </th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted md:table-cell">
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted md:table-cell">
                   Priority
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Status
                 </th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">
                   Activity
                 </th>
               </tr>
@@ -212,7 +212,7 @@ const siteLabel = (t: ApiTicket) => t.website_name || t.website_domain || ''
                   <div class="whitespace-nowrap text-sm font-semibold text-highlighted">
                     {{ t.subject }}
                   </div>
-                  <div class="mt-0.5 flex items-center gap-2 font-mono text-[11px] tracking-[0.03em] text-muted">
+                  <div class="mt-0.5 flex items-center gap-2 text-[11px] tracking-[0.03em] text-muted">
                     <span>{{ ticketCode(t.id) }}</span>
                     <span>· {{ TYPE_LABEL[t.type] || t.type }}</span>
                     <span
@@ -279,7 +279,7 @@ const siteLabel = (t: ApiTicket) => t.website_name || t.website_domain || ''
           name="i-lucide-life-buoy"
           class="size-6"
         /></span>
-        <h3 class="font-display text-lg font-medium text-highlighted">
+        <h3 class="font-display text-lg font-semibold text-highlighted">
           {{ tickets.length ? 'No Tickets Match' : 'No Tickets Yet' }}
         </h3>
         <p class="mt-1.5 max-w-xs text-sm text-muted">

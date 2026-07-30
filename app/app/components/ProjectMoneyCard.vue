@@ -42,10 +42,10 @@ const collectedPct = computed(() => {
 
 <template>
   <div class="rounded-card bg-default p-[18px] ring ring-default">
-    <div class="mb-3 font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+    <div class="mb-3 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
       Project Fee
     </div>
-    <div class="font-display text-[26px] font-medium tracking-tight text-highlighted tabular-nums">
+    <div class="font-display text-[26px] font-semibold tracking-tight text-highlighted tabular-nums">
       {{ formatMoney(project.project_fee) || '—' }}
     </div>
 
@@ -62,7 +62,7 @@ const collectedPct = computed(() => {
           </StatusChip>
           <span
             v-else
-            class="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted"
+            class="rounded-chip bg-muted px-2 py-0.5 text-[11px] font-medium text-muted"
           >Not invoiced</span>
           <span class="font-semibold text-highlighted tabular-nums">{{ formatMoney(deposit) || '—' }}</span>
         </div>
@@ -79,7 +79,7 @@ const collectedPct = computed(() => {
           </StatusChip>
           <span
             v-else
-            class="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted"
+            class="rounded-chip bg-muted px-2 py-0.5 text-[11px] font-medium text-muted"
           >Not invoiced</span>
           <span class="font-semibold text-highlighted tabular-nums">{{ formatMoney(balance) || '—' }}</span>
         </div>
@@ -101,7 +101,7 @@ const collectedPct = computed(() => {
       </div>
       <div class="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div
-          class="h-full rounded-full bg-teal-500 transition-[width] duration-500"
+          class="h-full rounded-full bg-primary transition-[width] duration-500"
           :style="{ width: collectedPct + '%' }"
         />
       </div>

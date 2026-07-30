@@ -47,7 +47,7 @@ function chip(inv: { status: Status, is_overdue: boolean }) {
   if (inv.is_overdue) return { label: 'Overdue', status: 'warning' as const }
   return STATUS_META[inv.status]
 }
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-primary text-inverted', 'bg-elevated text-default', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 const clientName = (i: { client_company: string | null, client_name: string | null }) => i.client_company || i.client_name || 'Unknown'
 
 const detail = ref<InvoiceDetail | null>(null)
@@ -170,17 +170,17 @@ async function submitPay() {
             <StatusChip :status="chip(detail).status">
               {{ chip(detail).label }}
             </StatusChip>
-            <span class="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium capitalize text-muted">{{ detail.kind }}</span>
+            <span class="rounded-chip bg-muted px-2 py-0.5 text-[11px] font-medium capitalize text-muted">{{ detail.kind }}</span>
           </div>
           <div class="mt-3.5 flex items-baseline gap-2">
-            <span class="font-display text-[26px] font-medium tracking-tight text-highlighted tabular-nums">{{ formatMoney(detail.amount_due) }}</span>
+            <span class="font-display text-[26px] font-semibold tracking-tight text-highlighted tabular-nums">{{ formatMoney(detail.amount_due) }}</span>
             <span class="text-[13px] text-muted">{{ detail.amount_paid > 0 ? `${formatMoney(detail.amount_paid)} paid` : 'due' }}</span>
           </div>
         </div>
 
         <!-- body -->
         <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-          <div class="mb-2.5 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">
+          <div class="mb-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
             Line items
           </div>
           <div class="mb-6 overflow-hidden rounded-xl ring-1 ring-default">
@@ -209,7 +209,7 @@ async function submitPay() {
             v-if="detail.payments.length"
             class="mb-6"
           >
-            <div class="mb-2.5 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">
+            <div class="mb-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Payments
             </div>
             <div class="flex flex-col gap-2">

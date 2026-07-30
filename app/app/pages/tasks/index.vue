@@ -221,13 +221,13 @@ function taskOverdue(t: Task) {
         <button
           v-for="t in statusTabs"
           :key="t.key"
-          class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
+          class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-colors"
           :class="statusTab === t.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
           @click="statusTab = t.key"
         >
           {{ t.label }}
           <span
-            class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
+            class="rounded-chip px-1.5 text-[11px] font-semibold tabular-nums"
             :class="statusTab === t.key ? 'bg-default text-primary' : 'bg-muted text-muted'"
           >{{ t.count }}</span>
         </button>
@@ -280,7 +280,7 @@ function taskOverdue(t: Task) {
           <button
             type="button"
             class="flex size-[18px] flex-none items-center justify-center rounded-full border transition-colors"
-            :class="t.status === 'done' ? 'border-teal-500 bg-teal-500 text-white' : 'border-accented hover:border-primary'"
+            :class="t.status === 'done' ? 'border-primary bg-primary text-inverted' : 'border-accented hover:border-primary'"
             :aria-label="t.status === 'done' ? 'Mark not done' : 'Mark done'"
             @click="toggleTask(t)"
           >
@@ -309,7 +309,7 @@ function taskOverdue(t: Task) {
           </StatusChip>
           <span
             v-if="t.priority !== 'medium'"
-            class="rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
+            class="rounded-chip px-2 py-0.5 text-[10.5px] font-semibold"
             :class="PRIORITY_META[t.priority].class"
           >{{ PRIORITY_META[t.priority].label }}</span>
           <span
@@ -336,7 +336,7 @@ function taskOverdue(t: Task) {
           name="i-lucide-check-check"
           class="size-6"
         /></span>
-        <h3 class="font-display text-lg font-medium text-highlighted">
+        <h3 class="font-display text-lg font-semibold text-highlighted">
           Nothing Here
         </h3>
         <p class="mt-1.5 max-w-xs text-sm text-muted">

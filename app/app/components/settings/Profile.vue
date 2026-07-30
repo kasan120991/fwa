@@ -142,7 +142,7 @@ async function changePassword() {
       </div>
       <div class="mt-4">
         <label class="mb-1.5 block text-sm font-medium text-toned">Role</label>
-        <span class="inline-flex items-center gap-1.5 rounded-full bg-mist px-3 py-1 text-xs font-semibold text-primary">
+        <span class="inline-flex items-center gap-1.5 rounded-chip bg-mist px-3 py-1 text-xs font-semibold text-primary">
           <span class="size-1.5 rounded-full bg-current" />{{ user?.role === 'admin' ? 'Admin' : 'Client' }}
         </span>
         <p class="mt-1.5 text-xs text-muted">Contact support to change your role.</p>

@@ -22,12 +22,12 @@ defineProps<{
       </span>
       <div class="min-w-0">
         <div class="flex items-center gap-3">
-          <h1 class="font-display text-[26px] font-medium tracking-tight text-highlighted">
+          <h1 class="font-display text-[26px] font-semibold tracking-tight text-highlighted">
             {{ title }}
           </h1>
           <span
             v-if="count != null"
-            class="rounded-full bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums"
+            class="rounded-chip bg-mist px-2.5 py-0.5 text-[13px] font-semibold text-primary tabular-nums"
           >{{ count }}</span>
           <slot name="badge" />
         </div>

@@ -183,14 +183,14 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
         class="rounded-[14px] border border-default bg-default p-4"
       >
         <div class="flex items-center justify-between gap-2.5">
-          <span class="font-mono text-[10.5px] uppercase tracking-[0.05em] text-muted">{{ t.label }}</span>
+          <span class="text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted">{{ t.label }}</span>
           <span class="inline-flex size-7 items-center justify-center rounded-lg bg-mist text-primary"><UIcon
             :name="t.icon"
             class="size-[15px]"
           /></span>
         </div>
         <div class="mt-3 flex items-baseline gap-2">
-          <span class="font-display text-[27px] font-medium leading-none tracking-tight text-highlighted tabular-nums">{{ t.value }}</span>
+          <span class="font-display text-[27px] font-semibold leading-none tracking-tight text-highlighted tabular-nums">{{ t.value }}</span>
           <span
             v-if="t.delta != null"
             class="text-[12.5px] font-semibold"
@@ -208,11 +208,11 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
     <div class="rounded-card bg-default p-5 ring ring-default">
       <div class="mb-4 flex items-start justify-between gap-4">
         <div>
-          <div class="mb-2 font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+          <div class="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
             Total traffic
           </div>
           <div class="flex items-baseline gap-2.5">
-            <span class="font-display text-[26px] font-medium leading-none tracking-tight text-highlighted tabular-nums">{{ stats ? compactNum(stats.visitors_30d) : '—' }}</span>
+            <span class="font-display text-[26px] font-semibold leading-none tracking-tight text-highlighted tabular-nums">{{ stats ? compactNum(stats.visitors_30d) : '—' }}</span>
             <span
               v-if="stats && stats.visitors_delta_pct != null"
               class="text-[13px] font-semibold"
@@ -241,7 +241,7 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
       />
       <div
         v-if="axisLabels.length"
-        class="mt-2 flex justify-between font-mono text-[10.5px] text-muted"
+        class="mt-2 flex justify-between text-[10.5px] text-muted"
       >
         <span v-for="(l, i) in axisLabels" :key="i">{{ l }}</span>
       </div>
@@ -253,13 +253,13 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
         <button
           v-for="t in envTabs"
           :key="t.key"
-          class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
+          class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-colors"
           :class="envFilter === t.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
           @click="envFilter = t.key"
         >
           {{ t.label }}
           <span
-            class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
+            class="rounded-chip px-1.5 text-[11px] font-semibold tabular-nums"
             :class="envFilter === t.key ? 'bg-default text-primary' : 'bg-muted text-muted'"
           >{{ t.count }}</span>
         </button>
@@ -280,7 +280,7 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
         <UDropdownMenu :items="connItems">
           <UButton icon="i-lucide-plug" color="neutral" variant="outline" class="rounded-full">
             Analytics
-            <span v-if="connFilter !== 'all'" class="size-1.5 rounded-full bg-teal-500" />
+            <span v-if="connFilter !== 'all'" class="size-1.5 rounded-full bg-citrine" />
           </UButton>
         </UDropdownMenu>
       </div>
@@ -296,12 +296,12 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default">
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Site</th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted md:table-cell">Client</th>
-                <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Visitors · 30d</th>
-                <th class="hidden px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">Conv.</th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted sm:table-cell">Trend</th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Health</th>
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Site</th>
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted md:table-cell">Client</th>
+                <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Visitors · 30d</th>
+                <th class="hidden px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Conv.</th>
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted sm:table-cell">Trend</th>
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Health</th>
               </tr>
             </thead>
             <tbody>
@@ -317,7 +317,7 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
                     <div class="min-w-0">
                       <div class="flex items-center gap-2">
                         <span class="whitespace-nowrap text-sm font-semibold text-highlighted">{{ w.name }}</span>
-                        <span class="rounded-full bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.05em]" :class="ENV_META[w.environment].class">{{ ENV_META[w.environment].label }}</span>
+                        <span class="rounded-chip bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em]" :class="ENV_META[w.environment].class">{{ ENV_META[w.environment].label }}</span>
                       </div>
                       <div class="whitespace-nowrap text-[13px] text-muted">{{ w.domain }}</div>
                     </div>
@@ -333,7 +333,7 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
                 </td>
                 <td class="hidden whitespace-nowrap px-4 py-3.5 text-right text-[13.5px] text-default tabular-nums lg:table-cell">{{ w.connected ? w.conversions_30d.toLocaleString() : '—' }}</td>
                 <td class="hidden px-4 py-3.5 sm:table-cell">
-                  <svg v-if="w.connected && w.spark.length > 1" width="90" height="26" viewBox="0 0 90 26" preserveAspectRatio="none" class="text-teal-500">
+                  <svg v-if="w.connected && w.spark.length > 1" width="90" height="26" viewBox="0 0 90 26" preserveAspectRatio="none" class="text-primary">
                     <polyline :points="rowSpark(w).area" fill="var(--color-mist)" stroke="none" />
                     <polyline :points="rowSpark(w).line" fill="none" stroke="currentColor" stroke-width="1.5" vector-effect="non-scaling-stroke" />
                   </svg>
@@ -354,7 +354,7 @@ const rowSpark = (w: Website) => spark(w.spark, 90, 26)
       </template>
       <div v-else class="flex flex-col items-center px-6 py-16 text-center">
         <span class="mb-4 inline-flex size-12 items-center justify-center rounded-[12px] bg-muted text-muted"><UIcon name="i-lucide-globe" class="size-6" /></span>
-        <h3 class="font-display text-lg font-medium text-highlighted">
+        <h3 class="font-display text-lg font-semibold text-highlighted">
           {{ websites.length ? 'No Sites Match' : 'No Websites Yet' }}
         </h3>
         <p class="mt-1.5 max-w-xs text-sm text-muted">

@@ -99,10 +99,10 @@ async function submit() {
         <div class="flex-none border-b border-default px-6 py-5">
           <div class="flex items-start justify-between gap-3">
             <div>
-              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+              <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
                 Provision hosting
               </div>
-              <h2 class="mt-1 font-display text-[22px] font-medium tracking-tight text-highlighted">
+              <h2 class="mt-1 font-display text-[22px] font-semibold tracking-tight text-highlighted">
                 Launch a DigitalOcean droplet
               </h2>
             </div>
