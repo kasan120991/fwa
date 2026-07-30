@@ -612,6 +612,12 @@ async function ingestEndOfCall(message) {
   const vapiCallId = message.call?.id ?? null
   if (vapiCallId && await getCallByVapiId(vapiCallId)) return // already ingested
 
+  // Demo line: the marketing site's public demo assistant reports here too.
+  // Tag those calls line='demo' — they're lead-magnet prospects to follow up,
+  // but stay ordinary call rows (never auto-converted to leads).
+  const assistantId = message.assistant?.id ?? message.call?.assistantId ?? null
+  const isDemo = !!(config.vapi.demoAssistantId && assistantId === config.vapi.demoAssistantId)
+
   const structured = message.analysis?.structuredData ?? {}
   const number = message.customer?.number
     ?? message.call?.customer?.number
@@ -624,7 +630,10 @@ async function ingestEndOfCall(message) {
   // Trust the assistant's structured classification; else 'client' for a known
   // caller, otherwise 'other'.
   let classification = String(structured.classification || '').toLowerCase()
-  if (!CALL_CLASSIFICATIONS.has(classification)) classification = client ? 'client' : 'other'
+  if (!CALL_CLASSIFICATIONS.has(classification)) {
+    // Demo callers dialed the marketing site's demo number — prospects by default.
+    classification = isDemo ? 'inquiry' : (client ? 'client' : 'other')
+  }
 
   // Vapi's artifact.messages -> [{ r, t }] turns (receptionist = r:true).
   const turns = Array.isArray(message.artifact?.messages)
@@ -653,6 +662,7 @@ async function ingestEndOfCall(message) {
     vapi_call_id: vapiCallId,
     client_id: client?.id ?? null,
     classification,
+    line: isDemo ? 'demo' : 'main',
     caller_number: number || '',
     caller_name: client?.name ?? structured.caller_name ?? null,
     summary: message.analysis?.summary ?? null,
@@ -679,7 +689,7 @@ async function ingestEndOfCall(message) {
     try {
       await notify({
         category: 'call', tone: alert.tone, icon: alert.icon,
-        title: alert.title,
+        title: isDemo ? 'Demo line call' : alert.title,
         body: `${call.caller_name || call.caller_number || 'A caller'} — ${call.summary || 'call logged'}.`,
         link: '/receptionist'
       })
@@ -696,7 +706,8 @@ async function ingestEndOfCall(message) {
         template: TEMPLATES.phoneCall,
         to: config.resend.alertsTo,
         variables: {
-          name: call.caller_name || 'Unknown caller',
+          // Demo-line calls announce themselves in the subject line.
+          name: (call.caller_name || 'Unknown caller') + (isDemo ? ' (demo line)' : ''),
           phone_number: number || 'Not provided',
           email: structured.email || 'N/A',
           intent: structured.intent || 'N/A',

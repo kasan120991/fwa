@@ -21,7 +21,8 @@ const schema = await readFile(path.join(dir, 'schema.sql'), 'utf8')
 const ADDITIVE_COLUMNS = {
   calls: [
     ['reviewed_at', 'DATETIME NULL AFTER extracted'],
-    ['vapi_call_id', 'VARCHAR(64) NULL AFTER client_id']
+    ['vapi_call_id', 'VARCHAR(64) NULL AFTER client_id'],
+    ['line', "ENUM('main', 'demo') NOT NULL DEFAULT 'main' AFTER classification"]
   ],
   // Soft project back-links (no FK — projects is created after these tables in
   // schema.sql, and a trailing ADD CONSTRAINT wouldn't be idempotent).

@@ -20,6 +20,7 @@ interface Call {
   captured: [string, string][]
   transcript: Turn[]
   recordingUrl: string | null
+  demo: boolean
 }
 
 // Raw API row shape (subset we use).
@@ -35,6 +36,7 @@ interface ApiCall {
   duration_seconds: number | null
   recording_url: string | null
   extracted: { business?: string | null, captured?: [string, string][] } | null
+  line: 'main' | 'demo'
   reviewed: boolean
   occurred_at: string
 }
@@ -53,6 +55,7 @@ function mapCall(c: ApiCall): Call {
     number: c.caller_number,
     business: c.extracted?.business ?? null,
     type: c.classification,
+    demo: c.line === 'demo',
     unread: !c.reviewed,
     leadId: c.lead_id,
     clientId: c.client_id,
@@ -109,7 +112,7 @@ async function loadStats() {
   } catch { /* leave strip empty on failure */ }
 }
 
-const activeTab = ref<'all' | 'inquiry' | 'client' | 'other'>('all')
+const activeTab = ref<'all' | 'inquiry' | 'client' | 'demo' | 'other'>('all')
 const search = ref('')
 const selected = ref<Record<number, boolean>>({})
 const convertTarget = ref<Call | null>(null)
@@ -146,12 +149,14 @@ const counts = computed(() => ({
   all: calls.value.length,
   inquiry: calls.value.filter(c => c.type === 'inquiry').length,
   client: calls.value.filter(c => c.type === 'client').length,
+  demo: calls.value.filter(c => c.demo).length,
   other: calls.value.filter(c => ['spam', 'wrong_number', 'other'].includes(c.type)).length
 }))
 const tabs = computed(() => [
   { key: 'all' as const, label: 'All', count: counts.value.all },
   { key: 'inquiry' as const, label: 'Inquiries', count: counts.value.inquiry },
   { key: 'client' as const, label: 'Clients', count: counts.value.client },
+  ...(counts.value.demo ? [{ key: 'demo' as const, label: 'Demo', count: counts.value.demo }] : []),
   { key: 'other' as const, label: 'Other', count: counts.value.other }
 ])
 
@@ -160,6 +165,7 @@ const visibleCalls = computed(() => {
   let rows = calls.value
   if (activeTab.value === 'inquiry') rows = rows.filter(c => c.type === 'inquiry')
   else if (activeTab.value === 'client') rows = rows.filter(c => c.type === 'client')
+  else if (activeTab.value === 'demo') rows = rows.filter(c => c.demo)
   else if (activeTab.value === 'other') rows = rows.filter(c => ['spam', 'wrong_number', 'other'].includes(c.type))
   if (q) rows = rows.filter(c => `${c.name ?? ''} ${c.number} ${c.business ?? ''} ${c.summary}`.toLowerCase().includes(q))
   return rows
@@ -400,6 +406,7 @@ onBeforeUnmount(() => {
                 <div class="mt-1.5 line-clamp-2 text-[13px] leading-snug text-default">{{ c.summary }}</div>
                 <div class="mt-2 flex items-center gap-2.5">
                   <span class="inline-flex items-center rounded-chip px-2 py-0.5 text-[11.5px] font-semibold" :class="TYPE_CHIP[c.type]">{{ TYPE_LABEL[c.type] }}</span>
+                  <span v-if="c.demo" class="inline-flex items-center rounded-chip bg-citrine px-2 py-0.5 text-[11.5px] font-semibold text-ink-900">Demo</span>
                   <span class="inline-flex items-center gap-1 text-xs text-muted tabular-nums"><UIcon name="i-lucide-clock" class="size-3" />{{ c.duration }}</span>
                   <UIcon name="i-lucide-mic" class="size-[13px] text-muted" />
                 </div>
@@ -437,6 +444,7 @@ onBeforeUnmount(() => {
                   <div class="truncate text-[13px] text-muted tabular-nums">{{ (cur.business ? cur.business + ' · ' : '') + formatPhone(cur.number) }}</div>
                 </div>
               </div>
+              <span v-if="cur.demo" class="inline-flex flex-none items-center rounded-chip bg-citrine px-2.5 py-1.5 text-[11.5px] font-semibold text-ink-900">Demo</span>
               <UDropdownMenu :items="reclassItems">
                 <button class="inline-flex flex-none items-center gap-1 rounded-chip px-2.5 py-1.5 text-[11.5px] font-semibold" :class="TYPE_CHIP[cur.type]">
                   {{ TYPE_LABEL[cur.type] }}<UIcon name="i-lucide-chevron-down" class="size-3 opacity-60" />
