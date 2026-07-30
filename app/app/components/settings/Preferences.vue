@@ -146,7 +146,7 @@ function setTheme(t: string) { colorMode.preference = t }
           v-for="t in THEMES"
           :key="t"
           type="button"
-          class="rounded-full px-4 py-1.5 text-[13px] font-semibold capitalize transition-colors"
+          class="rounded-lg px-4 py-1.5 text-[13px] font-semibold capitalize transition-colors"
           :class="colorMode.preference === t ? 'bg-default text-highlighted shadow-sm' : 'text-muted'"
           @click="setTheme(t)"
         >

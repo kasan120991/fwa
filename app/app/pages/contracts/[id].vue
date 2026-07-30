@@ -263,7 +263,7 @@ onBeforeUnmount(() => {
         name="i-lucide-file-x"
         class="size-6"
       /></span>
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         Contract Not Found
       </h3>
       <UButton
@@ -280,10 +280,10 @@ onBeforeUnmount(() => {
       <!-- header -->
       <div class="flex flex-col gap-4 border-b border-default pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div class="min-w-0">
-          <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+          <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
             {{ contract.type === 'care_plan' ? 'Care Plan' : 'Project Contract' }}
           </div>
-          <h1 class="mt-1 font-display text-[26px] font-medium leading-tight tracking-tight text-highlighted">
+          <h1 class="mt-1 font-display text-[26px] font-semibold leading-tight tracking-tight text-highlighted">
             {{ contract.title }}
           </h1>
           <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted">
@@ -386,7 +386,7 @@ onBeforeUnmount(() => {
                 name="i-lucide-loader-circle"
                 class="mb-4 size-8 animate-spin text-primary"
               />
-              <h3 class="font-display text-lg font-medium text-highlighted">
+              <h3 class="font-display text-lg font-semibold text-highlighted">
                 Preparing the document…
               </h3>
               <p class="mt-1.5 max-w-sm text-sm text-muted">
@@ -398,7 +398,7 @@ onBeforeUnmount(() => {
                 name="i-lucide-file-signature"
                 class="size-6"
               /></span>
-              <h3 class="font-display text-lg font-medium text-highlighted">
+              <h3 class="font-display text-lg font-semibold text-highlighted">
                 Draft ready to send
               </h3>
               <p class="mt-1.5 max-w-md text-sm text-muted">
@@ -434,7 +434,7 @@ onBeforeUnmount(() => {
                 name="i-lucide-file-text"
                 class="size-6"
               /></span>
-              <h3 class="font-display text-lg font-medium text-highlighted">
+              <h3 class="font-display text-lg font-semibold text-highlighted">
                 No PandaDoc document
               </h3>
               <p class="mt-1.5 max-w-sm text-sm text-muted">
@@ -446,7 +446,7 @@ onBeforeUnmount(() => {
                 name="i-lucide-triangle-alert"
                 class="size-6"
               /></span>
-              <h3 class="font-display text-lg font-medium text-highlighted">
+              <h3 class="font-display text-lg font-semibold text-highlighted">
                 Can't load the document
               </h3>
               <p class="mt-1.5 max-w-md text-sm text-muted">
@@ -469,7 +469,7 @@ onBeforeUnmount(() => {
         <!-- sidebar: line items + timeline -->
         <div class="order-1 flex flex-col gap-5 lg:order-2">
           <div class="rounded-card bg-default p-5 ring ring-default">
-            <h2 class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+            <h2 class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Line Items
             </h2>
             <div class="mt-3 flex flex-col gap-2.5">
@@ -495,7 +495,7 @@ onBeforeUnmount(() => {
             v-if="timeline.length"
             class="rounded-card bg-default p-5 ring ring-default"
           >
-            <h2 class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+            <h2 class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Timeline
             </h2>
             <div class="mt-3 flex flex-col gap-3">

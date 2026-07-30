@@ -61,14 +61,14 @@ const STATUS: Record<Status, { label: string, chip: string, dot: string, bar: st
   planning: { label: 'Planning', chip: 'bg-muted text-default', dot: 'bg-ink-400', bar: 'bg-ink-400' },
   awaiting_signature: { label: 'Awaiting Signature', chip: 'bg-info/10 text-info', dot: 'bg-info', bar: 'bg-info' },
   awaiting_deposit: { label: 'Awaiting Deposit', chip: 'bg-warning/10 text-warning', dot: 'bg-warning', bar: 'bg-warning' },
-  in_progress: { label: 'In Progress', chip: 'bg-info/10 text-info', dot: 'bg-info', bar: 'bg-teal-500' },
-  in_review: { label: 'In Review', chip: 'bg-mist text-primary', dot: 'bg-teal-600', bar: 'bg-teal-500' },
+  in_progress: { label: 'In Progress', chip: 'bg-info/10 text-info', dot: 'bg-info', bar: 'bg-primary' },
+  in_review: { label: 'In Review', chip: 'bg-mist text-primary', dot: 'bg-primary', bar: 'bg-primary' },
   awaiting_final: { label: 'Awaiting Final Payment', chip: 'bg-warning/10 text-warning', dot: 'bg-warning', bar: 'bg-warning' },
   on_hold: { label: 'On Hold', chip: 'bg-warning/10 text-warning', dot: 'bg-warning', bar: 'bg-warning' },
   completed: { label: 'Completed', chip: 'bg-success/10 text-success', dot: 'bg-success', bar: 'bg-success' }
 }
 // Avatar tints, mirroring the design system palette.
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-primary text-inverted', 'bg-elevated text-default', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 
 const api = useApi()
 const socket = useSocket()
@@ -284,13 +284,13 @@ async function onDrop(status: Status) {
         <button
           v-for="t in statusTabs"
           :key="t.key"
-          class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
+          class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-colors"
           :class="statusTab === t.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
           @click="statusTab = t.key"
         >
           {{ t.label }}
           <span
-            class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
+            class="rounded-chip px-1.5 text-[11px] font-semibold tabular-nums"
             :class="statusTab === t.key ? 'bg-default text-primary' : 'bg-muted text-muted'"
           >{{ t.count }}</span>
         </button>
@@ -317,7 +317,7 @@ async function onDrop(status: Status) {
             Filter
             <span
               v-if="filterActive"
-              class="size-1.5 rounded-full bg-teal-500"
+              class="size-1.5 rounded-full bg-citrine"
             />
           </UButton>
         </UDropdownMenu>
@@ -369,7 +369,7 @@ async function onDrop(status: Status) {
               <div class="truncate text-[12.5px] text-muted">{{ p.client }}</div>
             </div>
             <div class="flex flex-none flex-col items-end gap-1">
-              <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold" :class="STATUS[eff(p)].chip">
+              <span class="inline-flex items-center gap-1.5 rounded-chip px-2.5 py-1 text-xs font-semibold" :class="STATUS[eff(p)].chip">
                 <span class="size-1.5 rounded-full" :class="STATUS[eff(p)].dot" />{{ STATUS[eff(p)].label }}
               </span>
               <span class="text-[12px] tabular-nums" :class="isOverdue(p) ? 'font-semibold text-warning' : 'text-muted'">{{ shortDate(p.due) }}</span>
@@ -382,28 +382,28 @@ async function onDrop(status: Status) {
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default">
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Project
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Client
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Status
                 </th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted md:table-cell">
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted md:table-cell">
                   Progress
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Due
                 </th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted md:table-cell">
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted md:table-cell">
                   Open tasks
                 </th>
-                <th class="hidden px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">
+                <th class="hidden px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">
                   Value
                 </th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">
                   Updated
                 </th>
                 <th class="w-12" />
@@ -420,7 +420,7 @@ async function onDrop(status: Status) {
                   <div class="whitespace-nowrap text-sm font-semibold text-highlighted">
                     {{ p.name }}
                   </div>
-                  <div class="mt-0.5 font-mono text-[11px] tracking-[0.03em] text-muted">
+                  <div class="mt-0.5 text-[11px] tracking-[0.03em] text-muted">
                     {{ p.code }}
                   </div>
                 </td>
@@ -441,7 +441,7 @@ async function onDrop(status: Status) {
                 </td>
                 <td class="px-4 py-3.5">
                   <span
-                    class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
+                    class="inline-flex items-center gap-1.5 rounded-chip px-2.5 py-1 text-xs font-semibold"
                     :class="STATUS[eff(p)].chip"
                   >
                     <span
@@ -523,7 +523,7 @@ async function onDrop(status: Status) {
           name="i-lucide-search"
           class="size-6"
         /></span>
-        <h3 class="font-display text-lg font-medium text-highlighted">
+        <h3 class="font-display text-lg font-semibold text-highlighted">
           No Projects Match
         </h3>
         <p class="mt-1.5 max-w-xs text-sm text-muted">
@@ -550,7 +550,7 @@ async function onDrop(status: Status) {
           v-for="col in boardColumns"
           :key="col.key"
           class="w-[280px] flex-none rounded-[14px] border p-3.5 transition-colors"
-          :class="dragOverCol === col.key ? 'border-teal-200 bg-mist' : 'border-default bg-muted'"
+          :class="dragOverCol === col.key ? 'border-citrine bg-mist' : 'border-default bg-muted'"
           @dragover.prevent="dragOverCol = col.key"
           @dragleave="dragOverCol === col.key && (dragOverCol = null)"
           @drop.prevent="onDrop(col.key)"
@@ -561,7 +561,7 @@ async function onDrop(status: Status) {
               :class="col.dot"
             />
             <span class="text-[13px] font-semibold text-highlighted">{{ col.label }}</span>
-            <span class="rounded-full border border-default bg-default px-2 py-px text-xs font-semibold text-muted tabular-nums">{{ col.cards.length }}</span>
+            <span class="rounded-chip border border-default bg-default px-2 py-px text-xs font-semibold text-muted tabular-nums">{{ col.cards.length }}</span>
           </div>
           <div class="flex min-h-[60px] flex-col gap-2.5">
             <div
@@ -569,7 +569,7 @@ async function onDrop(status: Status) {
               :key="c.id"
               draggable="true"
               class="cursor-grab rounded-xl border bg-default p-3.5 transition-[border-color,box-shadow,opacity]"
-              :class="dragId === c.id ? 'border-teal-500 opacity-50' : 'border-default hover:shadow-sm'"
+              :class="dragId === c.id ? 'border-primary opacity-50' : 'border-default hover:shadow-sm'"
               @dragstart="dragId = c.id"
               @dragend="dragId = null; dragOverCol = null"
               @click="navigateTo(`/projects/${c.id}`)"

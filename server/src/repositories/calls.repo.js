@@ -87,6 +87,7 @@ export async function createCall(data) {
     client_id: data.client_id ?? null,
     vapi_call_id: data.vapi_call_id ?? null,
     classification: data.classification,
+    line: data.line === 'demo' ? 'demo' : 'main',
     caller_number: data.caller_number,
     caller_name: data.caller_name ?? null,
     summary: data.summary ?? null,

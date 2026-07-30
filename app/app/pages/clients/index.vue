@@ -81,7 +81,7 @@ const STAGE_META: Record<Stage, { status: 'success' | 'neutral', label: string }
 
 // Avatar tint pairs (mist/sand/info/cloud/warning) from the design system.
 const AVATAR = [
-  'bg-teal-800 text-white',
+  'bg-primary text-inverted',
   'bg-mist text-primary',
   'bg-sand text-highlighted',
   'bg-info/10 text-info',
@@ -224,13 +224,13 @@ function openClient(id: number) {
       <button
         v-for="t in tabs"
         :key="t.key"
-        class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
+        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-colors"
         :class="tab === t.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
         @click="tab = t.key"
       >
         {{ t.label }}
         <span
-          class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
+          class="rounded-chip px-1.5 text-[11px] font-semibold tabular-nums"
           :class="tab === t.key ? 'bg-default text-primary' : 'bg-muted text-muted'"
         >{{ t.count }}</span>
       </button>
@@ -311,16 +311,16 @@ function openClient(id: number) {
               <th class="w-11 py-3 pl-[18px] pr-2 text-left">
                 <UCheckbox :model-value="allChecked" aria-label="Select all" @update:model-value="toggleAll(Boolean($event))" />
               </th>
-              <th class="cursor-pointer select-none px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted" @click="setSort('name')">
+              <th class="cursor-pointer select-none px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted" @click="setSort('name')">
                 Client <span class="text-primary">{{ sortArrow('name') }}</span>
               </th>
-              <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Status</th>
-              <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">Primary contact</th>
-              <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">Projects</th>
-              <th class="cursor-pointer select-none px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted" @click="setSort('outstanding')">
+              <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Status</th>
+              <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Primary contact</th>
+              <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Projects</th>
+              <th class="cursor-pointer select-none px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted" @click="setSort('outstanding')">
                 Outstanding <span class="text-primary">{{ sortArrow('outstanding') }}</span>
               </th>
-              <th class="hidden cursor-pointer select-none px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell" @click="setSort('days')">
+              <th class="hidden cursor-pointer select-none px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell" @click="setSort('days')">
                 Last activity <span class="text-primary">{{ sortArrow('days') }}</span>
               </th>
               <th class="w-[52px] px-4 py-3" />
@@ -398,7 +398,7 @@ function openClient(id: number) {
       <span class="mb-4 inline-flex size-12 items-center justify-center rounded-[12px] bg-muted text-muted">
         <UIcon name="i-lucide-search" class="size-6" />
       </span>
-      <h3 class="font-display text-lg font-medium text-highlighted">No Clients Match</h3>
+      <h3 class="font-display text-lg font-semibold text-highlighted">No Clients Match</h3>
       <p class="mt-1.5 max-w-xs text-sm text-muted">Try a different search or clear the filters to see everyone.</p>
       <UButton color="neutral" variant="outline" class="mt-5 rounded-full" @click="search = ''; tab = 'all'">Clear Filters</UButton>
     </div>

@@ -93,7 +93,7 @@ async function onFilesPicked(e: Event) {
       <p class="eyebrow text-primary">
         Your files
       </p>
-      <h1 class="mt-1 font-display text-[2rem] font-medium leading-tight tracking-tight text-highlighted">
+      <h1 class="mt-1 font-display text-[2rem] font-semibold leading-tight tracking-tight text-highlighted">
         Files
       </h1>
       <p class="mt-1.5 text-[0.9375rem] text-muted">
@@ -138,7 +138,7 @@ async function onFilesPicked(e: Event) {
       v-else-if="!groups.length"
       class="rounded-card bg-default px-6 py-16 text-center ring ring-default"
     >
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         No files yet
       </h3>
       <p class="mt-1.5 text-sm text-muted">
@@ -157,7 +157,7 @@ async function onFilesPicked(e: Event) {
           :name="g.meta.icon"
           class="size-4 text-primary"
         />
-        <span class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">{{ g.meta.label }}</span>
+        <span class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">{{ g.meta.label }}</span>
         <span class="text-[12px] text-muted tabular-nums">{{ g.items.length }}</span>
       </div>
       <a

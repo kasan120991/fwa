@@ -76,7 +76,11 @@ export const config = {
     // an inbound call is answered by it with per-caller context injected.
     assistantId: process.env.VAPI_ASSISTANT_ID || '',
     // The receptionist's public phone number — display only (header/stat strip).
-    phoneNumber: process.env.VAPI_PHONE_NUMBER || ''
+    phoneNumber: process.env.VAPI_PHONE_NUMBER || '',
+    // The public demo assistant (marketing-site "Call It Right Now" line). Its
+    // end-of-call-reports land in the same webhook; matching this id tags the
+    // call line = 'demo' so demo callers surface as follow-up prospects.
+    demoAssistantId: process.env.VAPI_DEMO_ASSISTANT_ID || ''
   },
   plausible: {
     // Plausible Stats API key (Bearer token). Empty = analytics sync disabled:

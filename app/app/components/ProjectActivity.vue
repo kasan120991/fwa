@@ -128,7 +128,7 @@ const events = computed<Event[]>(() => {
       <h2 class="text-base font-semibold text-highlighted">
         Activity
       </h2>
-      <span class="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-mist px-[7px] text-xs font-bold text-primary tabular-nums">{{ events.length }}</span>
+      <span class="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-chip bg-mist px-[7px] text-xs font-bold text-primary tabular-nums">{{ events.length }}</span>
     </div>
     <div
       v-if="events.length"

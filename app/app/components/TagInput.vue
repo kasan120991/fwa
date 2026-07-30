@@ -41,7 +41,7 @@ function onKeydown(e: KeyboardEvent) {
     <span
       v-for="(tag, i) in model"
       :key="tag"
-      class="inline-flex items-center gap-1 rounded-full bg-elevated py-1 pl-2.5 pr-1 text-[13px] font-medium text-default"
+      class="inline-flex items-center gap-1 rounded-chip bg-elevated py-1 pl-2.5 pr-1 text-[13px] font-medium text-default"
     >
       {{ tag }}
       <button

@@ -67,12 +67,12 @@ interface Agreement {
   producedProject?: boolean
 }
 
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-primary text-inverted', 'bg-elevated text-default', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 
 const STATUS_META: Record<Status, { label: string, chip: string, dot: string }> = {
   draft: { label: 'Draft', chip: 'bg-muted text-default', dot: 'bg-ink-400' },
   sent: { label: 'Sent', chip: 'bg-info/10 text-info', dot: 'bg-info' },
-  viewed: { label: 'Viewed', chip: 'bg-mist text-primary', dot: 'bg-teal-600' },
+  viewed: { label: 'Viewed', chip: 'bg-mist text-primary', dot: 'bg-primary' },
   accepted: { label: 'Accepted', chip: 'bg-success/10 text-success', dot: 'bg-success' },
   signed: { label: 'Signed', chip: 'bg-success/10 text-success', dot: 'bg-success' },
   declined: { label: 'Declined', chip: 'bg-error/10 text-error', dot: 'bg-error' },
@@ -93,7 +93,7 @@ const GROUP: Record<Exclude<Group, 'all'>, Status[]> = {
 const BOARD_COLS: { key: string, label: string, statuses: Status[], dot: string }[] = [
   { key: 'draft', label: 'Draft', statuses: ['draft'], dot: 'bg-ink-400' },
   { key: 'sent', label: 'Sent', statuses: ['sent'], dot: 'bg-info' },
-  { key: 'viewed', label: 'Viewed', statuses: ['viewed'], dot: 'bg-teal-600' },
+  { key: 'viewed', label: 'Viewed', statuses: ['viewed'], dot: 'bg-primary' },
   { key: 'won', label: 'Won', statuses: ['accepted', 'signed'], dot: 'bg-success' },
   { key: 'closed', label: 'Closed', statuses: ['declined', 'expired', 'voided'], dot: 'bg-error' }
 ]
@@ -186,7 +186,7 @@ const byId = (id?: string | null) => agreements.value.find(a => a.id === id) || 
 const kindLabel = (k: Kind) => (k === 'proposal' ? 'Proposal' : 'Contract')
 const kindChip = (k: Kind) => (k === 'proposal'
   ? 'bg-default text-highlighted ring-1 ring-accented'
-  : 'bg-teal-800 text-white')
+  : 'bg-primary text-inverted')
 const kindIconWrap = (k: Kind) => (k === 'proposal' ? 'bg-muted text-muted' : 'bg-mist text-primary')
 const kindIcon = (k: Kind) => (k === 'proposal' ? 'i-lucide-file-text' : 'i-lucide-file-check-2')
 const subtypeLabel = (ct?: Ctype) => (ct === 'care_plan' ? 'Care Plan' : 'Project')
@@ -382,7 +382,7 @@ const timeline = computed(() => {
       date: s.date,
       line: !last,
       showCheck: !(isBad && last),
-      dot: isBad && last ? 'bg-error' : (good && last ? 'bg-success' : 'bg-teal-600'),
+      dot: isBad && last ? 'bg-error' : (good && last ? 'bg-success' : 'bg-primary'),
       text: last ? (isBad ? 'text-error' : (good ? 'text-success' : 'text-highlighted')) : 'text-highlighted'
     }
   })
@@ -446,14 +446,14 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
         @click="t.apply"
       >
         <div class="flex items-center justify-between gap-2.5">
-          <span class="font-mono text-[10.5px] uppercase tracking-[0.05em] text-muted">{{ t.label }}</span>
+          <span class="text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted">{{ t.label }}</span>
           <span class="inline-flex size-7 items-center justify-center rounded-lg bg-mist text-primary"><UIcon
             :name="t.icon"
             class="size-[15px]"
           /></span>
         </div>
         <div class="mt-3 flex items-baseline gap-2">
-          <span class="font-display text-[27px] font-medium leading-none tracking-tight text-highlighted tabular-nums">{{ t.value }}</span>
+          <span class="font-display text-[27px] font-semibold leading-none tracking-tight text-highlighted tabular-nums">{{ t.value }}</span>
           <span class="text-[12.5px] text-muted">{{ t.sub }}</span>
         </div>
       </button>
@@ -471,7 +471,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
         >
           {{ s.label }}
           <span
-            class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums"
+            class="rounded-chip px-1.5 py-px text-[11px] font-semibold tabular-nums"
             :class="seg === s.key ? 'bg-mist text-primary' : 'bg-elevated text-muted'"
           >{{ s.count }}</span>
         </button>
@@ -498,7 +498,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
             Filter
             <span
               v-if="filterActive"
-              class="size-1.5 rounded-full bg-teal-500"
+              class="size-1.5 rounded-full bg-citrine"
             />
           </UButton>
         </UDropdownMenu>
@@ -555,7 +555,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
               <div class="truncate text-sm font-semibold text-highlighted">{{ a.title }}</div>
               <div class="truncate text-[12.5px] text-muted">{{ kindLabel(a.kind) }} · {{ a.client }}</div>
             </div>
-            <span class="inline-flex flex-none items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold" :class="STATUS_META[a.status].chip">
+            <span class="inline-flex flex-none items-center gap-1.5 rounded-chip px-2.5 py-1 text-xs font-semibold" :class="STATUS_META[a.status].chip">
               <span class="size-1.5 rounded-full" :class="STATUS_META[a.status].dot" />{{ STATUS_META[a.status].label }}
             </span>
           </li>
@@ -566,22 +566,22 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default">
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Agreement
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Client
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Type
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Status
                 </th>
-                <th class="hidden px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">
+                <th class="hidden px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">
                   Value
                 </th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted md:table-cell">
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted md:table-cell">
                   Date
                 </th>
                 <th class="w-12" />
@@ -638,12 +638,12 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
                 <td class="px-4 py-3.5">
                   <div class="flex flex-wrap items-center gap-1.5">
                     <span
-                      class="inline-flex items-center rounded-full px-2.5 py-1 text-[11.5px] font-semibold"
+                      class="inline-flex items-center rounded-chip px-2.5 py-1 text-[11.5px] font-semibold"
                       :class="kindChip(a.kind)"
                     >{{ kindLabel(a.kind) }}</span>
                     <span
                       v-if="a.kind === 'contract'"
-                      class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold"
+                      class="inline-flex items-center gap-1 rounded-chip px-2 py-1 text-[11px] font-semibold"
                       :class="subtypeChip(a.ctype)"
                     ><UIcon
                       :name="subtypeIcon(a.ctype)"
@@ -653,7 +653,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
                 </td>
                 <td class="px-4 py-3.5">
                   <span
-                    class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
+                    class="inline-flex items-center gap-1.5 rounded-chip px-2.5 py-1 text-xs font-semibold"
                     :class="STATUS_META[a.status].chip"
                   >
                     <span
@@ -721,7 +721,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
           name="i-lucide-search"
           class="size-6"
         /></span>
-        <h3 class="font-display text-lg font-medium text-highlighted">
+        <h3 class="font-display text-lg font-semibold text-highlighted">
           No Agreements Match
         </h3>
         <p class="mt-1.5 max-w-xs text-sm text-muted">
@@ -755,7 +755,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
               :class="col.dot"
             />
             <span class="text-[13px] font-semibold text-highlighted">{{ col.label }}</span>
-            <span class="rounded-full border border-default bg-default px-2 py-px text-xs font-semibold text-muted tabular-nums">{{ col.cards.length }}</span>
+            <span class="rounded-chip border border-default bg-default px-2 py-px text-xs font-semibold text-muted tabular-nums">{{ col.cards.length }}</span>
           </div>
           <div class="flex min-h-[50px] flex-col gap-2.5">
             <div
@@ -766,12 +766,12 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
             >
               <div class="mb-2.5 flex items-center gap-1.5">
                 <span
-                  class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                  class="inline-flex items-center rounded-chip px-2 py-0.5 text-[11px] font-semibold"
                   :class="kindChip(a.kind)"
                 >{{ kindLabel(a.kind) }}</span>
                 <span
                   v-if="a.kind === 'contract'"
-                  class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10.5px] font-semibold"
+                  class="inline-flex items-center gap-1 rounded-chip px-1.5 py-0.5 text-[10.5px] font-semibold"
                   :class="subtypeChip(a.ctype)"
                 ><UIcon
                   :name="subtypeIcon(a.ctype)"
@@ -821,7 +821,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
       v-if="view === 'table' && filtered.length > 0"
       class="flex flex-wrap items-center gap-4 px-1"
     >
-      <span class="font-mono text-[10.5px] uppercase tracking-[0.05em] text-muted">Status system</span>
+      <span class="text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted">Status system</span>
       <span
         v-for="l in legend"
         :key="l.label"
@@ -883,19 +883,19 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
             </div>
             <div class="mt-3.5 flex flex-wrap items-center gap-1.5">
               <span
-                class="inline-flex items-center rounded-full px-2.5 py-1 text-[11.5px] font-semibold"
+                class="inline-flex items-center rounded-chip px-2.5 py-1 text-[11.5px] font-semibold"
                 :class="kindChip(detail.kind)"
               >{{ kindLabel(detail.kind) }}</span>
               <span
                 v-if="detail.kind === 'contract'"
-                class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold"
+                class="inline-flex items-center gap-1 rounded-chip px-2 py-1 text-[11px] font-semibold"
                 :class="subtypeChip(detail.ctype)"
               ><UIcon
                 :name="subtypeIcon(detail.ctype)"
                 class="size-3"
               />{{ subtypeLabel(detail.ctype) }}</span>
               <span
-                class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
+                class="inline-flex items-center gap-1.5 rounded-chip px-2.5 py-1 text-xs font-semibold"
                 :class="STATUS_META[detail.status].chip"
               ><span
                 class="size-1.5 rounded-full"
@@ -903,7 +903,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
               />{{ STATUS_META[detail.status].label }}</span>
             </div>
             <div class="mt-3.5 flex items-baseline gap-2">
-              <span class="font-display text-[26px] font-medium tracking-tight text-highlighted tabular-nums">{{ valueText(detail) }}</span>
+              <span class="font-display text-[26px] font-semibold tracking-tight text-highlighted tabular-nums">{{ valueText(detail) }}</span>
               <span
                 v-if="detail.recurring"
                 class="text-sm font-medium text-muted"
@@ -917,7 +917,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
 
           <!-- body -->
           <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-            <div class="mb-2.5 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">
+            <div class="mb-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Line items
             </div>
             <div class="mb-6 overflow-hidden rounded-xl ring-1 ring-default">
@@ -959,7 +959,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
               </div>
             </div>
 
-            <div class="mb-3.5 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">
+            <div class="mb-3.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Status timeline
             </div>
             <div class="mb-2 flex flex-col">
@@ -999,7 +999,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
             </div>
 
             <template v-if="lineage.length > 0">
-              <div class="mb-2.5 mt-4 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">
+              <div class="mb-2.5 mt-4 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
                 Related
               </div>
               <div class="flex flex-col gap-2">
@@ -1017,7 +1017,7 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
                     class="size-4"
                   /></span>
                   <div class="min-w-0 flex-1">
-                    <div class="font-mono text-[11px] uppercase tracking-[0.04em] text-muted">
+                    <div class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
                       {{ ln.kicker }}
                     </div>
                     <div class="mt-px truncate text-[13.5px] font-semibold text-highlighted">

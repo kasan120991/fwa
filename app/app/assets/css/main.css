@@ -1,39 +1,50 @@
 /* =====================================================================
    Francis Web Agency — design tokens (Tailwind CSS v4 + Nuxt UI v4)
-   Target: app/assets/css/main.css
-   Layer 1 of 2: raw design tokens. Semantic mapping lives in app.config.ts.
+   Target: app/assets/css/main.css   (shared byte-identical with portal/)
+   v2 — the Highlighter system (rebrand 2026-07).
+   Source of truth: brand/rebrand/system-spec.md. Layer 1 of 2: raw tokens
+   + Nuxt UI var overrides. Semantic mapping lives in app.config.ts.
    ===================================================================== */
 @import "tailwindcss";
 @import "@nuxt/ui";
 
 /* ---- Fonts (auto-loaded + optimised by @nuxt/fonts) ---------------- */
 @theme {
-  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  /* ONE family — Geist carries everything (mono + serif retired 2026-07).
+     font-display / font-mono stay defined as Geist shims so legacy classes
+     keep rendering on-brand; weight/tracking treatments live below. */
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist", ui-sans-serif, system-ui, sans-serif;
 
-  /* Type scale — use as text-display-1 … text-eyebrow (pair with font-display on headings) */
-  --text-display-1: 5.5rem;  --text-display-1--line-height: 1.02; --text-display-1--letter-spacing: -0.02em; --text-display-1--font-weight: 470;
-  --text-display-2: 4rem;    --text-display-2--line-height: 1.05; --text-display-2--letter-spacing: -0.015em; --text-display-2--font-weight: 470;
-  --text-h1: 3rem;           --text-h1--line-height: 1.1;  --text-h1--letter-spacing: -0.012em; --text-h1--font-weight: 470;
-  --text-h2: 2.25rem;        --text-h2--line-height: 1.15; --text-h2--letter-spacing: -0.008em; --text-h2--font-weight: 470;
-  --text-h3: 1.75rem;        --text-h3--line-height: 1.2;  --text-h3--letter-spacing: -0.004em; --text-h3--font-weight: 470;
-  --text-h4: 1.375rem;       --text-h4--line-height: 1.3;  --text-h4--font-weight: 600;
-  --text-body-lg: 1.125rem;  --text-body-lg--line-height: 1.5;
-  --text-body: 1rem;         --text-body--line-height: 1.55;
-  --text-caption: 0.875rem;  --text-caption--line-height: 1.5;
-  --text-eyebrow: 0.8125rem; --text-eyebrow--line-height: 1.4; --text-eyebrow--letter-spacing: 0.18em;
+  /* Type scale — Geist 700 tight display / 600 headings / 400 body */
+  --text-display-1: 4.625rem; --text-display-1--line-height: 1.05; --text-display-1--letter-spacing: -0.03em;  --text-display-1--font-weight: 700;
+  --text-display-2: 3.5rem;   --text-display-2--line-height: 1.06; --text-display-2--letter-spacing: -0.03em;  --text-display-2--font-weight: 700;
+  --text-h1: 2.5rem;          --text-h1--line-height: 1.1;   --text-h1--letter-spacing: -0.028em; --text-h1--font-weight: 700;
+  --text-h2: 2rem;            --text-h2--line-height: 1.12;  --text-h2--letter-spacing: -0.025em; --text-h2--font-weight: 700;
+  --text-h3: 1.25rem;         --text-h3--line-height: 1.3;   --text-h3--letter-spacing: -0.015em; --text-h3--font-weight: 600;
+  --text-h4: 1.125rem;        --text-h4--line-height: 1.35;  --text-h4--font-weight: 600;
+  --text-body-lg: 1.125rem;   --text-body-lg--line-height: 1.6;
+  --text-body: 1rem;          --text-body--line-height: 1.55;
+  --text-caption: 0.875rem;   --text-caption--line-height: 1.5;
+  --text-eyebrow: 0.72rem;    --text-eyebrow--line-height: 1.4; --text-eyebrow--letter-spacing: 0.08em; --text-eyebrow--font-weight: 600;
 
-  /* Spacing + radius helpers */
-  --spacing-section: 6rem;     /* py-section = 96px marketing rhythm */
-  --radius-pill: 9999px;       /* rounded-pill */
-  --radius-card: 1rem;         /* rounded-card = 16px */
+  /* Radii — softened squares, NO pills (4 chip / 8 btn / 12 card / 16 band) */
+  --radius-chip: 4px;
+  --radius-btn: 8px;
+  --radius-card: 12px;
+  --radius-band: 16px;
+
+  /* Flat brand tokens */
+  --color-paper: #FCFCFA;    /* the brand ground */
+  --color-linen: #F4F2EB;    /* warm block / soft card fill */
+  --color-citrine: #F2D318;  /* THE accent — rules, floods, markers. NEVER text. */
 }
 
 /* ---- Surface tokens (dark-aware) ---------------------------------- *
- * Raw values live on :root / .dark below and are wired into Tailwind
- * via `@theme inline` so bg-canvas / bg-sand / bg-mist / bg-cloud /
- * bg-deep resolve to a var() and flip with the color mode. */
+ * Legacy surface classes (bg-canvas / bg-sand / bg-mist / bg-cloud /
+ * bg-deep) survive the rebrand as shims onto Highlighter surfaces —
+ * raw values live on :root / .dark below and flip with the color mode. */
 @theme inline {
   --color-canvas: var(--surface-canvas);
   --color-sand:   var(--surface-sand);
@@ -44,130 +55,172 @@
 
 /* ---- Color ramps (full 50–950 — required by Nuxt UI) -------------- */
 @theme static {
-  /* Brand — primary (teal does double duty: action + signature bands) */
-  --color-teal-50: #ECFBF7;
-  --color-teal-100: #CCF3EA;
-  --color-teal-200: #99E6D6;
-  --color-teal-300: #5FD4BF;
-  --color-teal-400: #25BBA4;
-  --color-teal-500: #0FA08C;
-  --color-teal-600: #0B7F70;
-  --color-teal-700: #0A6358;
-  --color-teal-800: #094E46;
-  --color-teal-900: #073A34;
-  --color-teal-950: #04241F;
+  /* Neutral — ink. Mapped so Nuxt UI's default shade roles land on spec:
+     900 = ink (text/solid buttons) · 800 = ink-soft (hover) · 700 = muted
+     500 = meta · 300 = line-strong · 200 = line (hairline) */
+  --color-ink-50: #F6F6F3;
+  --color-ink-100: #EFEFEC;
+  --color-ink-200: #E3E4E1;
+  --color-ink-300: #C9CBCE;
+  --color-ink-400: #9A9EA3;
+  --color-ink-500: #797D82;
+  --color-ink-600: #6A6E73;
+  --color-ink-700: #55585C;
+  --color-ink-800: #33353A;
+  --color-ink-900: #17181A;
+  --color-ink-950: #101113;
 
-  /* Neutral — ink (warm-cool slate; maps to Nuxt UI text/bg/border tokens) */
-  --color-ink-50: #F6F7F6;
-  --color-ink-100: #ECEEEC;
-  --color-ink-200: #E4E6E2;
-  --color-ink-300: #D7DAD6;
-  --color-ink-400: #A6AFAC;
-  --color-ink-500: #8A9794;
-  --color-ink-600: #67716E;
-  --color-ink-700: #4A5654;
-  --color-ink-800: #2C3331;
-  --color-ink-900: #121817;
-  --color-ink-950: #0B0F0E;
+  /* Status — anchored to the spec: 600 = light solid, 50/100 = tint,
+     400 = dark-mode solid. Warning is orange, never yellow (citrine is
+     brand, not status). */
+  --color-success-50: #EFF7F2;
+  --color-success-100: #E2F1E8;
+  --color-success-200: #BFE0CE;
+  --color-success-300: #8FC9AB;
+  --color-success-400: #5BBE8E;
+  --color-success-500: #2E9464;
+  --color-success-600: #1E7A4E;
+  --color-success-700: #196541;
+  --color-success-800: #145234;
+  --color-success-900: #104028;
+  --color-success-950: #0B2E1D;
 
-  /* Status */
-  --color-success-50: #EDF7F2;
-  --color-success-100: #D7EDE1;
-  --color-success-200: #AADABF;
-  --color-success-300: #79C49A;
-  --color-success-400: #45AE74;
-  --color-success-500: #1F9D57;
-  --color-success-600: #1B894C;
-  --color-success-700: #177340;
-  --color-success-800: #125D33;
-  --color-success-900: #0E4828;
-  --color-success-950: #0A341D;
+  --color-warning-50: #FBF3E8;
+  --color-warning-100: #F8ECDD;
+  --color-warning-200: #F0D6B8;
+  --color-warning-300: #E9BD8A;
+  --color-warning-400: #E09A50;
+  --color-warning-500: #CB7422;
+  --color-warning-600: #B45D0E;
+  --color-warning-700: #954D0C;
+  --color-warning-800: #773E0A;
+  --color-warning-900: #5C3008;
+  --color-warning-950: #422206;
 
-  --color-warning-50: #FDF7EF;
-  --color-warning-100: #FAEEDA;
-  --color-warning-200: #F4DBB1;
-  --color-warning-300: #EEC684;
-  --color-warning-400: #E7B055;
-  --color-warning-500: #E2A032;
-  --color-warning-600: #C58B2C;
-  --color-warning-700: #A57524;
-  --color-warning-800: #855E1E;
-  --color-warning-900: #684A17;
-  --color-warning-950: #4B3510;
+  --color-error-50: #FAEBE9;
+  --color-error-100: #F7E4E2;
+  --color-error-200: #EFC4C0;
+  --color-error-300: #E9A09A;
+  --color-error-400: #E37B72;
+  --color-error-500: #C94C40;
+  --color-error-600: #B3362B;
+  --color-error-700: #952D24;
+  --color-error-800: #78241D;
+  --color-error-900: #5D1C16;
+  --color-error-950: #431410;
 
-  --color-error-50: #FBF1EF;
-  --color-error-100: #F7DFDC;
-  --color-error-200: #EEBBB5;
-  --color-error-300: #E3938B;
-  --color-error-400: #D96A5E;
-  --color-error-500: #D14B3D;
-  --color-error-600: #B64135;
-  --color-error-700: #99372D;
-  --color-error-800: #7B2C24;
-  --color-error-900: #60221C;
-  --color-error-950: #451914;
-
-  --color-info-50: #EEF3FD;
-  --color-info-100: #D9E5F9;
-  --color-info-200: #AFC8F3;
-  --color-info-300: #81A9EC;
-  --color-info-400: #5187E5;
-  --color-info-500: #2D6FE0;
-  --color-info-600: #2761C3;
-  --color-info-700: #2151A4;
-  --color-info-800: #1B4184;
-  --color-info-900: #153367;
-  --color-info-950: #0F254A;
+  --color-info-50: #EBF0F8;
+  --color-info-100: #E4EBF5;
+  --color-info-200: #C3D3E9;
+  --color-info-300: #A1BBDF;
+  --color-info-400: #7FA3D7;
+  --color-info-500: #4A77B7;
+  --color-info-600: #3563A4;
+  --color-info-700: #2C5289;
+  --color-info-800: #24426E;
+  --color-info-900: #1C3355;
+  --color-info-950: #14253D;
 }
 
 /* ---- Nuxt UI semantic token tuning -------------------------------- */
 :root {
-  /* Action color = teal-600 (AA with white text); brand identity is teal-500.
-     Nuxt UI defaults --ui-primary to the 500 shade, so we bump it to 600. */
-  --ui-primary: var(--ui-color-primary-600);
+  /* Primary action = ink. Solid buttons are ink with paper text; citrine
+     is never an action color (Nuxt UI defaults --ui-primary to the 500
+     shade, so we pin it to the 900). */
+  --ui-primary: var(--ui-color-primary-900);
 
-  /* Base component radius (drives all rounded-* in Nuxt UI). 8px = soft, premium. */
+  /* Base component radius (drives all rounded-* in Nuxt UI). 8px buttons/inputs. */
   --ui-radius: 0.5rem;
 
-  /* Container max-width matches our 1200px marketing container */
+  /* Container max-width */
   --ui-container: 75rem;
 
-  /* Surface tokens — light (the brand's white-canvas defaults) */
+  /* Page ground is paper, not gray (Nuxt UI defaults bg-muted to neutral-50) */
+  --ui-bg-muted: var(--color-paper);
+
+  /* Surface shims — light. mist = selection tint (spec §5.7 row hover),
+     sand = linen, deep = the ink band. */
   --surface-canvas: #FFFFFF;
-  --surface-sand:   #F1EEE7;   /* warm neutral block */
-  --surface-mist:   #ECFBF7;   /* pale teal wash */
-  --surface-cloud:  #F5F7F6;   /* cool neutral app background */
-  --surface-deep:   #073A34;   /* deep teal band */
+  --surface-sand:   #F4F2EB;
+  --surface-mist:   #F6F6F3;
+  --surface-cloud:  #FCFCFA;
+  --surface-deep:   #17181A;
 }
 
 .dark {
-  /* On dark surfaces, step the brand up to the brighter teal-400 */
-  --ui-primary: var(--ui-color-primary-400);
+  /* The solid role inverts on dark: primary buttons become paper with ink
+     text (spec §5.1). */
+  --ui-primary: #F0F0EC;
+  --ui-text-inverted: #17181A;
 
-  /* Surface tokens — dark (soft warm ink; the deep teal band stays deep) */
-  --surface-canvas: #1C2422;   /* raised surface (ink-soft) */
-  --surface-sand:   #222A28;   /* warm elevated block */
-  --surface-mist:   #0C2E29;   /* dark teal wash */
-  --surface-cloud:  #121817;   /* base page (ink-900) */
-  --surface-deep:   #073A34;   /* deep teal band — dark in both modes */
+  /* Dark ramp (spec §1.2) — derived, not naively inverted */
+  --ui-bg: #1B1C20;             /* surface — cards, panels, popovers */
+  --ui-bg-muted: #131417;       /* page ground */
+  --ui-bg-elevated: #232429;
+  --ui-bg-accented: #2C2D32;
+  --ui-border: #2C2D32;         /* line */
+  --ui-border-muted: #2C2D32;
+  --ui-border-accented: #43454B; /* line-strong */
+  --ui-text-dimmed: #6E7278;
+  --ui-text-muted: #8C9096;     /* meta */
+  --ui-text-toned: #B0B3B0;
+  --ui-text: #B0B3B0;           /* muted */
+  --ui-text-highlighted: #F0F0EC; /* ink (roles invert; names stay semantic) */
+
+  /* Surface shims — dark */
+  --surface-canvas: #1B1C20;
+  --surface-sand:   #232429;
+  --surface-mist:   #26272C;
+  --surface-cloud:  #131417;
+  --surface-deep:   #17181A;
 }
 
 /* ---- Base layer --------------------------------------------------- */
 @layer base {
-  /* Headings use the display serif at its optical-display cut */
-  h1, h2, h3, .font-display {
-    font-family: var(--font-display);
-    font-variation-settings: "opsz" 96, "wght" 470, "SOFT" 0, "WONK" 0;
+  body { font-family: var(--font-sans); }
+
+  /* Display is Geist, bold and tight — no serif, no variable axes.
+     Explicit font-weight utilities on an element still win (utilities
+     layer beats base). */
+  h1, h2, .font-display {
+    font-weight: 700;
+    letter-spacing: -0.02em;
   }
+  h3 {
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
   /* Restore pointer cursor on buttons (Tailwind v4 preflight sets default) */
   button:not(:disabled), [role="button"]:not(:disabled) { cursor: pointer; }
 }
 
-/* Uppercase mono eyebrow helper (brand signature) */
+/* ---- Uppercase eyebrow (brand signature — tracked Geist 600, meta gray) */
 @utility eyebrow {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--text-eyebrow);
-  letter-spacing: 0.18em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ui-primary); /* teal-600 light / teal-400 dark */
+  font-weight: 600;
+  color: var(--ui-text-muted);
+}
+
+/* ---- Metadata strip (facts row: CS-004 · LAUNCHED 02/2026 …) ------- */
+@utility metastrip {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.66rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.9;
+  color: var(--ui-text-muted);
+}
+
+/* ---- The highlighter sweep (citrine behind the clause) ------------- */
+@utility hl {
+  background-color: var(--color-citrine);
+  color: #17181A;
+  padding: 0.01em 0.1em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }

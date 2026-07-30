@@ -110,7 +110,7 @@ async function changePassword() {
       <p class="eyebrow text-primary">
         Your details
       </p>
-      <h1 class="mt-1 font-display text-[2rem] font-medium leading-tight tracking-tight text-highlighted">
+      <h1 class="mt-1 font-display text-[2rem] font-semibold leading-tight tracking-tight text-highlighted">
         Account
       </h1>
       <p
@@ -131,7 +131,7 @@ async function changePassword() {
     <template v-else>
       <!-- contact & billing -->
       <div class="flex flex-col gap-4 rounded-card bg-default p-6 ring ring-default">
-        <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+        <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
           Contact &amp; billing
         </div>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -215,7 +215,7 @@ async function changePassword() {
 
       <!-- change password -->
       <div class="flex flex-col gap-4 rounded-card bg-default p-6 ring ring-default">
-        <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+        <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
           Password
         </div>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">

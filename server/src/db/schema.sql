@@ -170,6 +170,11 @@ CREATE TABLE IF NOT EXISTS calls (
 
   classification     ENUM('inquiry', 'client', 'spam', 'wrong_number', 'other') NOT NULL,
 
+  -- Which line took the call: the real receptionist ('main') or the public
+  -- marketing-site demo number ('demo'). Demo calls are lead-magnet prospects —
+  -- surfaced with a Demo label in the inbox, never auto-converted to leads.
+  line               ENUM('main', 'demo') NOT NULL DEFAULT 'main',
+
   caller_number      VARCHAR(32)  NOT NULL,
   caller_name        VARCHAR(160) NULL,
   summary            TEXT NULL,

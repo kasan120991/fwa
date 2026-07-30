@@ -190,10 +190,10 @@ const lockedClientLabel = computed(() => props.clientLabel || props.ticket?.clie
         <div class="flex-none border-b border-default px-6 py-5">
           <div class="flex items-start justify-between gap-3">
             <div>
-              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+              <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
                 Support
               </div>
-              <h2 class="mt-1 font-display text-[22px] font-medium tracking-tight text-highlighted">
+              <h2 class="mt-1 font-display text-[22px] font-semibold tracking-tight text-highlighted">
                 {{ mode === 'edit' ? 'Edit Ticket' : 'New Ticket' }}
               </h2>
             </div>

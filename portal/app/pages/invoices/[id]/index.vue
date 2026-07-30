@@ -95,7 +95,7 @@ const statusChip = computed(() => {
       v-else-if="notFound || !invoice"
       class="rounded-card bg-default px-6 py-16 text-center ring ring-default"
     >
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         Invoice not found
       </h3>
     </div>
@@ -108,7 +108,7 @@ const statusChip = computed(() => {
             <p class="eyebrow text-primary">
               Invoice
             </p>
-            <h1 class="mt-1 font-display text-[1.75rem] font-medium tracking-tight text-highlighted">
+            <h1 class="mt-1 font-display text-[1.75rem] font-semibold tracking-tight text-highlighted">
               {{ invoice.number || `#${invoice.id}` }}
             </h1>
             <p
@@ -121,7 +121,7 @@ const statusChip = computed(() => {
           </div>
           <div class="flex items-center gap-2.5">
             <span
-              class="rounded-full px-3 py-1.5 text-[12px] font-semibold"
+              class="rounded-lg px-3 py-1.5 text-[12px] font-semibold"
               :class="statusChip.class"
             >{{ statusChip.label }}</span>
           </div>
@@ -132,7 +132,7 @@ const statusChip = computed(() => {
             <div class="text-[12.5px] text-muted">
               Amount
             </div>
-            <div class="font-display text-[1.6rem] font-medium tabular-nums text-highlighted">
+            <div class="font-display text-[1.6rem] font-semibold tabular-nums text-highlighted">
               {{ formatMoney(invoice.amount_due) }}
             </div>
           </div>
@@ -174,7 +174,7 @@ const statusChip = computed(() => {
         v-if="items.length"
         class="overflow-hidden rounded-card bg-default ring ring-default"
       >
-        <div class="border-b border-default px-5 py-3.5 font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+        <div class="border-b border-default px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
           Line items
         </div>
         <div
@@ -210,7 +210,7 @@ const statusChip = computed(() => {
         v-if="payments.length"
         class="overflow-hidden rounded-card bg-default ring ring-default"
       >
-        <div class="border-b border-default px-5 py-3.5 font-mono text-[11px] uppercase tracking-[0.06em] text-primary">
+        <div class="border-b border-default px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
           Payments
         </div>
         <div

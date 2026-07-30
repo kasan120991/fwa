@@ -46,7 +46,7 @@ async function onSubmit() {
   <div class="flex min-h-screen w-full items-center justify-center bg-muted px-6 py-12">
     <div class="w-full max-w-[420px]">
       <div class="mb-8 flex items-center justify-center gap-2.5">
-        <span class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-[9px] bg-deep">
+        <span class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-lg bg-deep">
           <img
             src="/brand/fwa-mark-white.svg"
             alt=""
@@ -56,7 +56,7 @@ async function onSubmit() {
       </div>
 
       <div class="rounded-card bg-default p-8 ring ring-default">
-        <h1 class="font-display text-[1.75rem] font-medium leading-tight tracking-tight text-highlighted">
+        <h1 class="text-[1.75rem] leading-tight tracking-tight text-highlighted">
           Set your password
         </h1>
         <p class="mt-2 mb-6 text-[0.9375rem] leading-relaxed text-muted">

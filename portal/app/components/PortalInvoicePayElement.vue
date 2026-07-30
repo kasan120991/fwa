@@ -29,15 +29,15 @@ async function start() {
     )
     stripe = await loadStripe(data.publishableKey)
     if (!stripe) throw new Error('Could not load the payment form.')
-    // Appearance themed to the FWA portal (teal primary, rounded, Inter).
+    // Appearance themed to the FWA portal (Highlighter: ink primary, 8px, Geist).
     elements = stripe.elements({
       clientSecret: data.clientSecret,
       appearance: {
         theme: 'stripe',
         variables: {
-          colorPrimary: '#0f766e',
-          borderRadius: '10px',
-          fontFamily: 'Inter, system-ui, sans-serif'
+          colorPrimary: '#17181A',
+          borderRadius: '8px',
+          fontFamily: 'Geist, system-ui, sans-serif'
         }
       }
     })
@@ -86,7 +86,7 @@ onMounted(start)
         name="i-lucide-circle-check"
         class="mx-auto size-9 text-success"
       />
-      <h3 class="mt-3 font-display text-lg font-medium text-highlighted">
+      <h3 class="mt-3 font-display text-lg font-semibold text-highlighted">
         Payment received
       </h3>
       <p class="mt-1.5 text-sm text-muted">

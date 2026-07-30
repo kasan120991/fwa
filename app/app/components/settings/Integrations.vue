@@ -66,7 +66,7 @@ function chip(i: Integration) {
           </div>
         </div>
         <span
-          class="inline-flex flex-none items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+          class="inline-flex flex-none items-center gap-1.5 rounded-chip px-2.5 py-1 text-[11px] font-semibold"
           :class="chip(i).class"
         >
           <span class="size-1.5 rounded-full bg-current" />{{ chip(i).label }}

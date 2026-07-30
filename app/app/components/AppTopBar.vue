@@ -234,7 +234,7 @@ watch(notifPanelOpen, (open) => {
 
 // Icon tint per tone — reuses the semantic ramps from the design system.
 const toneClass: Record<NotifTone, string> = {
-  brand: 'bg-mist text-primary',
+  brand: 'bg-sand text-highlighted',
   success: 'bg-success-50 text-success',
   warning: 'bg-warning-50 text-warning',
   info: 'bg-info-50 text-info',
@@ -290,7 +290,7 @@ function onNotifOpen(n: Notification) {
       <!-- mobile: open the drawer -->
       <button
         aria-label="Open menu"
-        class="inline-flex size-[38px] flex-none items-center justify-center rounded-[10px] border border-default bg-default text-highlighted transition-colors hover:bg-muted lg:hidden"
+        class="inline-flex size-[38px] flex-none items-center justify-center rounded-lg border border-default bg-default text-highlighted transition-colors hover:bg-muted lg:hidden"
         @click="mobileOpen = true"
       >
         <UIcon
@@ -301,7 +301,7 @@ function onNotifOpen(n: Notification) {
       <!-- desktop: collapse the rail -->
       <button
         aria-label="Toggle sidebar"
-        class="hidden size-[38px] flex-none items-center justify-center rounded-[10px] border border-default bg-default text-highlighted transition-colors hover:bg-muted lg:inline-flex"
+        class="hidden size-[38px] flex-none items-center justify-center rounded-lg border border-default bg-default text-highlighted transition-colors hover:bg-muted lg:inline-flex"
         @click="collapsed = !collapsed"
       >
         <UIcon
@@ -312,11 +312,11 @@ function onNotifOpen(n: Notification) {
       <div class="min-w-0">
         <div
           v-if="header.breadcrumb"
-          class="hidden font-mono text-[11px] uppercase tracking-[0.05em] text-muted sm:block"
+          class="hidden text-[11px] font-semibold uppercase tracking-[0.08em] text-muted sm:block"
         >
           {{ header.breadcrumb }}
         </div>
-        <h1 class="mt-px truncate font-display text-[19px] font-medium tracking-tight text-highlighted sm:text-[22px]">
+        <h1 class="mt-px truncate text-[19px] font-semibold tracking-tight text-highlighted sm:text-[22px]">
           {{ header.title }}
         </h1>
       </div>
@@ -325,7 +325,7 @@ function onNotifOpen(n: Notification) {
     <!-- right: search, create, notifications, account -->
     <div class="flex flex-none items-center gap-3">
       <button
-        class="hidden w-[260px] cursor-text items-center gap-2.5 rounded-full border border-default bg-muted py-2 pl-3.5 pr-2.5 text-left transition-colors hover:border-accented md:flex"
+        class="hidden w-[260px] cursor-text items-center gap-2.5 rounded-lg border border-default bg-muted py-2 pl-3.5 pr-2.5 text-left transition-colors hover:border-accented md:flex"
         aria-label="Search"
         @click="searchOpen = true"
       >
@@ -334,13 +334,13 @@ function onNotifOpen(n: Notification) {
           class="size-4 flex-none text-muted"
         />
         <span class="flex-1 text-sm text-muted">Search clients, projects…</span>
-        <span class="rounded-md border border-default bg-default px-1.5 py-px font-mono text-[11px] text-muted">⌘K</span>
+        <span class="rounded-[4px] border border-default bg-default px-1.5 py-px text-[11px] font-medium text-muted">⌘K</span>
       </button>
 
       <button
         :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
         :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
-        class="inline-flex size-10 flex-none items-center justify-center rounded-[10px] border border-default bg-default text-highlighted transition-colors hover:bg-muted"
+        class="inline-flex size-10 flex-none items-center justify-center rounded-lg border border-default bg-default text-highlighted transition-colors hover:bg-muted"
         @click="toggleColorMode"
       >
         <ClientOnly>
@@ -359,7 +359,7 @@ function onNotifOpen(n: Notification) {
 
       <button
         aria-label="Notifications"
-        class="relative inline-flex size-10 flex-none items-center justify-center rounded-[10px] border border-default bg-default text-highlighted transition-colors hover:bg-muted"
+        class="relative inline-flex size-10 flex-none items-center justify-center rounded-lg border border-default bg-default text-highlighted transition-colors hover:bg-muted"
         @click="notifPanelOpen = true"
       >
         <UIcon
@@ -385,7 +385,7 @@ function onNotifOpen(n: Notification) {
             <div class="flex-none border-b border-default px-6 py-5">
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
-                  <h2 class="font-display text-[22px] font-medium tracking-tight text-highlighted">
+                  <h2 class="text-[22px] font-semibold tracking-tight text-highlighted">
                     Notifications
                   </h2>
                   <p class="mt-1 text-[13px] text-muted">
@@ -410,13 +410,13 @@ function onNotifOpen(n: Notification) {
                     v-for="f in (['unread', 'all'] as const)"
                     :key="f"
                     class="inline-flex items-center gap-2 rounded-[9px] px-3.5 py-1.5 text-[13px] font-semibold capitalize transition-colors"
-                    :class="notifFilter === f ? 'bg-teal-800 text-white' : 'text-muted hover:text-highlighted'"
+                    :class="notifFilter === f ? 'bg-ink-900 text-white dark:bg-[#F0F0EC] dark:text-ink-900' : 'text-muted hover:text-highlighted'"
                     @click="notifFilter = f"
                   >
                     {{ f }}
                     <span
-                      class="rounded-full px-1.5 py-px text-[11px] tabular-nums"
-                      :class="notifFilter === f ? 'bg-white/20 text-white' : 'border border-default bg-default text-muted'"
+                      class="rounded-chip px-1.5 py-px text-[11px] tabular-nums"
+                      :class="notifFilter === f ? 'bg-white/20 text-white dark:bg-ink-900/10 dark:text-ink-900' : 'border border-default bg-default text-muted'"
                     >{{ f === 'unread' ? unreadTabCount : notifications.length }}</span>
                   </button>
                 </div>
@@ -446,7 +446,7 @@ function onNotifOpen(n: Notification) {
                 :key="n.id"
                 :to="n.to"
                 class="flex gap-3.5 px-6 py-4 transition-colors hover:bg-muted"
-                :class="!n.read && 'bg-mist/40'"
+                :class="!n.read && 'bg-sand/60'"
                 @click="onNotifOpen(n)"
               >
                 <span
@@ -472,7 +472,7 @@ function onNotifOpen(n: Notification) {
                   <p class="mt-0.5 text-[13px] leading-snug text-muted">
                     {{ n.body }}
                   </p>
-                  <p class="mt-1.5 font-mono text-[11px] uppercase tracking-[0.05em] text-dimmed">
+                  <p class="mt-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-dimmed">
                     {{ timeAgo(n.createdAt) }}
                   </p>
                 </div>
@@ -483,7 +483,7 @@ function onNotifOpen(n: Notification) {
                 v-if="!visibleNotifications.length"
                 class="flex flex-col items-center px-6 py-16 text-center"
               >
-                <span class="inline-flex size-12 items-center justify-center rounded-full bg-mist text-primary">
+                <span class="inline-flex size-12 items-center justify-center rounded-full bg-sand text-highlighted">
                   <UIcon
                     name="i-lucide-check"
                     class="size-6"
@@ -507,9 +507,9 @@ function onNotifOpen(n: Notification) {
       >
         <button
           aria-label="Account menu"
-          class="flex items-center gap-1.5 rounded-[10px] p-0.5 transition-colors hover:bg-muted"
+          class="flex items-center gap-1.5 rounded-lg p-0.5 transition-colors hover:bg-muted"
         >
-          <span class="inline-flex size-[34px] flex-none items-center justify-center rounded-full bg-teal-600 text-[13px] font-semibold text-white">
+          <span class="inline-flex size-[34px] flex-none items-center justify-center rounded-full bg-ink-900 text-[13px] font-semibold text-white dark:bg-[#F0F0EC] dark:text-ink-900">
             <ClientOnly fallback="—">{{ initials }}</ClientOnly>
           </span>
           <UIcon

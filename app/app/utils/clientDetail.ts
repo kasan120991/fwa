@@ -44,7 +44,7 @@ export const PROJECT_META: Record<PStatus, { label: string, status: 'neutral' | 
   awaiting_signature: { label: 'Awaiting Signature', status: 'info', bar: 'bg-info' },
   awaiting_deposit: { label: 'Awaiting Deposit', status: 'warning', bar: 'bg-warning' },
   in_progress: { label: 'In Progress', status: 'info', bar: 'bg-info' },
-  in_review: { label: 'In Review', status: 'info', bar: 'bg-teal-500' },
+  in_review: { label: 'In Review', status: 'info', bar: 'bg-primary' },
   awaiting_final: { label: 'Awaiting Final Payment', status: 'warning', bar: 'bg-warning' },
   on_hold: { label: 'On Hold', status: 'warning', bar: 'bg-warning' },
   completed: { label: 'Completed', status: 'success', bar: 'bg-success' }

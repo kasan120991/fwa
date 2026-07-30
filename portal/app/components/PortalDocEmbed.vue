@@ -88,7 +88,7 @@ onBeforeUnmount(() => {
       v-else-if="session?.reason === 'draft' || session?.reason === 'no_document'"
       class="rounded-card bg-default px-6 py-16 text-center ring ring-default"
     >
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         Not ready to sign yet
       </h3>
       <p class="mt-1.5 text-sm text-muted">
@@ -100,7 +100,7 @@ onBeforeUnmount(() => {
       v-else
       class="flex flex-col items-center rounded-card bg-default px-6 py-16 text-center ring ring-default"
     >
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         Couldn't open the document
       </h3>
       <p class="mt-1.5 max-w-sm text-sm text-muted">

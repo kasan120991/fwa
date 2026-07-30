@@ -231,7 +231,7 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
   <div v-else-if="!site" class="flex min-h-[60vh] items-center justify-center">
     <div class="flex max-w-md flex-col items-center rounded-card bg-default px-10 py-14 text-center ring ring-default">
       <span class="mb-5 inline-flex size-12 items-center justify-center rounded-[12px] bg-muted text-muted"><UIcon name="i-lucide-globe" class="size-6" /></span>
-      <h2 class="font-display text-2xl font-medium tracking-tight text-highlighted">
+      <h2 class="font-display text-2xl font-semibold tracking-tight text-highlighted">
         Website Not Found
       </h2>
       <p class="mt-2 text-[15px] text-muted">
@@ -254,10 +254,10 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
         <span class="inline-flex size-[52px] flex-none items-center justify-center rounded-[14px] bg-mist text-primary"><UIcon name="i-lucide-globe" class="size-7" /></span>
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-3">
-            <h1 class="font-display text-[28px] font-medium tracking-tight text-highlighted">
+            <h1 class="font-display text-[28px] font-semibold tracking-tight text-highlighted">
               {{ site.name }}
             </h1>
-            <span class="rounded-full bg-muted px-2 py-0.5 font-mono text-[11px] font-medium uppercase tracking-[0.05em]" :class="ENV_META[site.environment].class">{{ ENV_META[site.environment].label }}</span>
+            <span class="rounded-chip bg-muted px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.06em]" :class="ENV_META[site.environment].class">{{ ENV_META[site.environment].label }}</span>
           </div>
           <div class="mt-1.5 flex flex-wrap items-center gap-3.5 text-sm">
             <a :href="site.url || `https://${site.domain}`" target="_blank" class="inline-flex items-center gap-1.5 font-medium text-primary hover:text-primary/80">
@@ -297,9 +297,9 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
       <!-- KPI tiles -->
       <div class="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div v-for="t in tiles" :key="t.key" class="rounded-[14px] border border-default bg-default p-4">
-          <span class="font-mono text-[10.5px] uppercase tracking-[0.05em] text-muted">{{ t.label }}</span>
+          <span class="text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted">{{ t.label }}</span>
           <div class="mt-2.5 flex items-baseline gap-2">
-            <span class="font-display text-[26px] font-medium leading-none tracking-tight text-highlighted tabular-nums">{{ t.value }}</span>
+            <span class="font-display text-[26px] font-semibold leading-none tracking-tight text-highlighted tabular-nums">{{ t.value }}</span>
             <span v-if="t.delta != null" class="text-[12.5px] font-semibold" :class="t.delta >= 0 ? 'text-success' : 'text-muted'">{{ t.delta >= 0 ? '+' : '' }}{{ t.delta }}%</span>
             <span v-else class="text-[12.5px] text-muted">{{ t.sub }}</span>
           </div>
@@ -334,7 +334,7 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
           :format-value="(n) => n.toLocaleString() + ' ' + metric"
           :height="160"
         />
-        <div v-if="metrics.length" class="mt-2 flex justify-between font-mono text-[10.5px] text-muted">
+        <div v-if="metrics.length" class="mt-2 flex justify-between text-[10.5px] text-muted">
           <span>{{ metrics[0].label }}</span>
           <span>{{ metrics[metrics.length - 1].label }}</span>
         </div>
@@ -343,7 +343,7 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
       <!-- top pages + sources -->
       <div class="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div class="rounded-card bg-default p-5 ring ring-default">
-          <div class="mb-3.5 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">Top pages</div>
+          <div class="mb-3.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Top pages</div>
           <div class="flex flex-col gap-3">
             <div v-for="p in site.top_pages" :key="p.path">
               <div class="mb-1 flex items-center justify-between gap-3 text-[13px]">
@@ -351,13 +351,13 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
                 <span class="flex-none text-muted tabular-nums">{{ p.views.toLocaleString() }}</span>
               </div>
               <div class="h-1.5 overflow-hidden rounded-full bg-muted">
-                <div class="h-full rounded-full bg-teal-500" :style="{ width: (p.views / pagesMax * 100) + '%' }" />
+                <div class="h-full rounded-full bg-primary" :style="{ width: (p.views / pagesMax * 100) + '%' }" />
               </div>
             </div>
           </div>
         </div>
         <div class="rounded-card bg-default p-5 ring ring-default">
-          <div class="mb-3.5 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">Top sources</div>
+          <div class="mb-3.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Top sources</div>
           <div class="flex flex-col gap-3">
             <div v-for="s in site.top_sources" :key="s.source">
               <div class="mb-1 flex items-center justify-between gap-3 text-[13px]">
@@ -365,7 +365,7 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
                 <span class="flex-none text-muted tabular-nums">{{ s.visits.toLocaleString() }}</span>
               </div>
               <div class="h-1.5 overflow-hidden rounded-full bg-muted">
-                <div class="h-full rounded-full bg-teal-400" :style="{ width: (s.visits / sourcesMax * 100) + '%' }" />
+                <div class="h-full rounded-full bg-primary/60" :style="{ width: (s.visits / sourcesMax * 100) + '%' }" />
               </div>
             </div>
           </div>
@@ -375,7 +375,7 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
       <!-- uptime & response-time history -->
       <div class="mt-5 rounded-card bg-default p-5 ring ring-default">
         <div class="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-          <div class="font-mono text-[11px] uppercase tracking-[0.05em] text-muted">Response time</div>
+          <div class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Response time</div>
           <div class="text-[13px] text-muted">
             <span class="font-semibold text-highlighted tabular-nums">{{ uptimeAvg != null ? uptimeAvg + '%' : '—' }}</span> uptime · last {{ range }} days
           </div>
@@ -384,7 +384,7 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
           :points="checks.map(c => c.response_ms ?? 0)"
           :labels="checks.map(c => c.label)"
           :format-value="(n) => Math.round(n) + ' ms'"
-          color="var(--color-teal-600)"
+          color="var(--ui-primary)"
           :height="120"
         />
       </div>
@@ -393,20 +393,20 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
       <div class="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div class="rounded-card bg-default p-5 ring ring-default">
           <div class="mb-3.5 flex items-center justify-between">
-            <span class="font-mono text-[11px] uppercase tracking-[0.05em] text-muted">Health &amp; performance</span>
+            <span class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Health &amp; performance</span>
             <StatusChip :status="HEALTH_META[site.health_state].status">{{ HEALTH_META[site.health_state].label }}</StatusChip>
           </div>
           <div class="grid grid-cols-3 gap-3">
             <div>
-              <div class="font-display text-[22px] font-medium text-highlighted tabular-nums">{{ site.uptime_pct != null ? site.uptime_pct + '%' : '—' }}</div>
+              <div class="font-display text-[22px] font-semibold text-highlighted tabular-nums">{{ site.uptime_pct != null ? site.uptime_pct + '%' : '—' }}</div>
               <div class="mt-0.5 text-xs text-muted">Uptime</div>
             </div>
             <div>
-              <div class="font-display text-[22px] font-medium text-highlighted tabular-nums">{{ site.perf_score ?? '—' }}</div>
+              <div class="font-display text-[22px] font-semibold text-highlighted tabular-nums">{{ site.perf_score ?? '—' }}</div>
               <div class="mt-0.5 text-xs text-muted">Perf score</div>
             </div>
             <div>
-              <div class="font-display text-[22px] font-medium text-highlighted tabular-nums">{{ site.avg_lcp_ms != null ? (site.avg_lcp_ms / 1000).toFixed(1) + 's' : '—' }}</div>
+              <div class="font-display text-[22px] font-semibold text-highlighted tabular-nums">{{ site.avg_lcp_ms != null ? (site.avg_lcp_ms / 1000).toFixed(1) + 's' : '—' }}</div>
               <div class="mt-0.5 text-xs text-muted">LCP</div>
             </div>
           </div>
@@ -419,7 +419,7 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
               <template v-if="site.do_uptime_check_id">
                 <span class="text-muted">Uptime monitored by</span>
                 <span class="font-medium text-highlighted">DigitalOcean</span>
-                <span class="font-mono text-[10px] uppercase tracking-[0.05em] text-muted">multi-region</span>
+                <span class="text-[10px] font-medium uppercase tracking-[0.06em] text-muted">multi-region</span>
               </template>
               <span v-else class="text-muted">Uptime checked locally</span>
             </div>
@@ -436,7 +436,7 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
           </div>
         </div>
         <div class="rounded-card bg-default p-5 ring ring-default">
-          <div class="mb-3.5 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">Details</div>
+          <div class="mb-3.5 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Details</div>
           <dl class="flex flex-col gap-2.5 text-[13.5px]">
             <div class="flex justify-between gap-3">
               <dt class="text-muted">Conversion goal</dt><dd class="font-medium text-highlighted">{{ site.conversion_goal || '—' }}</dd>
@@ -462,7 +462,7 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
     <!-- infrastructure (DigitalOcean) — shown regardless of analytics connection -->
     <div class="mt-5 rounded-card bg-default p-5 ring ring-default">
       <div class="mb-3.5 flex items-center justify-between gap-3">
-        <span class="font-mono text-[11px] uppercase tracking-[0.05em] text-muted">Infrastructure</span>
+        <span class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">Infrastructure</span>
         <StatusChip v-if="infra?.droplet?.status" :status="dropletStatusTone(infra.droplet.status)" class="capitalize">
           {{ infra.droplet.status }}
         </StatusChip>
@@ -490,15 +490,15 @@ const sourcesMax = computed(() => Math.max(1, ...(site.value?.top_sources.map(s 
       <template v-else>
         <div class="grid grid-cols-3 gap-3">
           <div>
-            <div class="font-display text-[22px] font-medium text-highlighted tabular-nums">{{ infra.metrics?.cpuPct != null ? Math.round(infra.metrics.cpuPct) + '%' : '—' }}</div>
+            <div class="font-display text-[22px] font-semibold text-highlighted tabular-nums">{{ infra.metrics?.cpuPct != null ? Math.round(infra.metrics.cpuPct) + '%' : '—' }}</div>
             <div class="mt-0.5 text-xs text-muted">CPU</div>
           </div>
           <div>
-            <div class="font-display text-[22px] font-medium text-highlighted tabular-nums">{{ infra.metrics?.memUsedPct != null ? Math.round(infra.metrics.memUsedPct) + '%' : '—' }}</div>
+            <div class="font-display text-[22px] font-semibold text-highlighted tabular-nums">{{ infra.metrics?.memUsedPct != null ? Math.round(infra.metrics.memUsedPct) + '%' : '—' }}</div>
             <div class="mt-0.5 text-xs text-muted">Memory</div>
           </div>
           <div>
-            <div class="font-display text-[22px] font-medium text-highlighted tabular-nums">{{ infra.metrics?.diskUsedPct != null ? Math.round(infra.metrics.diskUsedPct) + '%' : '—' }}</div>
+            <div class="font-display text-[22px] font-semibold text-highlighted tabular-nums">{{ infra.metrics?.diskUsedPct != null ? Math.round(infra.metrics.diskUsedPct) + '%' : '—' }}</div>
             <div class="mt-0.5 text-xs text-muted">Disk</div>
           </div>
         </div>

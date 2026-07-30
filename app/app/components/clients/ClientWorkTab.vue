@@ -163,22 +163,22 @@ onBeforeUnmount(() => {
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default bg-muted/40">
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Project
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Status
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Progress
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Due
                 </th>
-                <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Value
                 </th>
-                <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Tasks
                 </th>
                 <th class="w-11" />
@@ -260,7 +260,7 @@ onBeforeUnmount(() => {
               <div class="flex items-center gap-2.5">
                 <span class="text-[15px] font-semibold text-highlighted">{{ w.name }}</span>
                 <span
-                  class="rounded-full bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.05em]"
+                  class="rounded-chip bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em]"
                   :class="envClass(w.env)"
                 >{{ w.env }}</span>
               </div>
@@ -293,7 +293,7 @@ onBeforeUnmount(() => {
             </div>
             <div class="mt-3.5 flex items-end justify-between gap-3.5">
               <div>
-                <div class="font-display text-[22px] font-medium leading-none tracking-tight text-highlighted tabular-nums">
+                <div class="font-display text-[22px] font-semibold leading-none tracking-tight text-highlighted tabular-nums">
                   {{ w.visitors }}
                 </div>
                 <div class="mt-1.5 text-xs text-muted">
@@ -316,7 +316,7 @@ onBeforeUnmount(() => {
                 <polyline
                   :points="w.spark"
                   fill="none"
-                  stroke="var(--color-teal-500)"
+                  stroke="var(--ui-primary)"
                   stroke-width="2"
                   stroke-linecap="round"
                   stroke-linejoin="round"

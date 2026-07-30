@@ -34,7 +34,7 @@ const stats = computed(() => [
       <p class="eyebrow text-primary">
         Client portal
       </p>
-      <h1 class="mt-1 font-display text-[2rem] font-medium leading-tight tracking-tight text-highlighted">
+      <h1 class="mt-1 font-display text-[2rem] font-semibold leading-tight tracking-tight text-highlighted">
         Welcome, {{ greetName }}
       </h1>
       <p class="mt-1.5 text-[0.9375rem] text-muted">
@@ -59,7 +59,7 @@ const stats = computed(() => [
           <div class="text-[12.5px] text-muted">
             {{ s.label }}
           </div>
-          <div class="font-display text-[1.5rem] font-medium tabular-nums text-highlighted">
+          <div class="font-display text-[1.5rem] font-semibold tabular-nums text-highlighted">
             {{ pending ? '—' : s.value }}
           </div>
         </div>

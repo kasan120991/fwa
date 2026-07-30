@@ -157,7 +157,7 @@ onBeforeUnmount(() => {
     <div class="overflow-hidden rounded-card bg-default ring ring-default">
       <div class="flex items-center justify-between px-[18px] py-4">
         <span class="text-[15px] font-semibold text-highlighted">Activity</span>
-        <span class="font-mono text-[10px] uppercase tracking-[0.05em] text-muted">All Events</span>
+        <span class="text-[10px] font-medium uppercase tracking-[0.06em] text-muted">All Events</span>
       </div>
       <div
         v-if="activityPending"
@@ -250,7 +250,7 @@ onBeforeUnmount(() => {
               >
                 {{ f.label }}
                 <span
-                  class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums"
+                  class="rounded-chip px-1.5 py-px text-[11px] font-semibold tabular-nums"
                   :class="ticketFilter === f.key ? 'bg-mist text-primary' : 'bg-elevated text-muted'"
                 >{{ f.count }}</span>
               </button>

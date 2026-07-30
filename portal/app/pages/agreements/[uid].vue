@@ -30,7 +30,7 @@ useHead({ title: 'Review & sign · Francis Web Agency' })
       <p class="eyebrow text-primary">
         {{ parsed?.kind === 'contract' ? 'Contract' : 'Proposal' }}
       </p>
-      <h1 class="mt-1 font-display text-[1.9rem] font-medium leading-tight tracking-tight text-highlighted">
+      <h1 class="mt-1 font-display text-[1.9rem] font-semibold leading-tight tracking-tight text-highlighted">
         Review &amp; Sign
       </h1>
     </div>
@@ -44,7 +44,7 @@ useHead({ title: 'Review & sign · Francis Web Agency' })
       v-else
       class="rounded-card bg-default px-6 py-16 text-center ring ring-default"
     >
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         Agreement not found
       </h3>
     </div>
