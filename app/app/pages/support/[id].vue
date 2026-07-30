@@ -242,7 +242,7 @@ async function removeAttachment(a: Attachment) {
         name="i-lucide-search-x"
         class="size-6 text-dimmed"
       />
-      <h3 class="mt-3 font-display text-lg font-medium text-highlighted">
+      <h3 class="mt-3 font-display text-lg font-semibold text-highlighted">
         Ticket not found
       </h3>
       <UButton
@@ -260,11 +260,11 @@ async function removeAttachment(a: Attachment) {
       <div class="rounded-card bg-default p-5 ring ring-default">
         <div class="flex items-center justify-between gap-4">
           <div class="min-w-0">
-            <div class="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">
+            <div class="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               <span>{{ ticketCode(ticket.id) }}</span>
               <span>· {{ TYPE_LABEL[ticket.type] || ticket.type }}</span>
             </div>
-            <h1 class="mt-1 font-display text-[24px] font-medium leading-tight tracking-tight text-highlighted">
+            <h1 class="mt-1 font-display text-[24px] font-semibold leading-tight tracking-tight text-highlighted">
               {{ ticket.subject }}
             </h1>
             <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted">
@@ -308,7 +308,7 @@ async function removeAttachment(a: Attachment) {
         <!-- status + priority controls -->
         <div class="mt-4 flex flex-wrap items-end gap-4 border-t border-default pt-4">
           <div class="w-40">
-            <div class="mb-1 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">
+            <div class="mb-1 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Status
             </div>
             <USelect
@@ -319,7 +319,7 @@ async function removeAttachment(a: Attachment) {
             />
           </div>
           <div class="w-40">
-            <div class="mb-1 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">
+            <div class="mb-1 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Priority
             </div>
             <USelect
@@ -346,7 +346,7 @@ async function removeAttachment(a: Attachment) {
             v-if="ticket.description"
             class="rounded-card bg-default p-5 ring ring-default"
           >
-            <div class="mb-2 font-mono text-[11px] uppercase tracking-[0.05em] text-muted">
+            <div class="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Details
             </div>
             <p class="whitespace-pre-wrap text-sm leading-relaxed text-default">
@@ -360,7 +360,7 @@ async function removeAttachment(a: Attachment) {
               <h2 class="text-sm font-semibold text-highlighted">
                 Activity
               </h2>
-              <span class="rounded-full bg-muted px-1.5 text-[11px] font-semibold text-muted tabular-nums">{{ ticket.messages.length }}</span>
+              <span class="rounded-chip bg-muted px-1.5 text-[11px] font-semibold text-muted tabular-nums">{{ ticket.messages.length }}</span>
             </div>
 
             <div
@@ -374,12 +374,12 @@ async function removeAttachment(a: Attachment) {
               >
                 <span
                   class="mt-0.5 inline-flex size-8 flex-none items-center justify-center rounded-full text-[11px] font-semibold"
-                  :class="m.author_type === 'client' ? 'bg-sand text-highlighted' : 'bg-teal-800 text-white'"
+                  :class="m.author_type === 'client' ? 'bg-sand text-highlighted' : 'bg-primary text-inverted'"
                 >{{ initials(m.author_name || (m.author_type === 'client' ? 'Client' : 'FWA')) }}</span>
                 <div class="min-w-0 flex-1">
                   <div class="flex items-baseline gap-2">
                     <span class="text-[13px] font-semibold text-highlighted">{{ m.author_name || (m.author_type === 'client' ? 'Client' : 'Team') }}</span>
-                    <span class="font-mono text-[11px] uppercase tracking-[0.05em] text-dimmed">{{ timeAgo(m.created_at) }}</span>
+                    <span class="text-[11px] font-medium uppercase tracking-[0.06em] text-dimmed">{{ timeAgo(m.created_at) }}</span>
                   </div>
                   <p class="mt-0.5 whitespace-pre-wrap text-sm leading-relaxed text-default">
                     {{ m.body }}
@@ -442,7 +442,7 @@ async function removeAttachment(a: Attachment) {
               <h2 class="text-sm font-semibold text-highlighted">
                 Attachments
               </h2>
-              <span class="rounded-full bg-muted px-1.5 text-[11px] font-semibold text-muted tabular-nums">{{ ticketAttachments.length }}</span>
+              <span class="rounded-chip bg-muted px-1.5 text-[11px] font-semibold text-muted tabular-nums">{{ ticketAttachments.length }}</span>
             </div>
             <UButton
               icon="i-lucide-upload"
@@ -483,7 +483,7 @@ async function removeAttachment(a: Attachment) {
                 class="min-w-0 flex-1"
               >
                 <div class="truncate text-[13px] font-medium text-default group-hover:text-primary">{{ a.name }}</div>
-                <div class="font-mono text-[11px] text-dimmed">{{ formatBytes(a.size_bytes) }}</div>
+                <div class="text-[11px] text-dimmed">{{ formatBytes(a.size_bytes) }}</div>
               </a>
               <UButton
                 icon="i-lucide-x"

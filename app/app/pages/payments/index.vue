@@ -28,7 +28,7 @@ const METHOD_META: Record<string, { label: string, class: string, icon: string }
   manual: { label: 'Manual', class: 'bg-muted text-default', icon: 'i-lucide-hand-coins' },
   other: { label: 'Other', class: 'bg-muted text-muted', icon: 'i-lucide-circle-dollar-sign' }
 }
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-primary text-inverted', 'bg-elevated text-default', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 const clientName = (p: Payment) => p.client_company || p.client_name || 'Unknown'
 
 const payments = ref<Payment[]>([])
@@ -84,14 +84,14 @@ const tiles = computed(() => [
         class="rounded-[14px] border border-default bg-default p-4"
       >
         <div class="flex items-center justify-between gap-2.5">
-          <span class="font-mono text-[10.5px] uppercase tracking-[0.05em] text-muted">{{ t.label }}</span>
+          <span class="text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted">{{ t.label }}</span>
           <span class="inline-flex size-7 items-center justify-center rounded-lg bg-mist text-primary"><UIcon
             :name="t.icon"
             class="size-[15px]"
           /></span>
         </div>
         <div class="mt-3 flex items-baseline gap-2">
-          <span class="font-display text-[27px] font-medium leading-none tracking-tight text-highlighted tabular-nums">{{ t.value }}</span>
+          <span class="font-display text-[27px] font-semibold leading-none tracking-tight text-highlighted tabular-nums">{{ t.value }}</span>
           <span class="text-[12.5px] text-muted">{{ t.sub }}</span>
         </div>
       </div>
@@ -129,19 +129,19 @@ const tiles = computed(() => [
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default">
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Date
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Client
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Method
                 </th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted md:table-cell">
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted md:table-cell">
                   Invoice
                 </th>
-                <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Amount
                 </th>
               </tr>
@@ -169,7 +169,7 @@ const tiles = computed(() => [
                 </td>
                 <td class="px-4 py-3.5">
                   <span
-                    class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-semibold"
+                    class="inline-flex items-center gap-1.5 rounded-chip px-2.5 py-1 text-[11.5px] font-semibold"
                     :class="METHOD_META[p.method]?.class"
                   ><UIcon
                     :name="METHOD_META[p.method]?.icon"
@@ -206,7 +206,7 @@ const tiles = computed(() => [
           name="i-lucide-banknote"
           class="size-6"
         /></span>
-        <h3 class="font-display text-lg font-medium text-highlighted">
+        <h3 class="font-display text-lg font-semibold text-highlighted">
           No Payments Yet
         </h3>
         <p class="mt-1.5 max-w-xs text-sm text-muted">

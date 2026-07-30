@@ -42,7 +42,7 @@ function stateOf(i: number): 'done' | 'current' | 'future' {
         <div
           v-if="i > 0"
           class="mt-[13px] h-0.5 w-6 flex-none rounded-full sm:w-10"
-          :class="!onHold && i <= currentIndex ? 'bg-teal-600' : 'bg-default'"
+          :class="!onHold && i <= currentIndex ? 'bg-primary' : 'bg-default'"
         />
         <button
           type="button"
@@ -55,9 +55,9 @@ function stateOf(i: number): 'done' | 'current' | 'future' {
             :class="onHold
               ? 'bg-muted text-muted ring-1 ring-default'
               : stateOf(i) === 'done'
-                ? 'bg-teal-600 text-white'
+                ? 'bg-primary text-inverted'
                 : stateOf(i) === 'current'
-                  ? 'bg-mist text-primary ring-2 ring-teal-400'
+                  ? 'bg-mist text-primary ring-2 ring-citrine'
                   : 'bg-muted text-muted ring-1 ring-default'"
           >
             <UIcon
@@ -67,7 +67,7 @@ function stateOf(i: number): 'done' | 'current' | 'future' {
             />
             <span
               v-else-if="!onHold && stateOf(i) === 'current'"
-              class="size-2 rounded-full bg-teal-500"
+              class="size-2 rounded-full bg-citrine"
             />
             <template v-else>{{ i + 1 }}</template>
           </span>
@@ -82,7 +82,7 @@ function stateOf(i: number): 'done' | 'current' | 'future' {
     <!-- on_hold side-state overlay -->
     <div
       v-if="onHold"
-      class="mt-2 inline-flex items-center gap-1.5 rounded-full bg-warning/10 px-2.5 py-1 text-[12px] font-semibold text-warning"
+      class="mt-2 inline-flex items-center gap-1.5 rounded-chip bg-warning/10 px-2.5 py-1 text-[12px] font-semibold text-warning"
     >
       <UIcon
         name="i-lucide-pause"

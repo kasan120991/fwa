@@ -40,7 +40,7 @@ const CATEGORY_META: Record<Category, { label: string, status: 'neutral' | 'info
   business: { label: 'Business', status: 'neutral' },
   subscription: { label: 'Subscription', status: 'success' }
 }
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-primary text-inverted', 'bg-elevated text-default', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 const clientName = (e: Expense) => e.client_company || e.client_name || null
 
 const expenses = ref<Expense[]>([])
@@ -137,14 +137,14 @@ function openEdit(e: Expense) {
         @click="t.apply"
       >
         <div class="flex items-center justify-between gap-2.5">
-          <span class="font-mono text-[10.5px] uppercase tracking-[0.05em] text-muted">{{ t.label }}</span>
+          <span class="text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted">{{ t.label }}</span>
           <span class="inline-flex size-7 items-center justify-center rounded-lg bg-mist text-primary"><UIcon
             :name="t.icon"
             class="size-[15px]"
           /></span>
         </div>
         <div class="mt-3 flex items-baseline gap-2">
-          <span class="font-display text-[27px] font-medium leading-none tracking-tight text-highlighted tabular-nums">{{ t.value }}</span>
+          <span class="font-display text-[27px] font-semibold leading-none tracking-tight text-highlighted tabular-nums">{{ t.value }}</span>
           <span class="text-[12.5px] text-muted">{{ t.sub }}</span>
         </div>
       </button>
@@ -155,13 +155,13 @@ function openEdit(e: Expense) {
       <button
         v-for="t in tabs"
         :key="t.key"
-        class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
+        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-colors"
         :class="tab === t.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
         @click="tab = t.key"
       >
         {{ t.label }}
         <span
-          class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
+          class="rounded-chip px-1.5 text-[11px] font-semibold tabular-nums"
           :class="tab === t.key ? 'bg-default text-primary' : 'bg-muted text-muted'"
         >{{ t.count }}</span>
       </button>
@@ -206,19 +206,19 @@ function openEdit(e: Expense) {
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default">
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Vendor
                 </th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Type
                 </th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted md:table-cell">
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted md:table-cell">
                   Client
                 </th>
-                <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+                <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                   Amount
                 </th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">
                   Date
                 </th>
               </tr>
@@ -310,7 +310,7 @@ function openEdit(e: Expense) {
           name="i-lucide-wallet"
           class="size-6"
         /></span>
-        <h3 class="font-display text-lg font-medium text-highlighted">
+        <h3 class="font-display text-lg font-semibold text-highlighted">
           No Expenses Here
         </h3>
         <p class="mt-1.5 max-w-xs text-sm text-muted">

@@ -95,14 +95,14 @@ onBeforeUnmount(() => socket.off('notification:new', onNotificationNew))
           to="/"
           class="flex flex-none items-center gap-2.5"
         >
-          <span class="inline-flex size-8 items-center justify-center rounded-[9px] bg-deep">
+          <span class="inline-flex size-8 items-center justify-center rounded-lg bg-deep">
             <img
               src="/brand/fwa-mark-white.svg"
               alt=""
               class="size-4"
             >
           </span>
-          <span class="whitespace-nowrap font-display text-[15px] font-medium text-highlighted">Client Portal</span>
+          <span class="whitespace-nowrap text-[15px] font-semibold text-highlighted">Client Portal</span>
         </NuxtLink>
         <!-- desktop nav -->
         <nav class="hidden items-center gap-1 lg:flex">
@@ -110,8 +110,8 @@ onBeforeUnmount(() => socket.off('notification:new', onNotificationNew))
             v-for="item in nav"
             :key="item.to"
             :to="item.to"
-            class="rounded-full px-3 py-1.5 text-sm font-medium transition-colors"
-            :class="isActive(item.to) ? 'bg-mist text-primary' : 'text-muted hover:text-highlighted'"
+            class="border-b-2 border-transparent px-3 py-1.5 text-sm font-medium transition-colors"
+            :class="isActive(item.to) ? 'border-citrine text-highlighted font-semibold' : 'text-muted hover:text-highlighted'"
           >
             {{ item.label }}
           </NuxtLink>
@@ -119,7 +119,7 @@ onBeforeUnmount(() => socket.off('notification:new', onNotificationNew))
         <div class="ms-auto flex items-center gap-1">
           <UPopover :ui="{ content: 'w-80' }">
             <button
-              class="relative inline-flex size-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-muted hover:text-highlighted"
+              class="relative inline-flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-muted hover:text-highlighted"
               aria-label="Notifications"
             >
               <UIcon
@@ -133,7 +133,7 @@ onBeforeUnmount(() => socket.off('notification:new', onNotificationNew))
             </button>
             <template #content>
               <div class="flex items-center justify-between border-b border-default px-4 py-2.5">
-                <span class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">Notifications</span>
+                <span class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Notifications</span>
                 <button
                   v-if="unread"
                   class="text-[12px] font-medium text-primary hover:underline"
@@ -153,7 +153,7 @@ onBeforeUnmount(() => socket.off('notification:new', onNotificationNew))
                   v-for="n in notifications"
                   :key="n.id"
                   class="flex w-full items-start gap-3 border-b border-default px-4 py-3 text-left transition-colors last:border-0 hover:bg-muted/50"
-                  :class="n.read ? '' : 'bg-mist/40'"
+                  :class="n.read ? '' : 'bg-sand/60'"
                   @click="openNotification(n)"
                 >
                   <UIcon
@@ -198,7 +198,7 @@ onBeforeUnmount(() => socket.off('notification:new', onNotificationNew))
 
           <!-- mobile menu toggle -->
           <button
-            class="inline-flex size-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-muted hover:text-highlighted lg:hidden"
+            class="inline-flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-muted hover:text-highlighted lg:hidden"
             :aria-expanded="menuOpen"
             aria-label="Menu"
             @click="menuOpen = !menuOpen"
@@ -220,8 +220,8 @@ onBeforeUnmount(() => socket.off('notification:new', onNotificationNew))
           v-for="item in nav"
           :key="item.to"
           :to="item.to"
-          class="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-[15px] font-medium transition-colors"
-          :class="isActive(item.to) ? 'bg-mist text-primary' : 'text-highlighted hover:bg-muted'"
+          class="flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] font-medium transition-colors"
+          :class="isActive(item.to) ? 'bg-sand font-semibold text-highlighted' : 'text-highlighted hover:bg-muted'"
         >
           <UIcon
             :name="item.icon"
@@ -232,9 +232,9 @@ onBeforeUnmount(() => socket.off('notification:new', onNotificationNew))
         <div class="mt-2 flex items-center justify-between gap-2 border-t border-default pt-3">
           <NuxtLink
             to="/account"
-            class="flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[15px] font-medium text-highlighted hover:bg-muted"
+            class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[15px] font-medium text-highlighted hover:bg-muted"
           >
-            <span class="inline-flex size-7 items-center justify-center rounded-full bg-mist text-[12px] font-semibold text-primary">
+            <span class="inline-flex size-7 items-center justify-center rounded-full bg-sand text-[12px] font-semibold text-highlighted">
               {{ (user?.name || 'C').slice(0, 1).toUpperCase() }}
             </span>
             {{ user?.name || 'Account' }}

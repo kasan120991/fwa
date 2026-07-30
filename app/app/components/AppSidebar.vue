@@ -113,15 +113,16 @@ function isActive(to: string) {
   return to === '/' ? route.path === '/' : route.path === to || route.path.startsWith(to + '/')
 }
 
-// Nav item classes — mirrors the prototype's active / hover / rest states.
+// Nav item classes — Highlighter §6: the 3px citrine left rule is the active
+// marker (no filled pill); inactive rests at dark-ramp muted.
 function itemClass(to: string) {
   const active = isActive(to)
   return [
-    'group relative flex items-center rounded-[10px] text-sm whitespace-nowrap transition-colors border-l-[3px]',
+    'group relative flex items-center rounded-r-[8px] text-sm whitespace-nowrap transition-colors border-l-[3px]',
     collapsed.value ? 'justify-center py-[11px] gap-0' : 'justify-start px-[11px] py-[9px] gap-3',
     active
-      ? 'bg-teal-800 text-white font-semibold ' + (collapsed.value ? 'border-transparent' : 'border-teal-400')
-      : 'text-teal-200 font-medium border-transparent hover:bg-[#1C2422] hover:text-white'
+      ? 'text-white font-semibold border-citrine'
+      : 'text-[#B0B3B0] font-medium border-transparent hover:bg-white/[0.06] hover:text-white'
   ]
 }
 </script>
@@ -137,16 +138,16 @@ function itemClass(to: string) {
   >
     <!-- logo -->
     <div class="flex items-center gap-[11px] px-1.5 pb-5 pt-1">
-      <span class="inline-flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[9px] bg-teal-600">
+      <span class="inline-flex h-[34px] w-[34px] flex-none items-center justify-center">
         <img
           src="/brand/fwa-mark-white.svg"
           alt="FWA"
-          class="h-[18px] w-[18px]"
+          class="h-[20px] w-[20px]"
         >
       </span>
       <span
         v-if="!collapsed"
-        class="font-display text-[19px] font-medium leading-tight tracking-tight text-white"
+        class="whitespace-nowrap text-[17px] font-semibold leading-tight tracking-tight text-white"
       >Francis Web Agency</span>
     </div>
 
@@ -159,12 +160,12 @@ function itemClass(to: string) {
         <!-- divider shown only when collapsed (labels hide) -->
         <div
           v-if="gi > 0 && collapsed"
-          class="mx-2.5 mt-3.5 h-px bg-[#1C2422]"
+          class="mx-2.5 mt-3.5 h-px bg-white/10"
         />
         <div :class="gi > 0 ? 'mt-[18px]' : ''">
           <div
             v-if="group.label && !collapsed"
-            class="mb-[7px] px-[11px] font-mono text-[11px] font-medium uppercase tracking-[0.06em] text-teal-200/60"
+            class="mb-[7px] px-[11px] text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8C9096]"
           >
             {{ group.label }}
           </div>
@@ -186,11 +187,11 @@ function itemClass(to: string) {
               >{{ item.label }}</span>
               <span
                 v-if="!collapsed && itemBadge(item.to) > 0"
-                class="ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-teal-500 px-1 text-[11px] font-semibold text-white tabular-nums"
+                class="ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[4px] bg-citrine px-1 text-[11px] font-semibold text-ink-900 tabular-nums"
               >{{ itemBadge(item.to) }}</span>
               <span
                 v-if="collapsed && itemBadge(item.to) > 0"
-                class="absolute right-1.5 top-1.5 size-2 rounded-full bg-teal-400 ring-2 ring-ink-900 dark:ring-ink-950"
+                class="absolute right-1.5 top-1.5 size-2 rounded-full bg-citrine ring-2 ring-ink-900 dark:ring-ink-950"
               />
             </NuxtLink>
           </div>
@@ -200,7 +201,7 @@ function itemClass(to: string) {
 
     <!-- pinned bottom -->
     <div class="flex-none">
-      <div class="mx-0.5 my-3 h-px bg-[#1C2422]" />
+      <div class="mx-0.5 my-3 h-px bg-white/10" />
       <div class="flex flex-col gap-0.5">
         <NuxtLink
           v-for="item in bottom"
@@ -219,18 +220,18 @@ function itemClass(to: string) {
           >{{ item.label }}</span>
           <span
             v-if="!collapsed && itemBadge(item.to) > 0"
-            class="ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-teal-500 px-1 text-[11px] font-semibold text-white tabular-nums"
+            class="ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[4px] bg-citrine px-1 text-[11px] font-semibold text-ink-900 tabular-nums"
           >{{ itemBadge(item.to) }}</span>
           <span
             v-if="collapsed && itemBadge(item.to) > 0"
-            class="absolute right-1.5 top-1.5 size-2 rounded-full bg-teal-400 ring-2 ring-ink-900 dark:ring-ink-950"
+            class="absolute right-1.5 top-1.5 size-2 rounded-full bg-citrine ring-2 ring-ink-900 dark:ring-ink-950"
           />
         </NuxtLink>
       </div>
 
-      <div class="mx-0.5 my-3 h-px bg-[#1C2422]" />
+      <div class="mx-0.5 my-3 h-px bg-white/10" />
       <div class="flex items-center gap-2.5 px-2 py-1.5">
-        <span class="inline-flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-teal-600 text-[13px] font-semibold text-white">
+        <span class="inline-flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full bg-white/10 text-[13px] font-semibold text-white">
           <ClientOnly fallback="—">{{ initials }}</ClientOnly>
         </span>
         <div
@@ -242,7 +243,7 @@ function itemClass(to: string) {
               {{ displayName }}
             </ClientOnly>
           </div>
-          <div class="whitespace-nowrap text-xs text-teal-200">
+          <div class="whitespace-nowrap text-xs text-[#B0B3B0]">
             <ClientOnly fallback="—">
               {{ roleLabel }}
             </ClientOnly>

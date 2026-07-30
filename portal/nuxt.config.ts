@@ -5,6 +5,16 @@ export default defineNuxtConfig({
   // the session has been resolved from the API's httpOnly cookie.
   ssr: false,
 
+  app: {
+    head: {
+      // Shared FWA app-icon favicon (same as the marketing site): ink mark on a
+      // citrine tile — holds contrast on light AND dark tabs, so one icon serves both.
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/fwa-app-icon-citrine.svg' }
+      ]
+    }
+  },
+
   modules: [
     '@nuxt/eslint',
     '@nuxt/ui'
@@ -15,6 +25,14 @@ export default defineNuxtConfig({
   },
 
   css: ['~/assets/css/main.css'],
+
+  // ONE brand family (Highlighter system). Explicit weights so 500/600 load
+  // (auto-discovery would only fetch 400/700).
+  fonts: {
+    families: [
+      { name: 'Geist', provider: 'google', weights: [400, 500, 600, 700] }
+    ]
+  },
 
   runtimeConfig: {
     public: {

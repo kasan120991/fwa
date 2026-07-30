@@ -136,7 +136,7 @@ async function confirmConvert() {
           class="size-6"
         />
       </span>
-      <h2 class="font-display text-2xl font-medium tracking-tight text-highlighted">
+      <h2 class="font-display text-2xl font-semibold tracking-tight text-highlighted">
         Lead Not Found
       </h2>
       <p class="mt-2 text-[15px] text-muted">
@@ -177,16 +177,16 @@ async function confirmConvert() {
         >
         <span
           v-else
-          class="inline-flex size-[58px] flex-none items-center justify-center rounded-[14px] font-display text-2xl font-medium tracking-tight"
+          class="inline-flex size-[58px] flex-none items-center justify-center rounded-[14px] font-display text-2xl font-semibold tracking-tight"
           :class="avatarClass"
         >{{ initials(displayName) }}</span>
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-3">
-            <h1 class="font-display text-[28px] font-medium tracking-tight text-highlighted">
+            <h1 class="font-display text-[28px] font-semibold tracking-tight text-highlighted">
               {{ displayName }}
             </h1>
             <span
-              class="inline-flex items-center rounded-full py-1 px-3 text-xs font-semibold"
+              class="inline-flex items-center rounded-chip py-1 px-3 text-xs font-semibold"
               :class="stageChipClass(contact.stage)"
             >{{ STAGE_LABEL[contact.stage] }}</span>
           </div>
@@ -237,7 +237,7 @@ async function confirmConvert() {
       <div class="flex flex-col gap-4 lg:sticky lg:top-4">
         <div class="overflow-hidden rounded-card bg-default ring ring-default">
           <div class="border-b border-default p-[18px]">
-            <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+            <div class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Primary contact
             </div>
             <div class="mt-2.5 flex items-center gap-3">
@@ -284,7 +284,7 @@ async function confirmConvert() {
             v-if="contact.tags && contact.tags.length"
             class="border-b border-default p-[18px]"
           >
-            <div class="mb-3 font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+            <div class="mb-3 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Tags
             </div>
             <div class="flex flex-wrap gap-2">
@@ -332,7 +332,7 @@ async function confirmConvert() {
         <!-- notes -->
         <div class="rounded-card bg-default p-[18px] ring ring-default">
           <div class="mb-2.5 flex items-center justify-between">
-            <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+            <div class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Internal notes
             </div>
             <span class="text-xs text-muted">{{ notes.length }} chars</span>

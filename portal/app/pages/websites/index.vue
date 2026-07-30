@@ -38,7 +38,7 @@ const HEALTH: Record<string, { label: string, class: string }> = {
       <p class="eyebrow text-primary">
         Your sites
       </p>
-      <h1 class="mt-1 font-display text-[2rem] font-medium leading-tight tracking-tight text-highlighted">
+      <h1 class="mt-1 font-display text-[2rem] font-semibold leading-tight tracking-tight text-highlighted">
         Websites
       </h1>
     </div>
@@ -54,7 +54,7 @@ const HEALTH: Record<string, { label: string, class: string }> = {
       v-else-if="!sites.length"
       class="rounded-card bg-default px-6 py-16 text-center ring ring-default"
     >
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         No websites yet
       </h3>
       <p class="mt-1.5 text-sm text-muted">
@@ -74,7 +74,7 @@ const HEALTH: Record<string, { label: string, class: string }> = {
       >
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <h2 class="font-display text-[1.05rem] font-medium text-highlighted">
+            <h2 class="font-display text-[1.05rem] font-semibold text-highlighted">
               {{ s.name }}
             </h2>
             <p class="mt-0.5 truncate text-[12.5px] text-muted">
@@ -82,7 +82,7 @@ const HEALTH: Record<string, { label: string, class: string }> = {
             </p>
           </div>
           <span
-            class="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            class="whitespace-nowrap rounded-chip px-2.5 py-1 text-[11px] font-semibold"
             :class="(HEALTH[s.health_state] || HEALTH.unknown)!.class"
           >{{ (HEALTH[s.health_state] || HEALTH.unknown)!.label }}</span>
         </div>
@@ -91,7 +91,7 @@ const HEALTH: Record<string, { label: string, class: string }> = {
             <div class="text-[12px] text-muted">
               Visitors · 30 days
             </div>
-            <div class="font-display text-[1.35rem] font-medium tabular-nums text-highlighted">
+            <div class="font-display text-[1.35rem] font-semibold tabular-nums text-highlighted">
               {{ (s.visitors_30d ?? 0).toLocaleString() }}
               <span
                 v-if="s.delta_pct != null"

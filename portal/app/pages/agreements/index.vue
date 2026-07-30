@@ -52,7 +52,7 @@ function signable(a: Agreement) {
       <p class="eyebrow text-primary">
         Paperwork
       </p>
-      <h1 class="mt-1 font-display text-[2rem] font-medium leading-tight tracking-tight text-highlighted">
+      <h1 class="mt-1 font-display text-[2rem] font-semibold leading-tight tracking-tight text-highlighted">
         Agreements
       </h1>
       <p class="mt-1.5 text-[0.9375rem] text-muted">
@@ -71,7 +71,7 @@ function signable(a: Agreement) {
       v-else-if="!agreements.length"
       class="rounded-card bg-default px-6 py-16 text-center ring ring-default"
     >
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         No agreements yet
       </h3>
       <p class="mt-1.5 text-sm text-muted">
@@ -108,10 +108,10 @@ function signable(a: Agreement) {
           <div class="mt-2 flex flex-wrap items-center gap-2 sm:hidden">
             <span
               v-if="signable(a)"
-              class="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary"
+              class="rounded-chip bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary"
             >Review &amp; Sign</span>
             <span
-              class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+              class="rounded-chip px-2.5 py-1 text-[11px] font-semibold"
               :class="chip(a).class"
             >{{ chip(a).label }}</span>
             <span
@@ -129,10 +129,10 @@ function signable(a: Agreement) {
         <div class="hidden items-center gap-4 sm:flex">
           <span
             v-if="signable(a)"
-            class="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary"
+            class="rounded-chip bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary"
           >Review &amp; Sign</span>
           <span
-            class="rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            class="rounded-chip px-2.5 py-1 text-[11px] font-semibold"
             :class="chip(a).class"
           >{{ chip(a).label }}</span>
           <span

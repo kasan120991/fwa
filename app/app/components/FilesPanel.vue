@@ -290,7 +290,7 @@ function rowMenuItems(f: FileRow) {
           class="flex items-center gap-3 border-t border-default px-4 py-3 transition-colors first:border-t-0 hover:bg-muted"
         >
           <span
-            class="inline-flex size-[38px] flex-none items-center justify-center rounded-[9px] bg-muted font-mono text-[10px] font-semibold"
+            class="inline-flex size-[38px] flex-none items-center justify-center rounded-[9px] bg-muted text-[10px] font-semibold"
             :class="EXT_CLASS[f.ext] ?? 'text-muted'"
           >{{ f.ext }}</span>
           <div class="min-w-0 flex-1">
@@ -329,7 +329,7 @@ function rowMenuItems(f: FileRow) {
           class="size-6"
         />
       </span>
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         No Files Yet
       </h3>
       <p class="mt-1.5 max-w-xs text-sm text-muted">

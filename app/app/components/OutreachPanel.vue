@@ -161,7 +161,7 @@ async function logTouch() {
             />
           </span>
           <div>
-            <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+            <div class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Next action
             </div>
             <div
@@ -203,11 +203,11 @@ async function logTouch() {
           <div
             v-if="i > 0"
             class="h-px flex-1"
-            :class="i <= stageIndex ? 'bg-teal-500' : 'bg-default'"
+            :class="i <= stageIndex ? 'bg-primary' : 'bg-default'"
           />
           <button
             class="inline-flex items-center gap-1.5 rounded-full py-1 pl-2.5 pr-3 text-xs font-semibold transition-colors"
-            :class="i === stageIndex ? 'bg-teal-800 text-white'
+            :class="i === stageIndex ? 'bg-primary text-inverted'
               : (i < stageIndex ? 'bg-mist text-primary hover:bg-mist/80' : 'bg-muted text-muted hover:text-highlighted')"
             @click="setStage(s)"
           >
@@ -231,7 +231,7 @@ async function logTouch() {
         <span class="text-[15px] font-semibold text-highlighted">Outreach timeline</span>
         <span
           v-if="touches.length"
-          class="rounded-full bg-muted px-1.5 py-px text-[11px] font-semibold text-muted tabular-nums"
+          class="rounded-chip bg-muted px-1.5 py-px text-[11px] font-semibold text-muted tabular-nums"
         >{{ touches.length }}</span>
       </div>
 
@@ -320,14 +320,14 @@ async function logTouch() {
       <template #body>
         <div class="flex flex-col gap-4">
           <div>
-            <div class="mb-2 font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+            <div class="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Channel
             </div>
             <div class="flex flex-wrap gap-2">
               <button
                 v-for="c in CHANNELS"
                 :key="c.key"
-                class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
+                class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-colors"
                 :class="form.channel === c.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
                 @click="form.channel = c.key"
               >
@@ -350,14 +350,14 @@ async function logTouch() {
           </UFormField>
 
           <div>
-            <div class="mb-2 font-mono text-[11px] uppercase tracking-[0.06em] text-muted">
+            <div class="mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
               Next follow-up
             </div>
             <div class="flex flex-wrap gap-2">
               <button
                 v-for="f in FOLLOWUPS"
                 :key="f.label"
-                class="inline-flex items-center rounded-full border px-3 py-1.5 text-[13px] transition-colors"
+                class="inline-flex items-center rounded-lg border px-3 py-1.5 text-[13px] transition-colors"
                 :class="form.followUp === f.days ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
                 @click="form.followUp = f.days"
               >

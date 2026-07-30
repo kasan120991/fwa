@@ -296,13 +296,13 @@ function rowMenuItems(f: FileRow) {
       <button
         v-for="t in tabs"
         :key="t.key"
-        class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
+        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-colors"
         :class="tab === t.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
         @click="tab = t.key"
       >
         {{ t.label }}
         <span
-          class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
+          class="rounded-chip px-1.5 text-[11px] font-semibold tabular-nums"
           :class="tab === t.key ? 'bg-default text-primary' : 'bg-muted text-muted'"
         >{{ t.count }}</span>
       </button>
@@ -347,7 +347,7 @@ function rowMenuItems(f: FileRow) {
           class="flex items-center gap-3 px-4 py-3"
         >
           <span
-            class="inline-flex size-[38px] flex-none items-center justify-center rounded-[9px] bg-muted font-mono text-[10px] font-semibold"
+            class="inline-flex size-[38px] flex-none items-center justify-center rounded-[9px] bg-muted text-[10px] font-semibold"
             :class="EXT_CLASS[row.ext] ?? 'text-muted'"
           >{{ row.ext }}</span>
           <div class="min-w-0 flex-1">
@@ -375,19 +375,19 @@ function rowMenuItems(f: FileRow) {
         <table class="w-full border-collapse">
           <thead>
             <tr class="border-b border-default">
-              <th class="px-4 py-3 pl-[18px] text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+              <th class="px-4 py-3 pl-[18px] text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                 File
               </th>
-              <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+              <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                 Category
               </th>
-              <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">
+              <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">
                 Client
               </th>
-              <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">
+              <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">
                 Uploaded
               </th>
-              <th class="px-4 py-3 text-right font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">
+              <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
                 Size
               </th>
               <th class="w-[52px] px-4 py-3" />
@@ -402,7 +402,7 @@ function rowMenuItems(f: FileRow) {
               <td class="px-4 py-3 pl-[18px]">
                 <div class="flex items-center gap-3">
                   <span
-                    class="inline-flex size-[38px] flex-none items-center justify-center rounded-[9px] bg-muted font-mono text-[10px] font-semibold"
+                    class="inline-flex size-[38px] flex-none items-center justify-center rounded-[9px] bg-muted text-[10px] font-semibold"
                     :class="EXT_CLASS[row.ext] ?? 'text-muted'"
                   >{{ row.ext }}</span>
                   <a
@@ -463,7 +463,7 @@ function rowMenuItems(f: FileRow) {
           class="size-6"
         />
       </span>
-      <h3 class="font-display text-lg font-medium text-highlighted">
+      <h3 class="font-display text-lg font-semibold text-highlighted">
         {{ counts.all === 0 ? 'No Files Yet' : 'No Files Match' }}
       </h3>
       <p class="mt-1.5 max-w-xs text-sm text-muted">

@@ -54,7 +54,7 @@ function stageChipClass(k: Stage) {
   if (k === 'qualified') return 'bg-success/10 text-success'
   return 'bg-mist text-primary'
 }
-const AVATAR = ['bg-teal-800 text-white', 'bg-mist text-primary', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
+const AVATAR = ['bg-primary text-inverted', 'bg-elevated text-default', 'bg-sand text-highlighted', 'bg-info/10 text-info', 'bg-muted text-default']
 
 function mapLead(c: ApiLead, index: number): Lead {
   const isManual = c.source === 'manual'
@@ -246,7 +246,7 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
       <UIcon v-if="s === 'inbound'" name="i-lucide-arrow-down-to-line" class="size-4" />
       <UIcon v-else-if="s === 'outreach'" name="i-lucide-arrow-up-from-line" class="size-4" />
       {{ s === 'all' ? 'All' : s }}
-      <span class="rounded-full px-1.5 py-px text-[11px] font-semibold tabular-nums" :class="section === s ? 'bg-mist text-primary' : 'bg-elevated text-muted'">{{ secCount[s] }}</span>
+      <span class="rounded-chip px-1.5 py-px text-[11px] font-semibold tabular-nums" :class="section === s ? 'bg-mist text-primary' : 'bg-elevated text-muted'">{{ secCount[s] }}</span>
     </button>
   </div>
 
@@ -256,12 +256,12 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
       <button
         v-for="p in stagePills"
         :key="p.key"
-        class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] transition-colors"
+        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-colors"
         :class="stageFilter === p.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
         @click="stageFilter = p.key"
       >
         {{ p.label }}
-        <span class="rounded-full px-1.5 text-[11px] font-semibold tabular-nums" :class="stageFilter === p.key ? 'bg-default text-primary' : 'bg-muted text-muted'">{{ p.count }}</span>
+        <span class="rounded-chip px-1.5 text-[11px] font-semibold tabular-nums" :class="stageFilter === p.key ? 'bg-default text-primary' : 'bg-muted text-muted'">{{ p.count }}</span>
       </button>
     </div>
     <div class="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
@@ -298,18 +298,18 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
           v-for="row in visibleRows"
           :key="row.id"
           class="flex items-center gap-3 px-4 py-3 transition-colors active:bg-muted"
-          :class="row.unread ? 'bg-teal-600/[0.045]' : ''"
+          :class="row.unread ? 'bg-citrine/[0.07]' : ''"
           @click="navigateTo(`/leads/${row.id}`)"
         >
           <span class="inline-flex size-9 flex-none items-center justify-center rounded-[9px] text-[13px] font-semibold" :class="AVATAR[row.ci]">{{ row.initials }}</span>
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-1.5">
-              <span v-if="row.unread" class="size-[7px] flex-none rounded-full bg-teal-500" />
+              <span v-if="row.unread" class="size-[7px] flex-none rounded-full bg-citrine" />
               <span class="truncate text-sm text-highlighted" :class="row.unread ? 'font-bold' : 'font-semibold'">{{ row.name }}</span>
             </div>
             <div class="truncate text-[12.5px] text-muted">{{ row.business }} · {{ secondaryOf(row) }}</div>
           </div>
-          <span class="inline-flex flex-none items-center rounded-full px-2.5 py-1 text-xs font-semibold" :class="stageChipClass(row.stage)">{{ STAGE_LABEL[row.stage] }}</span>
+          <span class="inline-flex flex-none items-center rounded-chip px-2.5 py-1 text-xs font-semibold" :class="stageChipClass(row.stage)">{{ STAGE_LABEL[row.stage] }}</span>
         </li>
       </ul>
 
@@ -321,24 +321,24 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
               <th class="w-11 py-3 pl-[18px] pr-2 text-left">
                 <UCheckbox :model-value="allChecked" aria-label="Select all" @update:model-value="toggleAll" />
               </th>
-              <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Contact / business</th>
+              <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Contact / business</th>
               <template v-if="section === 'inbound'">
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">Source</th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">Inquiry</th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Stage</th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">Received</th>
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Source</th>
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Inquiry</th>
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Stage</th>
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Received</th>
               </template>
               <template v-else-if="section === 'outreach'">
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">List / source</th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Stage</th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Next action</th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">Last contacted</th>
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">List / source</th>
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Stage</th>
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Next action</th>
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Last contacted</th>
               </template>
               <template v-else>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">Motion</th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">Source / list</th>
-                <th class="px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted">Stage</th>
-                <th class="hidden px-4 py-3 text-left font-mono text-[11px] font-medium uppercase tracking-[0.05em] text-muted lg:table-cell">Activity</th>
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Motion</th>
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Source / list</th>
+                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Stage</th>
+                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Activity</th>
               </template>
               <th class="w-24" />
             </tr>
@@ -348,11 +348,11 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
               v-for="row in visibleRows"
               :key="row.id"
               class="cursor-pointer border-b border-default transition-colors last:border-b-0"
-              :class="selected[row.id] ? 'bg-mist' : (row.unread ? 'bg-teal-600/[0.045] hover:bg-muted' : 'hover:bg-muted')"
+              :class="selected[row.id] ? 'bg-mist' : (row.unread ? 'bg-citrine/[0.07] hover:bg-muted' : 'hover:bg-muted')"
               @click="navigateTo(`/leads/${row.id}`)"
             >
               <td class="relative w-11 py-3.5 pl-[18px] pr-2" @click.stop>
-                <span v-if="row.unread" class="absolute inset-y-2 left-0 w-[3px] rounded-r bg-teal-500" />
+                <span v-if="row.unread" class="absolute inset-y-2 left-0 w-[3px] rounded-r bg-citrine" />
                 <UCheckbox :model-value="!!selected[row.id]" :aria-label="`Select ${row.name}`" @update:model-value="selected[row.id] = Boolean($event)" />
               </td>
               <td class="px-4 py-3">
@@ -360,7 +360,7 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
                   <span class="inline-flex size-9 flex-none items-center justify-center rounded-[9px] text-[13px] font-semibold" :class="AVATAR[row.ci]">{{ row.initials }}</span>
                   <div class="min-w-0">
                     <div class="flex items-center gap-1.5">
-                      <span v-if="row.unread" class="size-[7px] flex-none rounded-full bg-teal-500" />
+                      <span v-if="row.unread" class="size-[7px] flex-none rounded-full bg-citrine" />
                       <span class="whitespace-nowrap text-sm text-highlighted" :class="row.unread ? 'font-bold' : 'font-semibold'">{{ row.name }}</span>
                     </div>
                     <div class="whitespace-nowrap text-[13px] text-muted">{{ row.business }} · {{ secondaryOf(row) }}</div>
@@ -399,7 +399,7 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
 
               <template v-else>
                 <td class="hidden px-4 py-3 lg:table-cell">
-                  <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold" :class="row.source === 'manual' ? 'bg-muted text-default' : 'bg-info/10 text-info'">{{ row.source === 'manual' ? 'Outreach' : 'Inbound' }}</span>
+                  <span class="inline-flex items-center rounded-chip px-2.5 py-0.5 text-[11.5px] font-semibold" :class="row.source === 'manual' ? 'bg-muted text-default' : 'bg-info/10 text-info'">{{ row.source === 'manual' ? 'Outreach' : 'Inbound' }}</span>
                 </td>
                 <td class="hidden whitespace-nowrap px-4 py-3 text-[13px] text-default lg:table-cell">{{ row.source === 'manual' ? row.list : (row.source === 'call' ? 'Call' : 'Website') }}</td>
                 <td class="px-4 py-3" @click.stop>
@@ -435,7 +435,7 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
 
     <div v-else class="flex flex-col items-center px-6 py-16 text-center">
       <span class="mb-4 inline-flex size-12 items-center justify-center rounded-[12px] bg-muted text-muted"><UIcon name="i-lucide-search" class="size-6" /></span>
-      <h3 class="font-display text-lg font-medium text-highlighted">No Leads Match</h3>
+      <h3 class="font-display text-lg font-semibold text-highlighted">No Leads Match</h3>
       <p class="mt-1.5 max-w-xs text-sm text-muted">Try a different search or clear the stage filter to see everyone.</p>
       <UButton color="neutral" variant="outline" class="mt-5 rounded-full" @click="search = ''; stageFilter = 'all'">Clear Filters</UButton>
     </div>

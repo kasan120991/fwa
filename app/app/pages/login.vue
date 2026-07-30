@@ -37,19 +37,9 @@ async function onSubmit() {
   <div class="flex min-h-screen w-full">
     <!-- LEFT — brand panel -->
     <div class="relative hidden basis-[56%] overflow-hidden bg-deep lg:flex lg:flex-col lg:items-center lg:justify-center p-16">
-      <!-- faint grid -->
-      <div
-        class="pointer-events-none absolute inset-0 opacity-5"
-        style="background-image:linear-gradient(#0FA08C 1px,transparent 1px),linear-gradient(90deg,#0FA08C 1px,transparent 1px);background-size:56px 56px"
-      />
-      <!-- soft top-light glow -->
-      <div
-        class="pointer-events-none absolute -top-[20%] left-1/2 h-[820px] w-[820px] -translate-x-1/2 rounded-full"
-        style="background:radial-gradient(circle,rgba(37,187,164,.20) 0%,rgba(7,58,52,0) 62%)"
-      />
-      <!-- concentric ring accents -->
-      <div class="pointer-events-none absolute -bottom-[260px] -right-[200px] h-[640px] w-[640px] rounded-full border border-teal-200/10" />
-      <div class="pointer-events-none absolute -bottom-[180px] -right-[120px] h-[480px] w-[480px] rounded-full border border-teal-200/[0.08]" />
+      <!-- concentric hairline accents (flat system — no gradients) -->
+      <div class="pointer-events-none absolute -bottom-[260px] -right-[200px] h-[640px] w-[640px] rounded-full border border-white/[0.06]" />
+      <div class="pointer-events-none absolute -bottom-[180px] -right-[120px] h-[480px] w-[480px] rounded-full border border-white/[0.04]" />
 
       <div class="relative flex flex-col items-center text-center">
         <img
@@ -57,13 +47,13 @@ async function onSubmit() {
           alt="Francis Web Agency"
           class="block h-auto w-[300px] max-w-[60%]"
         >
-        <div class="my-[22px] mt-[34px] h-px w-10 bg-teal-200/35" />
-        <p class="m-0 max-w-[340px] text-base leading-relaxed text-teal-200">
+        <div class="my-[22px] mt-[34px] h-0.5 w-10 bg-citrine" />
+        <p class="m-0 max-w-[340px] text-base leading-relaxed text-[#B0B3B0]">
           Agency Management Platform — everything your agency needs, in one place.
         </p>
       </div>
 
-      <div class="eyebrow absolute bottom-10 left-12 text-teal-200/55">
+      <div class="eyebrow absolute bottom-10 left-12 text-[#8C9096]">
         Francis Web Agency · Internal
       </div>
     </div>
@@ -73,13 +63,13 @@ async function onSubmit() {
       <div class="w-full max-w-[420px]">
         <!-- mobile mini-brand -->
         <div class="mb-9 flex items-center justify-center gap-2.5 lg:hidden">
-          <span class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-[9px] bg-deep">
+          <span class="inline-flex h-[34px] w-[34px] items-center justify-center rounded-lg bg-deep">
             <img src="/brand/fwa-mark-white.svg" alt="" class="block h-[18px] w-[18px]">
           </span>
         </div>
 
         <div>
-          <h1 class="font-display text-[2.125rem] font-medium leading-[1.1] tracking-tight text-highlighted">
+          <h1 class="text-[2.125rem] leading-[1.1] tracking-tight text-highlighted">
             Welcome Back
           </h1>
           <p class="mt-2 mb-[30px] text-[0.9375rem] leading-relaxed text-muted">

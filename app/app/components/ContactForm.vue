@@ -355,7 +355,7 @@ const subtitle = computed(() => {
       <span class="mb-5 inline-flex size-12 items-center justify-center rounded-[12px] bg-muted text-muted">
         <UIcon name="i-lucide-user-x" class="size-6" />
       </span>
-      <h2 class="font-display text-2xl font-medium tracking-tight text-highlighted">{{ nounCap }} Not Found</h2>
+      <h2 class="font-display text-2xl font-semibold tracking-tight text-highlighted">{{ nounCap }} Not Found</h2>
       <p class="mt-2 text-[15px] text-muted">We couldn't find that {{ noun }} to edit.</p>
       <UButton :to="rootTo" variant="soft" color="primary" class="mt-6" icon="i-lucide-arrow-left">Back To {{ rootLabel }}</UButton>
     </div>
@@ -377,7 +377,7 @@ const subtitle = computed(() => {
         <!-- header -->
         <div class="mb-6 flex items-start justify-between gap-4">
           <div>
-            <h1 class="font-display text-[28px] font-medium tracking-tight text-highlighted">{{ title }}</h1>
+            <h1 class="font-display text-[28px] font-semibold tracking-tight text-highlighted">{{ title }}</h1>
             <p class="mt-1.5 text-sm text-muted">{{ subtitle }}</p>
           </div>
           <StatusChip v-if="mode === 'edit'" :status="STAGE_STATUS[form.stage]">{{ STAGE_LABEL[form.stage] }}</StatusChip>
@@ -387,7 +387,7 @@ const subtitle = computed(() => {
           <!-- ===== Company ===== -->
           <section class="rounded-card bg-default p-6 ring ring-default">
             <div class="mb-5">
-              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">Company</div>
+              <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Company</div>
               <p class="mt-1.5 text-[13.5px] text-muted">The business you're working with and how it shows up across the app.</p>
             </div>
 
@@ -448,7 +448,7 @@ const subtitle = computed(() => {
           <!-- ===== Primary contact ===== -->
           <section class="rounded-card bg-default p-6 ring ring-default">
             <div class="mb-5">
-              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">Primary contact</div>
+              <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Primary contact</div>
               <p class="mt-1.5 text-[13.5px] text-muted">Your main point of contact for this account.</p>
             </div>
 
@@ -474,7 +474,7 @@ const subtitle = computed(() => {
           <!-- ===== Billing (clients only) ===== -->
           <section v-if="kind === 'client'" class="rounded-card bg-default p-6 ring ring-default">
             <div class="mb-5">
-              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">Billing</div>
+              <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Billing</div>
               <p class="mt-1.5 text-[13.5px] text-muted">Where invoices are addressed. Leave the billing email blank to use the contact email.</p>
             </div>
 
@@ -507,7 +507,7 @@ const subtitle = computed(() => {
           <!-- ===== Internal ===== -->
           <section class="rounded-card bg-default p-6 ring ring-default">
             <div class="mb-5">
-              <div class="font-mono text-[11px] uppercase tracking-[0.06em] text-primary">Internal</div>
+              <div class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Internal</div>
               <p class="mt-1.5 text-[13.5px] text-muted">Only your team sees this. Notes never appear on invoices or the client portal.</p>
             </div>
 

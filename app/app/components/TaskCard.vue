@@ -58,7 +58,7 @@ function submitItem() {
       <button
         type="button"
         class="mt-0.5 flex size-[18px] flex-none items-center justify-center rounded-full border transition-colors"
-        :class="done ? 'border-teal-500 bg-teal-500 text-white' : 'border-accented hover:border-primary'"
+        :class="done ? 'border-primary bg-primary text-inverted' : 'border-accented hover:border-primary'"
         :aria-label="done ? 'Mark not done' : 'Mark done'"
         @click="emit('toggle')"
       >
@@ -79,7 +79,7 @@ function submitItem() {
         <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <span
             v-if="task.priority !== 'medium'"
-            class="rounded-full px-2 py-0.5 text-[10.5px] font-semibold"
+            class="rounded-chip px-2 py-0.5 text-[10.5px] font-semibold"
             :class="PRIORITY_META[task.priority].class"
           >{{ PRIORITY_META[task.priority].label }}</span>
 
@@ -87,7 +87,7 @@ function submitItem() {
           <UPopover>
             <button
               type="button"
-              class="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[12px] tabular-nums transition-colors"
+              class="inline-flex items-center gap-1 whitespace-nowrap rounded-chip px-1.5 py-0.5 text-[12px] tabular-nums transition-colors"
               :class="task.due_date ? (overdue ? 'font-semibold text-warning hover:bg-warning/10' : 'text-muted hover:bg-elevated') : 'text-muted opacity-0 group-hover:opacity-100 hover:text-highlighted'"
             >
               <UIcon
@@ -129,7 +129,7 @@ function submitItem() {
           >
             <span class="h-1 w-16 overflow-hidden rounded-full bg-muted">
               <span
-                class="block h-full rounded-full bg-teal-500 transition-[width] duration-300"
+                class="block h-full rounded-full bg-primary transition-[width] duration-300"
                 :style="{ width: checklistPct + '%' }"
               />
             </span>
@@ -142,7 +142,7 @@ function submitItem() {
       <div class="flex flex-none items-center gap-0.5">
         <button
           type="button"
-          class="inline-flex items-center rounded-full px-1.5 py-1 text-muted opacity-0 transition-colors hover:text-highlighted group-hover:opacity-100"
+          class="inline-flex items-center rounded-chip px-1.5 py-1 text-muted opacity-0 transition-colors hover:text-highlighted group-hover:opacity-100"
           :class="expanded ? 'opacity-100' : ''"
           :aria-label="expanded ? 'Hide checklist' : 'Show checklist'"
           @click="emit('toggle-expand')"
@@ -182,7 +182,7 @@ function submitItem() {
         <button
           type="button"
           class="flex size-4 flex-none items-center justify-center rounded-[5px] border transition-colors"
-          :class="item.done ? 'border-teal-500 bg-teal-500 text-white' : 'border-accented hover:border-primary'"
+          :class="item.done ? 'border-primary bg-primary text-inverted' : 'border-accented hover:border-primary'"
           :aria-label="item.done ? 'Mark item not done' : 'Mark item done'"
           @click="emit('toggle-item', item)"
         >
