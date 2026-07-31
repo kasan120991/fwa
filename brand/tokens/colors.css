@@ -1,0 +1,55 @@
+/* FWA — Color tokens (Highlighter system, spec v1.1: rebrand/system-spec.md §1)
+ * Ink on paper; citrine is THE accent — sweeps, rules, floods only, NEVER text.
+ * Text on citrine is always ink (#17181A), on both themes. */
+:root {
+  /* Core — light (default) */
+  --paper:       #FCFCFA; /* page ground — the brand's dominant field */
+  --surface:     #FFFFFF; /* raised surfaces (cards on tinted areas, popovers) */
+  --ink:         #17181A; /* text, primary buttons, the dark band */
+  --ink-soft:    #33353A; /* primary button hover, secondary emphasis */
+  --muted:       #55585C; /* marketing body, secondary text */
+  --meta:        #797D82; /* metadata, labels — not primary small copy */
+  --line:        #E3E4E1; /* hairline borders/dividers — default separation */
+  --line-strong: #C9CBCE; /* outlined buttons, hover borders */
+  --linen:       #F4F2EB; /* warm alternating section surface + soft card fill */
+  --citrine:     #F2D318; /* THE accent — background/rule/fill only, never text */
+
+  /* Semantic (status) — warning is orange, never yellow (citrine is brand, not status) */
+  --success:    #1E7A4E;
+  --success-bg: #E2F1E8;
+  --warning:    #B45D0E;
+  --warning-bg: #F8ECDD;
+  --error:      #B3362B;
+  --error-bg:   #F7E4E2;
+  --info:       #3563A4;
+  --info-bg:    #E4EBF5;
+
+  /* Focus = 2px ink ring (citrine fails non-text contrast — never the indicator) */
+  --focus-ring: #17181A;
+}
+
+/* ---- Dark theme (app only — marketing ships light-only) --------------------
+ * Derived, not naively inverted; role names stay semantic. Citrine unchanged.
+ * Applied under the `.dark` class on <html>. */
+.dark {
+  --paper:       #131417;
+  --surface:     #1B1C20;
+  --ink:         #F0F0EC;
+  --ink-soft:    #D6D6D1;
+  --muted:       #B0B3B0;
+  --meta:        #8C9096;
+  --line:        #2C2D32;
+  --line-strong: #43454B;
+  --citrine:     #F2D318; /* unchanged — sweeps still carry #17181A text */
+
+  --success: #5BBE8E;
+  --warning: #E09A50;
+  --error:   #E37B72;
+  --info:    #7FA3D7;
+  --success-bg: rgba(30, 122, 78, 0.15);
+  --warning-bg: rgba(180, 93, 14, 0.15);
+  --error-bg:   rgba(179, 54, 43, 0.15);
+  --info-bg:    rgba(53, 99, 164, 0.15);
+
+  --focus-ring: #F0F0EC; /* dark: paper ring */
+}

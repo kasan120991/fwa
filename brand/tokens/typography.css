@@ -1,0 +1,34 @@
+/* FWA — Typography tokens (Highlighter system, spec v1.1 §2)
+ * ONE family: Geist. 700 display (−0.03em), 600 headings/buttons (−0.015em), 400 body.
+ * Utility roles (ex-mono): Geist 600 UPPERCASE +0.08em; stat numerals tabular-nums. */
+:root {
+  /* Mono retired 2026-07-26 ("read technical") — one family, two role names. */
+  --font-display: 'Geist', -apple-system, 'Segoe UI', Roboto, ui-sans-serif, system-ui, sans-serif;
+  --font-sans:    'Geist', -apple-system, 'Segoe UI', Roboto, ui-sans-serif, system-ui, sans-serif;
+
+  /* Type scale — role: size / weight / line-height */
+  --t-display-1:  700 74px/1.05 var(--font-display); /* hero only; clamp 40–74 responsive */
+  --t-display-2:  700 56px/1.06 var(--font-display);
+  --t-heading-1:  700 40px/1.10 var(--font-display); /* section heads 32–40 */
+  --t-heading-2:  700 32px/1.15 var(--font-display);
+  --t-heading-3:  600 20px/1.30 var(--font-sans);    /* card titles */
+  --t-heading-4:  600 17px/1.35 var(--font-sans);
+  --t-body-large: 400 18px/1.60 var(--font-sans);    /* marketing body 17–18 */
+  --t-body:       400 16px/1.55 var(--font-sans);    /* app default 15–16 */
+  --t-caption:    400 13px/1.50 var(--font-sans);    /* helper text 13–14 */
+  --t-button:     600 14px/1 var(--font-sans);
+  --t-eyebrow:    600 11px/1.40 var(--font-sans);    /* UPPERCASE, +0.08em, meta gray */
+  --t-stat:       700 26px/1.10 var(--font-sans);    /* + font-variant-numeric: tabular-nums */
+  --t-metastrip:  600 11px/1.90 var(--font-sans);    /* UPPERCASE, +0.06em, interpunct-separated */
+  --t-micro:      400 12px/1.40 var(--font-sans);
+
+  /* Tracking */
+  --tr-display-1: -0.03em;
+  --tr-display-2: -0.028em;
+  --tr-heading-1: -0.028em;
+  --tr-heading-2: -0.02em;
+  --tr-heading-3: -0.015em;
+  --tr-button:    -0.015em;
+  --tr-eyebrow:    0.08em;
+  --tr-metastrip:  0.06em;
+}
