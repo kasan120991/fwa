@@ -753,29 +753,23 @@ async function toolCreateSupportTicket(client, args) {
   if (TICKET_PRIORITIES.has(String(args?.priority))) data.priority = String(args.priority)
   const ticket = await createTicketService(data)
   const code = ticketCode(ticket.id)
-  try {
-    await notify({
-      category: 'ticket', tone: 'info', icon: 'i-lucide-life-buoy',
-      title: `New support ticket ${code}`,
-      body: `${client.company || client.name} · ${subject} (opened by phone)`,
-      link: `/support/${ticket.id}`
-    })
-  } catch (err) {
-    console.error('Vapi ticket notification failed:', err.message)
-  }
-  try {
-    await sendTemplateEmail({
-      template: TEMPLATES.supportTicket,
-      to: config.resend.alertsTo,
-      variables: {
-        ticket_code: code, client: client.company || client.name, subject,
-        type, priority: data.priority || 'medium', description: description || 'N/A',
-        submitted_at: alertTimestamp(), ticket_url: `https://app.franciswebagency.com/support/${ticket.id}`
-      }
-    })
-  } catch (err) {
-    console.error('Vapi ticket email failed:', err.message)
-  }
+  // Fire-and-forget: the caller is waiting on the line for the spoken result —
+  // the bell + email land moments later either way.
+  notify({
+    category: 'ticket', tone: 'info', icon: 'i-lucide-life-buoy',
+    title: `New support ticket ${code}`,
+    body: `${client.company || client.name} · ${subject} (opened by phone)`,
+    link: `/support/${ticket.id}`
+  }).catch(err => console.error('Vapi ticket notification failed:', err.message))
+  sendTemplateEmail({
+    template: TEMPLATES.supportTicket,
+    to: config.resend.alertsTo,
+    variables: {
+      ticket_code: code, client: client.company || client.name, subject,
+      type, priority: data.priority || 'medium', description: description || 'N/A',
+      submitted_at: alertTimestamp(), ticket_url: `https://app.franciswebagency.com/support/${ticket.id}`
+    }
+  }).catch(err => console.error('Vapi ticket email failed:', err.message))
   return `Ticket ${spokenCode(ticket.id)} is created for "${subject}". Kasan has been notified and will follow up.`
 }
 
@@ -799,16 +793,12 @@ async function toolAddTicketUpdate(client, args) {
   }
 
   await addTicketMessage(target.id, { body: update, author_type: 'client', author_user_id: null })
-  try {
-    await notify({
-      category: 'ticket', tone: 'info', icon: 'i-lucide-life-buoy',
-      title: `Phone update from ${client.company || client.name}`,
-      body: `${ticketCode(target.id)} · ${target.subject}`,
-      link: `/support/${target.id}`
-    })
-  } catch (err) {
-    console.error('Vapi ticket-update notification failed:', err.message)
-  }
+  notify({
+    category: 'ticket', tone: 'info', icon: 'i-lucide-life-buoy',
+    title: `Phone update from ${client.company || client.name}`,
+    body: `${ticketCode(target.id)} · ${target.subject}`,
+    link: `/support/${target.id}`
+  }).catch(err => console.error('Vapi ticket-update notification failed:', err.message))
   const status = String(target.status).replace('_', ' ')
   return `Update added to ${spokenCode(target.id)}. Its current status is ${status}.`
 }
