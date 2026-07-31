@@ -593,7 +593,7 @@ async function buildCallerContext(number) {
     // Include each ticket's status so "any news on my ticket?" is answerable
     // straight from context — no tool round-trip needed for status questions.
     const summary = openTickets.length
-      ? openTickets.slice(0, 2).map(t => `${ticketCode(t.id)} (${String(t.status).replace('_', ' ')}): ${t.subject}`).join('; ')
+      ? openTickets.slice(0, 2).map(t => `${spokenCode(t.id)} (${String(t.status).replace('_', ' ')}): ${t.subject}`).join('; ')
       : 'none'
 
     return {
@@ -735,7 +735,13 @@ async function ingestEndOfCall(message) {
 // (a failed tool must not kill a live phone call).
 // ---------------------------------------------------------------------------
 
-const SR_CODE_RE = /(?:SR[-\s]?)(\d{1,6})/i
+// Callers say codes many ways ("SR-8", "SR 8", "SR dash 8") and transcripts
+// render them just as variably — accept all of them.
+const SR_CODE_RE = /SR[\s-]*(?:dash\s*)?0*(\d{1,6})/i
+
+// TTS-friendly ticket code: ElevenLabs reads "SR-008" as "SR minus 8", so
+// spoken strings use "SR dash 8". UI/notifications/emails keep ticketCode().
+const spokenCode = id => `SR dash ${Number(id)}`
 
 async function toolCreateSupportTicket(client, args) {
   if (!client) return 'No client account matches this phone number. Take a detailed message for Kasan instead.'
@@ -770,7 +776,7 @@ async function toolCreateSupportTicket(client, args) {
   } catch (err) {
     console.error('Vapi ticket email failed:', err.message)
   }
-  return `Ticket ${code} is created for "${subject}". Kasan has been notified and will follow up.`
+  return `Ticket ${spokenCode(ticket.id)} is created for "${subject}". Kasan has been notified and will follow up.`
 }
 
 async function toolAddTicketUpdate(client, args) {
@@ -785,11 +791,11 @@ async function toolAddTicketUpdate(client, args) {
   if (m) {
     // Verify the referenced ticket belongs to THIS caller and is open.
     target = open.find(t => t.id === Number(m[1])) ?? null
-    if (!target) return `Ticket SR-${m[1].padStart(3, '0')} is not one of this client's open tickets. Their open tickets are: ${open.map(t => `${ticketCode(t.id)} (${t.subject})`).join(', ')}.`
+    if (!target) return `Ticket ${spokenCode(m[1])} is not one of this client's open tickets. Their open tickets are: ${open.map(t => `${spokenCode(t.id)} (${t.subject})`).join(', ')}.`
   } else if (open.length === 1) {
     target = open[0]
   } else {
-    return `The client has multiple open tickets: ${open.map(t => `${ticketCode(t.id)} (${t.subject})`).join(', ')}. Ask which one this update is for.`
+    return `The client has multiple open tickets: ${open.map(t => `${spokenCode(t.id)} (${t.subject})`).join(', ')}. Ask which one this update is for.`
   }
 
   await addTicketMessage(target.id, { body: update, author_type: 'client', author_user_id: null })
@@ -804,7 +810,7 @@ async function toolAddTicketUpdate(client, args) {
     console.error('Vapi ticket-update notification failed:', err.message)
   }
   const status = String(target.status).replace('_', ' ')
-  return `Update added to ${ticketCode(target.id)}. Its current status is ${status}.`
+  return `Update added to ${spokenCode(target.id)}. Its current status is ${status}.`
 }
 
 async function toolCheckInvoiceStatus(client) {
