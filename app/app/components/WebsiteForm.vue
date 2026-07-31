@@ -11,6 +11,7 @@ interface WebsiteRow {
   url: string | null
   environment: string
   analytics_provider: string
+  analytics_site_id: string | null
   conversion_goal: string | null
   launched_at: string | null
   do_droplet_id: number | null
@@ -50,6 +51,7 @@ interface FormState {
   url: string
   environment: string
   analytics_provider: string
+  analytics_site_id: string
   conversion_goal: string
   launched_at: string
   do_droplet_id: number | null
@@ -59,7 +61,7 @@ function blank(): FormState {
     client_id: props.contactId ?? undefined,
     project_id: null,
     name: '', domain: '', url: '', environment: 'live',
-    analytics_provider: 'none', conversion_goal: '', launched_at: '',
+    analytics_provider: 'none', analytics_site_id: '', conversion_goal: '', launched_at: '',
     do_droplet_id: null
   }
 }
@@ -97,6 +99,7 @@ function fillFrom(w: WebsiteRow) {
     url: w.url || '',
     environment: w.environment,
     analytics_provider: w.analytics_provider,
+    analytics_site_id: w.analytics_site_id || '',
     conversion_goal: w.conversion_goal || '',
     launched_at: w.launched_at ? String(w.launched_at).slice(0, 10) : '',
     do_droplet_id: w.do_droplet_id ?? null
@@ -144,6 +147,7 @@ async function save() {
     url: form.url.trim() || `https://${domain}`,
     environment: form.environment,
     analytics_provider: form.analytics_provider,
+    analytics_site_id: form.analytics_site_id.trim() || null,
     conversion_goal: form.conversion_goal.trim() || null,
     launched_at: form.launched_at || null,
     do_droplet_id: form.do_droplet_id
@@ -238,10 +242,17 @@ const lockedClientLabel = computed(() => props.contactLabel || 'Selected client'
               <UFormField label="Analytics" help="Marks the site connected; metrics sync in later.">
                 <USelect v-model="form.analytics_provider" :items="PROVIDER_ITEMS" size="lg" class="w-full" />
               </UFormField>
-              <UFormField label="Conversion Goal">
-                <UInput v-model="form.conversion_goal" placeholder="Contact form" size="lg" class="w-full" />
+              <UFormField
+                label="Analytics Site ID"
+                help="Plausible: leave blank (the domain is used). GA4: the numeric property ID."
+              >
+                <UInput v-model="form.analytics_site_id" placeholder="e.g. 512345678" size="lg" class="w-full" />
               </UFormField>
             </div>
+
+            <UFormField label="Conversion Goal" help="Plausible goal or GA4 event name, e.g. generate_lead.">
+              <UInput v-model="form.conversion_goal" placeholder="Contact form" size="lg" class="w-full" />
+            </UFormField>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <UFormField label="Project (Optional)">

@@ -8,7 +8,7 @@ import { checkSubscriptionRenewals } from '../services/expenseReminders.js'
 let started = false
 
 // Background jobs for the Websites feature. Both are gated so dev/demo (no
-// Plausible key, checks off) runs nothing; production opts in via env. Plain
+// analytics keys, checks off) runs nothing; production opts in via env. Plain
 // setInterval — no new dependency; intervals are unref'd so they don't hold the
 // process open, and restart cleanly under `node --watch`.
 export function startScheduler() {
@@ -18,7 +18,7 @@ export function startScheduler() {
   if (syncConfigured()) {
     const ms = config.websites.syncIntervalMs
     setInterval(() => { syncAllWebsites().catch(e => console.error('[scheduler] sync:', e.message)) }, ms).unref()
-    console.log(`[scheduler] Plausible sync every ${Math.round(ms / 60000)}m`)
+    console.log(`[scheduler] analytics sync every ${Math.round(ms / 60000)}m`)
   }
 
   if (config.websites.checksEnabled) {
