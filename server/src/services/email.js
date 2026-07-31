@@ -15,7 +15,10 @@ export const TEMPLATES = {
   portalInvite: 'portal-invite',
   // Internal alert: a client opened a ticket from the portal. Variables:
   // { ticket_code, client, subject, type, priority, description, submitted_at, ticket_url }.
-  supportTicket: 'support-ticket'
+  supportTicket: 'support-ticket',
+  // Internal alert: an invoice was paid (Stripe webhook). Variables:
+  // { client, amount, invoice_number, method, paid_at, invoice_url }.
+  invoicePaid: 'invoice-paid'
 }
 
 export const isConfigured = () => !!config.resend.apiKey

@@ -201,10 +201,30 @@ webhooksRouter.post('/stripe', async (req, res) => {
             category: 'payment', tone: 'success', icon: 'i-lucide-check-circle-2',
             title: 'Invoice paid',
             body: `${who} paid a $${m.amount_paid.toLocaleString('en-US')} invoice.`,
-            link: '/payments'
+            link: local?.id ? `/invoices/${local.id}` : '/payments'
           })
         } catch (err) {
           console.error('invoice.paid notification failed:', err.message)
+        }
+        // Internal alert email (best-effort) — variables map to the "Invoice
+        // Paid" template.
+        try {
+          await sendTemplateEmail({
+            template: TEMPLATES.invoicePaid,
+            to: config.resend.alertsTo,
+            variables: {
+              client: who,
+              amount: `$${m.amount_paid.toLocaleString('en-US')}`,
+              invoice_number: local?.number || m.number || '—',
+              method: 'Card',
+              paid_at: alertTimestamp(),
+              invoice_url: local?.id
+                ? `https://app.franciswebagency.com/invoices/${local.id}`
+                : 'https://app.franciswebagency.com/invoices'
+            }
+          })
+        } catch (err) {
+          console.error('invoice.paid alert email failed:', err.message)
         }
         if (client) {
           await logClientActivity(client.id, {
