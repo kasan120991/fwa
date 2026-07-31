@@ -103,9 +103,6 @@ const tiles = computed(() => [
   { key: 'overdue', label: 'Overdue', icon: 'i-lucide-triangle-alert', value: String(stats.value.overdue_count), sub: 'past due', apply: () => { tab.value = 'overdue' } }
 ])
 
-// ---- detail drawer (shared InvoiceDrawer component, opened by id) ----
-const openId = ref<number | null>(null)
-
 // ---- create ----
 const formOpen = ref(false)
 function onCreated() {
@@ -187,7 +184,7 @@ function onCreated() {
             v-for="i in filtered"
             :key="i.id"
             class="flex items-center gap-3 px-4 py-3 transition-colors active:bg-muted"
-            @click="openId = i.id"
+            @click="navigateTo(`/invoices/${i.id}`)"
           >
             <span class="inline-flex size-9 flex-none items-center justify-center rounded-[8px] text-[12px] font-semibold" :class="AVATAR[i.client_id % AVATAR.length]">{{ initials(clientName(i)) }}</span>
             <div class="min-w-0 flex-1">
@@ -231,7 +228,7 @@ function onCreated() {
                 v-for="i in filtered"
                 :key="i.id"
                 class="cursor-pointer border-b border-default transition-colors last:border-b-0 hover:bg-muted"
-                @click="openId = i.id"
+                @click="navigateTo(`/invoices/${i.id}`)"
               >
                 <td class="px-4 py-3.5">
                   <div class="text-sm font-semibold text-highlighted">
@@ -291,13 +288,6 @@ function onCreated() {
         </p>
       </div>
     </div>
-
-    <!-- invoice detail drawer (shared) -->
-    <InvoiceDrawer
-      v-model:invoice-id="openId"
-      @changed="refresh"
-    />
-
 
     <InvoiceForm
       v-model:open="formOpen"

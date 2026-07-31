@@ -69,8 +69,10 @@ export async function createInvoice({ client_id, project_id = null, kind = 'cust
 export async function getInvoice(id) {
   const rows = await query(
     `SELECT i.*, ${OVERDUE_EXPR} AS is_overdue,
-       c.name AS client_name, c.company AS client_company, c.email AS client_email
+       c.name AS client_name, c.company AS client_company, c.email AS client_email,
+       p.name AS project_name
      FROM invoices i JOIN clients c ON c.id = i.client_id
+     LEFT JOIN projects p ON p.id = i.project_id
      WHERE i.id = :id LIMIT 1`,
     { id }
   )
