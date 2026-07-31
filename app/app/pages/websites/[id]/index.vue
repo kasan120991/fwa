@@ -193,7 +193,7 @@ async function syncNow() {
   syncing.value = true
   try {
     const { data } = await api<{ data: { synced: boolean, configured?: boolean, reason?: string } }>(`/websites/${route.params.id}/sync`, { method: 'POST' })
-    if (data.configured === false) toast.add({ title: 'Analytics not configured', description: 'Add a Plausible API key to pull live data.', color: 'neutral' })
+    if (data.configured === false) toast.add({ title: 'Analytics not configured', description: 'Add a Plausible or GA4 credential on the server to pull live data.', color: 'neutral' })
     else if (data.synced) toast.add({ title: 'Analytics synced', color: 'success' })
     else toast.add({ title: data.reason || 'Nothing to sync', color: 'neutral' })
     refreshDetail()

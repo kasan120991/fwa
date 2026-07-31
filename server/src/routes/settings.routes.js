@@ -4,6 +4,7 @@ import { getCachedSettings, saveSettings } from '../services/settings.service.js
 import { stripeEnabled } from '../services/stripe.js'
 import { pandadocEnabled } from '../services/pandadoc.js'
 import { isConfigured as plausibleConfigured } from '../services/plausible.js'
+import { isConfigured as ga4Configured } from '../services/ga4.js'
 import { isConfigured as digitaloceanConfigured } from '../services/digitalocean.js'
 import { isConfigured as emailConfigured } from '../services/email.js'
 import { listClientsWithPortalStatus } from '../repositories/clients.repo.js'
@@ -44,6 +45,7 @@ settingsRouter.get('/integrations', (req, res) => {
       },
       { id: 'pandadoc', name: 'PandaDoc', description: 'Proposals & contracts', connected: pandadocEnabled() },
       { id: 'plausible', name: 'Plausible', description: 'Website analytics', connected: plausibleConfigured() },
+      { id: 'ga4', name: 'Google Analytics 4', description: 'Website analytics', connected: ga4Configured() },
       { id: 'resend', name: 'Resend', description: 'Transactional email', connected: emailConfigured() },
       {
         id: 'vapi', name: 'Vapi', description: 'AI receptionist', connected: Boolean(config.vapi.webhookSecret),

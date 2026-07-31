@@ -217,7 +217,7 @@ export async function deleteWebsite(id) {
   return res.affectedRows > 0
 }
 
-// ---- analytics sync writers (used by the Plausible sync service) ----
+// ---- analytics sync writers (used by the websiteSync service) ----
 
 /** Upsert one day of metrics (idempotent on the uq_wm_site_date key). */
 export async function upsertMetric(website_id, date, { visitors = 0, pageviews = 0, conversions = 0 } = {}) {
@@ -238,9 +238,9 @@ export async function setSynced(id, { top_pages, top_sources } = {}) {
   )
 }
 
-/** Connected Plausible sites, for the scheduled/bulk sync. */
+/** Connected analytics sites (providers with sync support), for the scheduled/bulk sync. */
 export async function listSyncableWebsites() {
-  return query("SELECT id, domain, analytics_site_id, conversion_goal FROM websites WHERE analytics_provider = 'plausible'")
+  return query("SELECT id, domain, analytics_provider, analytics_site_id, conversion_goal FROM websites WHERE analytics_provider IN ('plausible', 'ga4')")
 }
 
 // ---- DigitalOcean uptime (managed check → health verdict) ----

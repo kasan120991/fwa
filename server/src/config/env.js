@@ -88,6 +88,16 @@ export const config = {
     apiKey: process.env.PLAUSIBLE_API_KEY || '',
     baseUrl: process.env.PLAUSIBLE_BASE_URL || 'https://plausible.io'
   },
+  ga4: {
+    // GA4 Data API via a Google service account (Viewer on the property).
+    // Both empty = GA4 sync disabled (no-op), same gating as Plausible above.
+    clientEmail: process.env.GA4_CLIENT_EMAIL || '',
+    // Base64 of the service-account `private_key` (PEM) — the raw key's
+    // newlines don't survive .env files / compose interpolation.
+    privateKey: process.env.GA4_PRIVATE_KEY_BASE64
+      ? Buffer.from(process.env.GA4_PRIVATE_KEY_BASE64, 'base64').toString('utf8')
+      : ''
+  },
   digitalocean: {
     // DigitalOcean API token for the website Infrastructure panel (live Droplet
     // health). A read-only token is sufficient — scopes `droplet:read` and

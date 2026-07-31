@@ -1,32 +1,39 @@
-import { isConfigured, fetchSiteAnalytics } from './plausible.js'
+import * as plausible from './plausible.js'
+import * as ga4 from './ga4.js'
 import { getWebsite, upsertMetric, setSynced, listSyncableWebsites } from '../repositories/websites.repo.js'
 import { emitWebsiteChanged } from '../realtime/io.js'
 
-export const syncConfigured = isConfigured
+// Analytics providers with sync support. Each exposes isConfigured() and
+// fetchSiteAnalytics(site, days) → { daily, topPages, topSources }.
+const providers = { plausible, ga4 }
 
-/** Sync one website's analytics from Plausible into website_metrics + snapshots. */
+export const syncConfigured = () => Object.values(providers).some(p => p.isConfigured())
+
+/** Sync one website's analytics from its provider into website_metrics + snapshots. */
 export async function syncWebsite(id, { days = 30 } = {}) {
   const site = await getWebsite(id)
   if (!site) return { synced: false, notFound: true }
-  if (site.analytics_provider !== 'plausible') return { synced: false, reason: 'not a Plausible site' }
-  if (!isConfigured()) return { synced: false, configured: false }
+  const provider = providers[site.analytics_provider]
+  if (!provider) return { synced: false, reason: `no sync support for provider '${site.analytics_provider}'` }
+  if (!provider.isConfigured()) return { synced: false, configured: false }
 
-  const { daily, topPages, topSources } = await fetchSiteAnalytics(site, days)
+  const { daily, topPages, topSources } = await provider.fetchSiteAnalytics(site, days)
   for (const d of daily) await upsertMetric(id, d.date, d)
   await setSynced(id, { top_pages: topPages, top_sources: topSources })
   emitWebsiteChanged(id)
   return { synced: true, days: daily.length }
 }
 
-/** Sync every connected Plausible site (scheduled + POST /websites/sync). */
+/** Sync every connected site whose provider is configured (scheduled + POST /websites/sync). */
 export async function syncAllWebsites() {
-  if (!isConfigured()) return { synced: 0, configured: false }
-  const sites = await listSyncableWebsites()
+  if (!syncConfigured()) return { synced: 0, configured: false }
+  const sites = (await listSyncableWebsites())
+    .filter(s => providers[s.analytics_provider]?.isConfigured())
   let synced = 0
   for (const s of sites) {
     try {
-      await syncWebsite(s.id)
-      synced++
+      const res = await syncWebsite(s.id)
+      if (res.synced) synced++
     } catch (err) {
       console.error(`[websiteSync] ${s.domain} failed:`, err.message)
     }
