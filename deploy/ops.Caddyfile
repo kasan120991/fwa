@@ -1,3 +1,8 @@
+# SUPERSEDED 2026-07-30: these vhosts are now COMMITTED in the website repo
+# (website/deploy/Caddyfile) — the single source of truth for the front door.
+# Do NOT append this file on the server anymore; a website rsync + reload once
+# clobbered a server-side append and took app+portal down. Kept for reference.
+
 # Ops app routing. Append this block to the marketing site's Caddyfile
 # (/opt/website/deploy/Caddyfile) on the server, then reload Caddy:
 #   docker compose -f /opt/website/docker-compose.yml exec caddy \

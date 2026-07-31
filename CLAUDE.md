@@ -152,7 +152,7 @@ Persistent left sidebar (collapsible) + top bar + main content. Nav groups (✓ 
 ## Design workflow (Ops app)
 
 The app's design system is the invocable **`fwa-design` skill** (a symlink →
-`app/design-system`) — use it for any admin-app UI work. It's the single source of truth for color,
+`brand/`) — use it for any admin-app UI work. It's the single source of truth for color,
 type, spacing, radii, icons, and components. Build as Nuxt UI + Tailwind v4 components that defer to
 it. Reuse the established shared components (tables, `StatusChip`, forms, `StatCard`, `TrendChart`,
 phone/tag inputs, the call-detail component) and match existing patterns.
@@ -169,8 +169,8 @@ Both projects co-deploy on one box.
 - **Marketing website** — deploys from `website/` (its own `docker-compose.yml`, project
   `name: website`), and its **Caddy is the shared front door**. The ops stack attaches to the
   website's Docker network (`website_default`). Caddy proxies the ops domain — `/api`, `/socket.io`,
-  `/uploads` → `api:4000`, everything else → `app:3000` (snippet in `deploy/ops.Caddyfile`, appended
-  to the website's Caddyfile at `/opt/website/` on the server).
+  `/uploads` → `api:4000`, everything else → `app:3000` (vhosts now committed in `website/deploy/Caddyfile` (was: appended
+  to the server copy — superseded 2026-07-30).
 
 ### How to redeploy (ops app)
 
