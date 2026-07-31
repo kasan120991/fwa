@@ -10,7 +10,10 @@ export default defineNuxtConfig({
       // Shared FWA app-icon favicon (same as the marketing site): ink mark on a
       // citrine tile — holds contrast on light AND dark tabs, so one icon serves both.
       link: [
-        { rel: 'icon', type: 'image/svg+xml', href: '/fwa-app-icon-citrine.svg' }
+        { rel: 'icon', type: 'image/svg+xml', href: '/fwa-app-icon-citrine.svg' },
+        // Safari doesn't support SVG favicons — PNG/ICO fallbacks + touch icon.
+        { rel: 'icon', type: 'image/png', sizes: '32x32', href: '/favicon-32.png' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' }
       ]
     }
   },
