@@ -5,10 +5,11 @@ import { constructWebhookEvent, createStripeCustomer, mapStripeInvoice, getInvoi
 import { verifyWebhookSignature, pandadocEnabled, createDocumentFromTemplate, sendDocument, hasViewedDocument } from '../services/pandadoc.js'
 import { getClient, getClientByStripeCustomerId, getClientByPhone, updateClient } from '../repositories/clients.repo.js'
 import { createLead, getRecentWebsiteLeadByEmail } from '../repositories/leads.repo.js'
-import { getInvoice, getInvoiceByStripeId, updateInvoice, upsertFromStripe } from '../repositories/invoices.repo.js'
+import { getInvoice, getInvoiceByStripeId, updateInvoice, upsertFromStripe, listInvoices } from '../repositories/invoices.repo.js'
 import { createPayment, getPaymentByIntentId } from '../repositories/payments.repo.js'
 import { createCall, getCallByVapiId } from '../repositories/calls.repo.js'
-import { listTickets, ticketCode } from '../repositories/tickets.repo.js'
+import { listTickets, ticketCode, TICKET_TYPES, TICKET_PRIORITIES } from '../repositories/tickets.repo.js'
+import { createTicket as createTicketService, addMessage as addTicketMessage } from '../services/tickets.service.js'
 import {
   emitInvoiceChanged, emitPaymentCreated, emitCallCreated, emitContractChanged, emitProposalChanged,
   emitClientInvoiceChanged, emitClientAgreementChanged
@@ -575,7 +576,7 @@ const CALL_EMAIL_CLASSIFICATIONS = new Set(['inquiry', 'other'])
 // hiccup can't block a live inbound call from being answered.
 async function buildCallerContext(number) {
   const empty = {
-    is_client: 'no', client_name: '', primary_contact_first_name: '',
+    is_client: 'no', client_id: '', client_name: '', primary_contact_first_name: '',
     company: '', open_ticket_count: '0', open_ticket_summary: 'none'
   }
   try {
@@ -589,12 +590,15 @@ async function buildCallerContext(number) {
     } catch (err) {
       console.error('Vapi caller ticket lookup failed:', err.message)
     }
+    // Include each ticket's status so "any news on my ticket?" is answerable
+    // straight from context — no tool round-trip needed for status questions.
     const summary = openTickets.length
-      ? openTickets.slice(0, 2).map(t => `${ticketCode(t.id)}: ${t.subject}`).join('; ')
+      ? openTickets.slice(0, 2).map(t => `${ticketCode(t.id)} (${String(t.status).replace('_', ' ')}): ${t.subject}`).join('; ')
       : 'none'
 
     return {
       is_client: 'yes',
+      client_id: String(client.id),
       client_name: client.name || '',
       primary_contact_first_name: (client.name || '').trim().split(/\s+/)[0] || '',
       company: client.company || '',
@@ -722,6 +726,134 @@ async function ingestEndOfCall(message) {
   }
 }
 
+
+// ---------------------------------------------------------------------------
+// In-call tools (Vapi `tool-calls` server messages). The client is ALWAYS
+// resolved server-side from the caller's number — never from model-provided
+// arguments — so the model cannot act on the wrong account. Every tool returns
+// a spoken-English result string; failures become polite results, never 5xx
+// (a failed tool must not kill a live phone call).
+// ---------------------------------------------------------------------------
+
+const SR_CODE_RE = /(?:SR[-\s]?)(\d{1,6})/i
+
+async function toolCreateSupportTicket(client, args) {
+  if (!client) return 'No client account matches this phone number. Take a detailed message for Kasan instead.'
+  const subject = String(args?.subject ?? '').trim().slice(0, 200)
+  const description = String(args?.description ?? '').trim().slice(0, 4000) || null
+  if (!subject) return 'A short subject is required to open a ticket. Ask the caller to summarize the issue in one sentence.'
+  const type = TICKET_TYPES.has(String(args?.type)) ? String(args.type) : 'question'
+  const data = { client_id: client.id, subject, description, type, opened_by: 'client' }
+  if (TICKET_PRIORITIES.has(String(args?.priority))) data.priority = String(args.priority)
+  const ticket = await createTicketService(data)
+  const code = ticketCode(ticket.id)
+  try {
+    await notify({
+      category: 'ticket', tone: 'info', icon: 'i-lucide-life-buoy',
+      title: `New support ticket ${code}`,
+      body: `${client.company || client.name} · ${subject} (opened by phone)`,
+      link: `/support/${ticket.id}`
+    })
+  } catch (err) {
+    console.error('Vapi ticket notification failed:', err.message)
+  }
+  try {
+    await sendTemplateEmail({
+      template: TEMPLATES.supportTicket,
+      to: config.resend.alertsTo,
+      variables: {
+        ticket_code: code, client: client.company || client.name, subject,
+        type, priority: data.priority || 'medium', description: description || 'N/A',
+        submitted_at: alertTimestamp(), ticket_url: `https://app.franciswebagency.com/support/${ticket.id}`
+      }
+    })
+  } catch (err) {
+    console.error('Vapi ticket email failed:', err.message)
+  }
+  return `Ticket ${code} is created for "${subject}". Kasan has been notified and will follow up.`
+}
+
+async function toolAddTicketUpdate(client, args) {
+  if (!client) return 'No client account matches this phone number. Take a detailed message for Kasan instead.'
+  const update = String(args?.update ?? '').trim().slice(0, 4000)
+  if (!update) return 'Ask the caller what they would like to add to the ticket first.'
+  const { rows: open } = await listTickets({ client_id: client.id, open: true, limit: 10 })
+  if (!open.length) return 'This client has no open tickets. Offer to open a new one instead.'
+
+  let target = null
+  const m = SR_CODE_RE.exec(String(args?.ticket_code ?? ''))
+  if (m) {
+    // Verify the referenced ticket belongs to THIS caller and is open.
+    target = open.find(t => t.id === Number(m[1])) ?? null
+    if (!target) return `Ticket SR-${m[1].padStart(3, '0')} is not one of this client's open tickets. Their open tickets are: ${open.map(t => `${ticketCode(t.id)} (${t.subject})`).join(', ')}.`
+  } else if (open.length === 1) {
+    target = open[0]
+  } else {
+    return `The client has multiple open tickets: ${open.map(t => `${ticketCode(t.id)} (${t.subject})`).join(', ')}. Ask which one this update is for.`
+  }
+
+  await addTicketMessage(target.id, { body: update, author_type: 'client', author_user_id: null })
+  try {
+    await notify({
+      category: 'ticket', tone: 'info', icon: 'i-lucide-life-buoy',
+      title: `Phone update from ${client.company || client.name}`,
+      body: `${ticketCode(target.id)} · ${target.subject}`,
+      link: `/support/${target.id}`
+    })
+  } catch (err) {
+    console.error('Vapi ticket-update notification failed:', err.message)
+  }
+  const status = String(target.status).replace('_', ' ')
+  return `Update added to ${ticketCode(target.id)}. Its current status is ${status}.`
+}
+
+async function toolCheckInvoiceStatus(client) {
+  if (!client) return 'No client account matches this phone number, so there is no invoice to look up.'
+  const { rows: openRows } = await listInvoices({ client_id: client.id, status: 'open', limit: 1 })
+  if (openRows.length) {
+    const inv = openRows[0]
+    const amount = `$${Number(inv.amount_due).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+    const due = inv.due_date ? ` due ${new Date(inv.due_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}` : ''
+    const overdue = inv.is_overdue ? ' It is currently past due.' : ''
+    return `Invoice ${inv.number || inv.id} is open for ${amount}${due}.${overdue} It can be paid from the link on the invoice email or through the client portal.`
+  }
+  // No open invoice — report the latest portal-visible one (mirror the portal's
+  // hidden statuses: draft + void are internal).
+  const { rows } = await listInvoices({ client_id: client.id, limit: 5 })
+  const visible = rows.find(r => r.status !== 'draft' && r.status !== 'void')
+  if (!visible) return 'There are no invoices on this account yet.'
+  if (visible.status === 'paid') return `The most recent invoice (${visible.number || visible.id}) is fully paid — the account is all settled.`
+  return `The most recent invoice (${visible.number || visible.id}) has status ${visible.status}.`
+}
+
+async function handleToolCalls(message) {
+  const calls = message.toolCallList ?? message.toolCalls ?? []
+  const number = message.call?.customer?.number ?? message.customer?.number ?? ''
+  const client = number ? await getClientByPhone(number).catch(() => null) : null
+
+  const results = []
+  for (const tc of calls) {
+    const id = tc.id ?? tc.toolCallId
+    const name = tc.function?.name ?? tc.name
+    let args = tc.function?.arguments ?? tc.arguments ?? {}
+    if (typeof args === 'string') {
+      try { args = JSON.parse(args) } catch { args = {} }
+    }
+    let result
+    try {
+      if (name === 'create_support_ticket') result = await toolCreateSupportTicket(client, args)
+      else if (name === 'add_ticket_update') result = await toolAddTicketUpdate(client, args)
+      else if (name === 'check_invoice_status') result = await toolCheckInvoiceStatus(client)
+      else result = `Unknown tool ${name}.`
+    } catch (err) {
+      console.error(`Vapi tool ${name} failed:`, err.message)
+      result = 'That action failed on our side. Apologize briefly and take a message instead.'
+    }
+    results.push({ toolCallId: id, result })
+  }
+  return { results }
+}
+
 // POST /api/webhooks/vapi
 webhooksRouter.post('/vapi', async (req, res) => {
   if (!config.vapi.webhookSecret) {
@@ -744,6 +876,12 @@ webhooksRouter.post('/vapi', async (req, res) => {
       assistantId: config.vapi.assistantId,
       assistantOverrides: { variableValues }
     })
+  }
+
+  // In-call tool invocation — resolve and respond synchronously (the assistant
+  // is waiting on the line to speak the result).
+  if (message.type === 'tool-calls') {
+    return res.json(await handleToolCalls(message))
   }
 
   // Finished call — ingest into the inbox.
