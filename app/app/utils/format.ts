@@ -126,6 +126,14 @@ export function shortDate(input?: string | null): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+/** "Aug 1, 2026 · 9:57 AM" — shortDate plus the exact time. */
+export function shortDateTime(input?: string | null): string {
+  const d = toDate(input)
+  if (!d) return ''
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  return `${shortDate(input)} · ${time}`
+}
+
 /** Support-ticket display number: SR-001, SR-002, … (derived from the id). */
 export function ticketCode(id?: number | null): string {
   return id == null ? '' : `SR-${String(id).padStart(3, '0')}`
