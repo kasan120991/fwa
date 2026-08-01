@@ -24,7 +24,10 @@ async function pandadocFetch(path, { method = 'GET', body, base = API_BASE } = {
   const text = await res.text()
   const data = text ? JSON.parse(text) : {}
   if (!res.ok) {
-    const detail = data?.detail || data?.message || res.statusText
+    // `detail` can be a nested object (per-field validation errors) — stringify
+    // so the log shows the actual reason, not "[object Object]".
+    let detail = data?.detail || data?.message || res.statusText
+    if (typeof detail !== 'string') detail = JSON.stringify(detail)
     throw new Error(`PandaDoc ${method} ${path} failed (${res.status}): ${detail}`)
   }
   return data
@@ -76,17 +79,19 @@ export async function createDocumentFromTemplate({ templateUuid, name, client, t
   // owner role is configured (PANDADOC_OWNER_ROLE) AND the template declares it.
   // Left off by default so document creation is unchanged without the config.
   //
-  // `delivery_methods.email: false` stops PandaDoc emailing the owner their own
-  // recipient link. Opening that link registers a *recipient view*, which flips the
-  // document to `document.viewed` — indistinguishable from the client reading it.
-  // The owner countersigns in-app instead (contracts/:id/session), so the email is
-  // pure downside. See handleDocumentEvent() in routes/webhooks.routes.js.
+  // NB: PandaDoc validation now requires at least one delivery method per
+  // recipient — `delivery_methods: { email: false, sms: false }` (previously
+  // used to suppress the owner's own recipient-link email) is rejected with a
+  // 400, so the owner does receive PandaDoc's email on send. If they open that
+  // link it registers a recipient view, but handleDocumentEvent() attributes
+  // `document.viewed` to the client via the audit trail (clientDidView), so
+  // status tracking stays accurate. The owner still countersigns in-app
+  // (contracts/:id/session).
   if (owner?.email && owner?.role) {
     recipients.push({
       role: owner.role,
       email: owner.email,
-      ...splitName(owner.name),
-      delivery_methods: { email: false, sms: false }
+      ...splitName(owner.name)
     })
   }
   const doc = await pandadocFetch('/documents', {
