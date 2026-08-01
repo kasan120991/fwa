@@ -3,8 +3,8 @@ import { listProjects, getProject } from '../repositories/projects.repo.js'
 import { listMilestones } from '../repositories/milestones.repo.js'
 import { listInvoices, getInvoice } from '../repositories/invoices.repo.js'
 import { listAgreements } from '../repositories/agreements.repo.js'
-import { getProposal } from '../repositories/proposals.repo.js'
-import { getContract } from '../repositories/contracts.repo.js'
+import { getProposal, updateProposal } from '../repositories/proposals.repo.js'
+import { getContract, updateContract } from '../repositories/contracts.repo.js'
 import { listFiles, createFile } from '../repositories/files.repo.js'
 import {
   listTickets, getTicket, listMessages, listAttachments, getMessage, ticketCode, TICKET_TYPES
@@ -24,7 +24,9 @@ import { notify } from '../services/notifications.service.js'
 import { pandadocEnabled, getDocumentStatus, createDocumentSession } from '../services/pandadoc.js'
 import { sendTemplateEmail, alertTimestamp, TEMPLATES } from '../services/email.js'
 import { portalUpload } from '../storage/local.js'
-import { emitClientTicketUpdated } from '../realtime/io.js'
+import {
+  emitClientTicketUpdated, emitProposalChanged, emitContractChanged, emitClientAgreementChanged
+} from '../realtime/io.js'
 import { config } from '../config/env.js'
 
 // PandaDoc statuses for which an embedded signing session can be minted.
@@ -385,6 +387,32 @@ portalRouter.get('/agreements/:kind/:id/session', async (req, res) => {
   try {
     const session = await createDocumentSession(doc.pandadoc_document_id, { recipient })
     if (!session) return res.json({ data: { ready: false, reason: 'no_document' } })
+
+    // The embed is about to render for the authenticated client — that IS the
+    // client viewing the document. Mark it here: PandaDoc can't always tell us
+    // (its `viewed` status transitions only on the FIRST open, so a client view
+    // after the agency's own preview fires no webhook and no audit-trail entry).
+    if (doc.status === 'sent') {
+      try {
+        const patch = { status: 'viewed', viewed_at: new Date() }
+        if (kind === 'proposal') {
+          await updateProposal(doc.id, patch)
+          emitProposalChanged(doc.id)
+        } else {
+          await updateContract(doc.id, patch)
+          emitContractChanged(doc.id)
+        }
+        emitClientAgreementChanged(doc.client_id, doc.id)
+        await notify({
+          category: kind, tone: 'info', icon: 'i-lucide-eye',
+          title: kind === 'proposal' ? 'Proposal viewed' : 'Contract viewed',
+          body: `${client.company || client.name} opened ${doc.title}.`,
+          link: kind === 'proposal' ? '/agreements' : `/contracts/${doc.id}`
+        })
+      } catch (err) {
+        console.error(`Portal viewed-mark failed for ${kind} ${doc.id}:`, err.message)
+      }
+    }
     return res.json({ data: { ready: true, embedUrl: `https://app.pandadoc.com/s/${session.id}/`, expiresAt: session.expiresAt, status } })
   } catch (err) {
     console.error(`Portal PandaDoc session failed for ${kind} ${id} (recipient ${recipient}):`, err.message)

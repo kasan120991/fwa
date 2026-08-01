@@ -153,9 +153,12 @@ export async function getDocumentAuditTrail(documentId) {
 /**
  * Did one of `emails` actually open the document? PandaDoc's `document.viewed`
  * status is document-level: it says *someone* looked, never who, and the payload
- * carries no per-recipient view timestamp. The audit trail is the only place that
- * attributes a view to an email, so it's the only way to tell the client reading
- * a contract from the agency previewing its own paperwork.
+ * carries no per-recipient view timestamp. The audit trail attributes the view
+ * to an email — but ONLY for the first open (it logs state *transitions*, not
+ * per-recipient views): a second recipient opening an already-viewed document
+ * leaves no trace here and fires no webhook. Portal opens are therefore marked
+ * viewed directly in portal.routes.js; this check only disambiguates the first
+ * view (client vs. the agency previewing its own paperwork).
  */
 export async function hasViewedDocument(documentId, emails = []) {
   const wanted = emails.filter(Boolean).map(e => String(e).toLowerCase())
