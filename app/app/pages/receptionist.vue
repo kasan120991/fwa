@@ -35,6 +35,7 @@ interface ApiCall {
   transcript: Turn[] | null
   duration_seconds: number | null
   recording_url: string | null
+  vapi_call_id: string | null
   extracted: { business?: string | null, captured?: [string, string][] } | null
   line: 'main' | 'demo'
   reviewed: boolean
@@ -42,6 +43,7 @@ interface ApiCall {
 }
 
 const api = useApi()
+const { public: { apiBase } } = useRuntimeConfig()
 const toast = useToast()
 
 const calls = ref<Call[]>([])
@@ -66,7 +68,9 @@ function mapCall(c: ApiCall): Call {
     summary: c.summary ?? '',
     captured: c.extracted?.captured ?? [],
     transcript: c.transcript ?? [],
-    recordingUrl: c.recording_url ?? null
+    // Vapi recordings are access-controlled — play through the server proxy,
+    // which swaps the Vapi call id for a short-lived signed URL.
+    recordingUrl: c.recording_url && c.vapi_call_id ? `${apiBase}/calls/${c.id}/recording` : null
   }
 }
 

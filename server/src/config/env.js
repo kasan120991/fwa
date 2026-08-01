@@ -68,6 +68,10 @@ export const config = {
     alertsTo: process.env.ALERTS_EMAIL || 'info@franciswebagency.com'
   },
   vapi: {
+    // Private API key (Dashboard → Manage → API Keys). Recordings are
+    // access-controlled: playback exchanges this key for a short-lived signed
+    // URL via GET /call/:id/mono-recording. Empty = recording playback disabled.
+    apiKey: process.env.VAPI_API_KEY || '',
     // Shared secret Vapi sends as `X-Vapi-Secret` on every server message
     // (assistant-request, end-of-call-report). Empty = the webhook is disabled
     // (fails closed, returns 503).

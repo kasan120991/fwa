@@ -691,7 +691,12 @@ async function ingestEndOfCall(message) {
     caller_name: client?.name ?? structured.caller_name ?? null,
     summary: message.analysis?.summary ?? null,
     transcript: turns,
-    recording_url: message.artifact?.recordingUrl ?? message.recordingUrl ?? null,
+    // Stored as a "recording exists" marker — playback goes through
+    // GET /api/calls/:id/recording (Vapi recordings are access-controlled, so
+    // this URL is not directly playable). Newer payloads nest the URLs under
+    // artifact.recording instead of the flat recordingUrl.
+    recording_url: message.artifact?.recordingUrl ?? message.recordingUrl
+      ?? message.artifact?.recording?.mono?.combinedUrl ?? message.artifact?.recording?.stereoUrl ?? null,
     duration_seconds: duration,
     extracted: { business: client?.company || structured.business || null, captured },
     occurred_at: message.startedAt ? new Date(message.startedAt) : new Date()
