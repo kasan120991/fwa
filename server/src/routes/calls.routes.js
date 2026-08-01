@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { Readable } from 'node:stream'
 import { config } from '../config/env.js'
 import { listCalls, getCall, updateCall, unreviewedCount, callStats, CLASSIFICATIONS } from '../repositories/calls.repo.js'
 import { createLead } from '../repositories/leads.repo.js'
@@ -62,6 +63,41 @@ callsRouter.get('/stats', async (req, res) => {
       online: !!config.vapi.webhookSecret
     }
   })
+})
+
+// GET /api/calls/:id/recording — play/download a call recording. Vapi
+// recordings are access-controlled (no public URLs): exchange the Vapi call id
+// for a short-lived signed URL using the private API key, then redirect the
+// player to it. The signed URL expires quickly, so nothing is cached — every
+// playback re-resolves through here.
+callsRouter.get('/:id/recording', async (req, res) => {
+  const call = await getCall(parseId(req))
+  if (!call) return res.status(404).json({ error: { message: 'Call not found' } })
+  if (!call.vapi_call_id || !call.recording_url) {
+    return res.status(404).json({ error: { message: 'No recording for this call' } })
+  }
+  if (!config.vapi.apiKey) {
+    return res.status(503).json({ error: { message: 'Recording playback is not configured (VAPI_API_KEY)' } })
+  }
+
+  const upstream = await fetch(`https://api.vapi.ai/call/${call.vapi_call_id}/mono-recording`, {
+    headers: { Authorization: `Bearer ${config.vapi.apiKey}` },
+    redirect: 'manual'
+  })
+  const signedUrl = upstream.headers.get('location')
+  if (upstream.status >= 300 && upstream.status < 400 && signedUrl) {
+    return res.redirect(302, signedUrl)
+  }
+  // Some responses stream the audio directly instead of redirecting.
+  if (upstream.ok && upstream.body) {
+    res.status(200)
+    res.set('Content-Type', upstream.headers.get('content-type') || 'audio/wav')
+    const len = upstream.headers.get('content-length')
+    if (len) res.set('Content-Length', len)
+    return Readable.fromWeb(upstream.body).pipe(res)
+  }
+  console.error(`Vapi recording fetch failed for call ${call.id}: HTTP ${upstream.status}`)
+  res.status(502).json({ error: { message: 'Could not retrieve the recording from Vapi' } })
 })
 
 // GET /api/calls/:id
