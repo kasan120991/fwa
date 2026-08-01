@@ -443,6 +443,9 @@ async function handleDocumentEvent(doc) {
     if (internal) {
       patch.status = internal
       if (STATUS_STAMP[internal]) patch[STATUS_STAMP[internal]] = new Date()
+      // Accepting implies viewing — backfill viewed_at when the view itself was
+      // never observable (PandaDoc only reports the document's first open).
+      if (internal === 'accepted' && !proposal.viewed_at) patch.viewed_at = new Date()
     }
     await updateProposal(proposal.id, patch)
     emitProposalChanged(proposal.id)
@@ -466,6 +469,9 @@ async function handleDocumentEvent(doc) {
     if (internal) {
       patch.status = internal
       if (STATUS_STAMP[internal]) patch[STATUS_STAMP[internal]] = new Date()
+      // Signing implies viewing — backfill viewed_at when the view itself was
+      // never observable (PandaDoc only reports the document's first open).
+      if (internal === 'signed' && !contract.viewed_at) patch.viewed_at = new Date()
     }
     await updateContract(contract.id, patch)
     emitContractChanged(contract.id)
