@@ -506,7 +506,7 @@ onBeforeUnmount(() => {
               >
                 <span class="size-1.5 flex-none rounded-full bg-primary" />
                 <span class="flex-1 text-[13.5px] text-default">{{ s.label }}</span>
-                <span class="text-[12.5px] text-muted tabular-nums">{{ shortDate(s.at as string) }}</span>
+                <span class="text-[12.5px] text-muted tabular-nums">{{ shortDateTime(s.at as string) }}</span>
               </div>
             </div>
           </div>
