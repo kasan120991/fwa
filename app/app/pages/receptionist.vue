@@ -323,31 +323,37 @@ onBeforeUnmount(() => {
       </template>
     </PageHeader>
 
-    <!-- stat strip -->
-    <div class="-mx-1 overflow-x-auto px-1">
+    <!-- stat strip — §5.6 stat cards with the citrine top rule.
+         The scroll wrapper needs vertical breathing room too: overflow-x
+         clips vertically as well, shaving the cards' ring + corners. -->
+    <div class="-m-1 overflow-x-auto p-1">
       <div class="flex min-w-min gap-3">
-        <div v-for="s in stats" :key="s.label" class="min-w-[170px] flex-1 rounded-[14px] bg-default p-4 ring ring-default">
-          <div class="whitespace-nowrap text-[10.5px] font-medium uppercase tracking-[0.06em] text-muted">{{ s.label }}</div>
-          <div class="mt-2 flex items-baseline gap-2">
-            <div class="font-display text-[26px] font-semibold leading-none tracking-tight text-highlighted tabular-nums">{{ s.value }}</div>
+        <div
+          v-for="s in stats"
+          :key="s.label"
+          class="relative min-w-[170px] flex-1 overflow-hidden rounded-card bg-default px-4 pb-3.5 pt-4 ring ring-default before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-citrine"
+        >
+          <div class="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">{{ s.label }}</div>
+          <div class="mt-1.5 flex items-baseline gap-2">
+            <div class="font-display text-[24px] font-bold leading-none tracking-tight text-highlighted tabular-nums">{{ s.value }}</div>
             <span v-if="s.trend" class="text-xs font-semibold text-success tabular-nums">{{ s.trend }}</span>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- controls -->
-    <div class="flex flex-wrap items-center justify-between gap-4">
-      <div class="inline-flex items-center gap-0.5 rounded-[10px] border border-default bg-muted p-0.5">
+    <!-- controls — citrine-underline filter tabs + search -->
+    <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-2.5">
+      <div class="flex min-w-0 gap-0.5 overflow-x-auto border-b border-default">
         <button
           v-for="t in tabs"
           :key="t.key"
-          class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] transition-colors"
-          :class="activeTab === t.key ? 'bg-default font-semibold text-highlighted shadow-sm' : 'font-medium text-muted hover:text-highlighted'"
+          class="-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-[13px] transition-colors"
+          :class="activeTab === t.key ? 'border-citrine font-semibold text-highlighted' : 'border-transparent font-medium text-muted hover:text-highlighted'"
           @click="activeTab = t.key"
         >
           {{ t.label }}
-          <span class="rounded-chip px-1.5 py-px text-[11px] font-semibold tabular-nums" :class="activeTab === t.key ? 'bg-mist text-primary' : 'bg-elevated text-muted'">{{ t.count }}</span>
+          <span class="ml-1 text-[11px] tabular-nums text-muted">{{ t.count }}</span>
         </button>
       </div>
       <UInput v-model="search" icon="i-lucide-search" placeholder="Search caller, number, transcript…" class="w-full sm:w-[260px]" :ui="{ base: 'rounded-full' }" />

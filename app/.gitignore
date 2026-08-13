@@ -14,8 +14,6 @@ logs
 *.log
 
 # Design system (local reference, not tracked)
-/design-system/
-/fwa-brand-design-system.md
 
 # Misc
 .DS_Store

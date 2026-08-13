@@ -37,6 +37,7 @@ interface Lead {
   list: string
   next: string
   overdue: boolean
+  overdueDays: number
   last: string
   lastDays: number
 }
@@ -59,13 +60,15 @@ const AVATAR = ['bg-primary text-inverted', 'bg-elevated text-default', 'bg-sand
 function mapLead(c: ApiLead, index: number): Lead {
   const isManual = c.source === 'manual'
   const nextAt = c.next_action_at
-  const overdue = !!nextAt && new Date(nextAt.replace(' ', 'T')).getTime() < Date.now()
+  const overdueDays = nextAt ? -(daysFromNow(nextAt) ?? 0) : 0
+  const overdue = !!nextAt && overdueDays > 0
   let next = '—'
   if (nextAt) {
     const d = daysFromNow(nextAt) ?? 0
     next = overdue ? `Follow-up · ${Math.abs(d)}d overdue` : `Follow up in ${d}d`
   } else if (c.stage === 'to_contact') next = 'Start outreach'
   else if (c.stage === 'qualified') next = 'Convert to project'
+  else if (!isManual && c.stage === 'new') next = 'Review inquiry'
 
   return {
     id: c.id,
@@ -84,6 +87,7 @@ function mapLead(c: ApiLead, index: number): Lead {
     list: 'Manual',
     next,
     overdue,
+    overdueDays,
     last: c.last_contacted_at ? timeAgo(c.last_contacted_at) : '—',
     lastDays: c.last_contacted_at ? -(daysFromNow(c.last_contacted_at) ?? -999) : 999
   }
@@ -103,8 +107,7 @@ async function load() {
 onMounted(load)
 
 // ---- state ----
-const section = ref<'inbound' | 'outreach' | 'all'>('inbound')
-const stageFilter = ref<Stage | 'all'>('all')
+const section = ref<'all' | 'inbound' | 'outreach'>('all')
 const search = ref('')
 const sortKey = ref<'recent' | 'name' | 'stage'>('recent')
 const sortDir = ref<'asc' | 'desc'>('asc')
@@ -113,20 +116,12 @@ const convertTarget = ref<Lead | null>(null)
 
 const inbound = computed(() => leads.value.filter(l => l.source !== 'manual'))
 const outreach = computed(() => leads.value.filter(l => l.source === 'manual'))
-const secCount = computed(() => ({ inbound: inbound.value.length, outreach: outreach.value.length, all: leads.value.length }))
+const secCount = computed(() => ({ all: leads.value.length, inbound: inbound.value.length, outreach: outreach.value.length }))
 const base = computed(() => section.value === 'inbound' ? inbound.value : section.value === 'outreach' ? outreach.value : leads.value)
-
-const stagePills = computed(() => {
-  if (section.value === 'all') return []
-  const defs = section.value === 'outreach' ? OUTREACH_STAGES : INBOUND_STAGES
-  const countOf = (k: Stage) => base.value.filter(c => c.stage === k).length
-  return [{ key: 'all' as const, label: 'All Stages', count: base.value.length }, ...defs.map(k => ({ key: k, label: STAGE_LABEL[k], count: countOf(k) }))]
-})
 
 const visibleRows = computed(() => {
   const q = search.value.trim().toLowerCase()
   let rows = [...base.value]
-  if (section.value !== 'all' && stageFilter.value !== 'all') rows = rows.filter(c => c.stage === stageFilter.value)
   if (q) rows = rows.filter(c => `${c.name} ${c.business} ${c.email} ${c.phone}`.toLowerCase().includes(q))
   const dir = sortDir.value === 'asc' ? 1 : -1
   const recency = (c: Lead) => c.source === 'manual' ? c.lastDays : c.days
@@ -143,6 +138,51 @@ const visibleRows = computed(() => {
 const headerCount = computed(() => secCount.value.all)
 const secondaryOf = (c: Lead) => c.email || formatPhone(c.phone) || '—'
 
+// ---- today's motion (triage strip) ----
+// One card per lead needing a touch: fresh inbound, overdue follow-ups, and
+// qualified leads waiting on conversion. Priority: convert > overdue > new.
+type TriageKind = 'new' | 'overdue' | 'convert'
+interface TriageItem { kind: TriageKind, lead: Lead }
+const TRIAGE_MAX = 6
+
+const triageAll = computed<TriageItem[]>(() => {
+  const items: TriageItem[] = []
+  for (const l of leads.value) {
+    if (l.stage === 'qualified') items.push({ kind: 'convert', lead: l })
+    else if (l.overdue) items.push({ kind: 'overdue', lead: l })
+    else if (l.unread) items.push({ kind: 'new', lead: l })
+  }
+  const order: Record<TriageKind, number> = { new: 0, overdue: 1, convert: 2 }
+  items.sort((a, b) => order[a.kind] - order[b.kind] || b.lead.overdueDays - a.lead.overdueDays)
+  return items
+})
+const triage = computed(() => triageAll.value.slice(0, TRIAGE_MAX))
+const triageOverflow = computed(() => triageAll.value.length - triage.value.length)
+
+const TRIAGE_META: Record<TriageKind, { edge: string, label: string, labelClass: string }> = {
+  new: { edge: 'before:bg-citrine', label: 'New Inbound', labelClass: 'text-muted' },
+  overdue: { edge: 'before:bg-warning', label: 'Overdue Follow-Up', labelClass: 'text-warning' },
+  convert: { edge: 'before:bg-success', label: 'Ready to Convert', labelClass: 'text-success' }
+}
+function triageKicker(t: TriageItem) {
+  if (t.kind === 'new') return `${TRIAGE_META.new.label} · ${t.lead.received}`
+  if (t.kind === 'overdue') return `${TRIAGE_META.overdue.label} · ${t.lead.overdueDays}d`
+  return TRIAGE_META.convert.label
+}
+function triageSummary(t: TriageItem) {
+  if (t.kind === 'new') return t.lead.inquiry
+  if (t.kind === 'overdue') return t.lead.last === '—' ? 'No touch logged yet.' : `Last contacted ${t.lead.last}.`
+  return 'Budget and timeline confirmed — start the project.'
+}
+
+const motionStrip = computed(() => {
+  const newCount = leads.value.filter(l => l.unread).length
+  const overdueCount = leads.value.filter(l => l.overdue && l.stage !== 'qualified').length
+  const convertCount = leads.value.filter(l => l.stage === 'qualified').length
+  return `${newCount} New · ${overdueCount} Overdue Follow-Up${overdueCount === 1 ? '' : 's'} · ${convertCount} Ready to Convert`
+})
+
+// ---- selection ----
 const selCount = computed(() => Object.values(selected.value).filter(Boolean).length)
 const allChecked = computed(() => visibleRows.value.length > 0 && visibleRows.value.every(c => selected.value[c.id]))
 function toggleAll() {
@@ -151,9 +191,8 @@ function toggleAll() {
   else visibleRows.value.forEach(c => { next[c.id] = true })
   selected.value = next
 }
-function setSection(s: 'inbound' | 'outreach' | 'all') {
+function setSection(s: 'all' | 'inbound' | 'outreach') {
   section.value = s
-  stageFilter.value = 'all'
   selected.value = {}
 }
 
@@ -162,7 +201,22 @@ async function changeStage(row: Lead, k: Stage) {
   if (row.stage === k) return
   const prev = row.stage
   row.stage = k
+  if (k !== 'new') row.unread = false
   try { await api(`/leads/${row.id}`, { method: 'PATCH', body: { stage: k } }) } catch { row.stage = prev }
+}
+
+// Snooze an overdue follow-up: push next_action_at three days out.
+async function snooze(row: Lead) {
+  const prev = { next: row.next, overdue: row.overdue, overdueDays: row.overdueDays }
+  row.next = 'Follow up in 3d'
+  row.overdue = false
+  row.overdueDays = 0
+  try {
+    await api(`/leads/${row.id}`, { method: 'PATCH', body: { next_action_at: new Date(Date.now() + 3 * 86400e3).toISOString() } })
+  } catch {
+    Object.assign(row, prev)
+    toast.add({ title: "Couldn't snooze", color: 'error' })
+  }
 }
 
 // Convert to project: creates a client from the lead + a project, deletes the lead.
@@ -219,49 +273,70 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
 </script>
 
 <template>
-  <!-- header -->
+  <!-- header — Convert (in the strip) is the page's solid; Add Lead takes the outline tier -->
   <PageHeader
     icon="i-lucide-user-plus"
     title="Leads"
     :count="headerCount"
-    subtitle="Everyone in the pipeline before they become a client — inbound inquiries and outreach prospects."
+    subtitle="What needs a touch today, then the whole pipeline."
   >
+    <template #subtitle>
+      <p class="mt-1.5 text-[10.5px] font-semibold uppercase leading-relaxed tracking-[0.06em] text-muted">{{ motionStrip }}</p>
+    </template>
     <template #actions>
       <UDropdownMenu :items="overflowItems">
         <UButton icon="i-lucide-ellipsis" color="neutral" variant="outline" square aria-label="More actions" />
       </UDropdownMenu>
-      <UButton to="/leads/new" icon="i-lucide-plus" color="primary">Add Lead</UButton>
+      <UButton to="/leads/new" icon="i-lucide-plus" color="neutral" variant="outline">Add Lead</UButton>
     </template>
   </PageHeader>
 
-  <!-- section switch -->
-  <div class="inline-flex items-center gap-0.5 self-start rounded-[10px] border border-default bg-muted p-0.5">
-    <button
-      v-for="s in (['inbound','outreach','all'] as const)"
-      :key="s"
-      class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] capitalize transition-colors"
-      :class="section === s ? 'bg-default font-semibold text-highlighted shadow-sm' : 'font-medium text-muted hover:text-highlighted'"
-      @click="setSection(s)"
-    >
-      <UIcon v-if="s === 'inbound'" name="i-lucide-arrow-down-to-line" class="size-4" />
-      <UIcon v-else-if="s === 'outreach'" name="i-lucide-arrow-up-from-line" class="size-4" />
-      {{ s === 'all' ? 'All' : s }}
-      <span class="rounded-chip px-1.5 py-px text-[11px] font-semibold tabular-nums" :class="section === s ? 'bg-mist text-primary' : 'bg-elevated text-muted'">{{ secCount[s] }}</span>
-    </button>
-  </div>
-
-  <!-- controls -->
-  <div class="flex flex-wrap items-center justify-between gap-4">
-    <div class="flex flex-wrap items-center gap-2">
-      <button
-        v-for="p in stagePills"
-        :key="p.key"
-        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-colors"
-        :class="stageFilter === p.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
-        @click="stageFilter = p.key"
+  <!-- today's motion -->
+  <template v-if="!pending && triage.length">
+    <div class="flex items-baseline gap-3">
+      <span class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Today's Motion · {{ triageAll.length }}</span>
+      <span v-if="triageOverflow > 0" class="text-[11.5px] text-muted">+{{ triageOverflow }} more in the table below</span>
+    </div>
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div
+        v-for="t in triage"
+        :key="`${t.kind}-${t.lead.id}`"
+        class="relative overflow-hidden rounded-card bg-default p-4 ring ring-default before:absolute before:inset-y-0 before:left-0 before:w-[3px]"
+        :class="TRIAGE_META[t.kind].edge"
       >
-        {{ p.label }}
-        <span class="rounded-chip px-1.5 text-[11px] font-semibold tabular-nums" :class="stageFilter === p.key ? 'bg-default text-primary' : 'bg-muted text-muted'">{{ p.count }}</span>
+        <div class="text-[9.5px] font-semibold uppercase tracking-[0.08em]" :class="TRIAGE_META[t.kind].labelClass">{{ triageKicker(t) }}</div>
+        <div class="mt-1.5 truncate text-[13.5px] font-bold text-highlighted">{{ t.lead.name }}<span v-if="t.lead.business" class="font-semibold text-muted"> — {{ t.lead.business }}</span></div>
+        <p class="mt-0.5 line-clamp-1 text-[12.5px] text-muted">{{ triageSummary(t) }}</p>
+        <div class="mt-3 flex items-center gap-2">
+          <template v-if="t.kind === 'new'">
+            <UButton color="neutral" variant="outline" size="xs" class="rounded-full" @click="navigateTo(`/leads/${t.lead.id}`)">Review</UButton>
+            <UButton color="neutral" variant="outline" size="xs" class="rounded-full" @click="changeStage(t.lead, 'qualifying')">Qualify</UButton>
+          </template>
+          <template v-else-if="t.kind === 'overdue'">
+            <UButton color="neutral" variant="outline" size="xs" class="rounded-full" @click="navigateTo(`/leads/${t.lead.id}`)">Open Lead</UButton>
+            <UButton color="neutral" variant="outline" size="xs" class="rounded-full" @click="snooze(t.lead)">Snooze 3d</UButton>
+          </template>
+          <template v-else>
+            <UButton icon="i-lucide-folder-plus" color="primary" size="xs" @click="convertTarget = t.lead">Convert to Project</UButton>
+          </template>
+        </div>
+      </div>
+    </div>
+  </template>
+  <p v-else-if="!pending && leads.length" class="text-[12.5px] text-muted">Nothing needs a touch today — the pipeline is all caught up.</p>
+
+  <!-- section tabs + search/filter/sort -->
+  <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-2.5">
+    <div class="flex min-w-0 gap-0.5 overflow-x-auto border-b border-default">
+      <button
+        v-for="s in (['all','inbound','outreach'] as const)"
+        :key="s"
+        class="-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-[13px] capitalize transition-colors"
+        :class="section === s ? 'border-citrine font-semibold text-highlighted' : 'border-transparent font-medium text-muted hover:text-highlighted'"
+        @click="setSection(s)"
+      >
+        {{ s === 'all' ? 'All' : s }}
+        <span class="ml-1 text-[11px] tabular-nums text-muted">{{ secCount[s] }}</span>
       </button>
     </div>
     <div class="flex w-full flex-wrap items-center gap-2.5 sm:w-auto">
@@ -313,7 +388,7 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
         </li>
       </ul>
 
-      <!-- table (sm+) -->
+      <!-- unified table (sm+) -->
       <div class="hidden overflow-x-auto sm:block">
         <table class="w-full border-collapse">
           <thead>
@@ -322,24 +397,10 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
                 <UCheckbox :model-value="allChecked" aria-label="Select all" @update:model-value="toggleAll" />
               </th>
               <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Contact / business</th>
-              <template v-if="section === 'inbound'">
-                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Source</th>
-                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Inquiry</th>
-                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Stage</th>
-                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Received</th>
-              </template>
-              <template v-else-if="section === 'outreach'">
-                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">List / source</th>
-                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Stage</th>
-                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Next action</th>
-                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Last contacted</th>
-              </template>
-              <template v-else>
-                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Motion</th>
-                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Source / list</th>
-                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Stage</th>
-                <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Activity</th>
-              </template>
+              <th v-if="section === 'all'" class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Motion</th>
+              <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Stage</th>
+              <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">Next action</th>
+              <th class="hidden px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted lg:table-cell">Activity</th>
               <th class="w-24" />
             </tr>
           </thead>
@@ -364,52 +425,23 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
                       <span class="whitespace-nowrap text-sm text-highlighted" :class="row.unread ? 'font-bold' : 'font-semibold'">{{ row.name }}</span>
                     </div>
                     <div class="whitespace-nowrap text-[13px] text-muted">{{ row.business }} · {{ secondaryOf(row) }}</div>
-                    <div v-if="row.email && row.phone" class="whitespace-nowrap text-[13px] text-muted tabular-nums">{{ formatPhone(row.phone) }}</div>
                   </div>
                 </div>
               </td>
-
-              <template v-if="section === 'inbound'">
-                <td class="hidden px-4 py-3 lg:table-cell">
-                  <span class="inline-flex items-center gap-1.5 text-[13px] text-default"><UIcon name="i-lucide-layout-panel-top" class="size-3.5 text-muted" />Website</span>
-                </td>
-                <td class="hidden max-w-[320px] px-4 py-3 lg:table-cell"><span class="block truncate text-[13px] text-default">{{ row.inquiry }}</span></td>
-                <td class="px-4 py-3" @click.stop>
-                  <UDropdownMenu :items="stageItems(row)">
-                    <button class="inline-flex items-center gap-1.5 rounded-full py-1 pl-3 pr-2 text-xs font-semibold" :class="stageChipClass(row.stage)">{{ STAGE_LABEL[row.stage] }}<UIcon name="i-lucide-chevron-down" class="size-3 opacity-60" /></button>
-                  </UDropdownMenu>
-                </td>
-                <td class="hidden whitespace-nowrap px-4 py-3 text-sm text-muted tabular-nums lg:table-cell">{{ row.received }}</td>
-              </template>
-
-              <template v-else-if="section === 'outreach'">
-                <td class="hidden px-4 py-3 lg:table-cell"><span class="inline-flex items-center gap-1.5 text-[13px] text-default"><UIcon name="i-lucide-calendar" class="size-3.5 text-muted" />{{ row.list }}</span></td>
-                <td class="px-4 py-3" @click.stop>
-                  <UDropdownMenu :items="stageItems(row)">
-                    <button class="inline-flex items-center gap-1.5 rounded-full py-1 pl-3 pr-2 text-xs font-semibold" :class="stageChipClass(row.stage)">{{ STAGE_LABEL[row.stage] }}<UIcon name="i-lucide-chevron-down" class="size-3 opacity-60" /></button>
-                  </UDropdownMenu>
-                </td>
-                <td class="px-4 py-3">
-                  <span class="inline-flex items-center gap-1.5 whitespace-nowrap text-sm" :class="row.overdue ? 'font-semibold text-warning' : 'text-default'">
-                    <UIcon v-if="row.overdue" name="i-lucide-triangle-alert" class="size-3.5 flex-none" />{{ row.next }}
-                  </span>
-                </td>
-                <td class="hidden whitespace-nowrap px-4 py-3 text-sm text-muted tabular-nums lg:table-cell">{{ row.last }}</td>
-              </template>
-
-              <template v-else>
-                <td class="hidden px-4 py-3 lg:table-cell">
-                  <span class="inline-flex items-center rounded-chip px-2.5 py-0.5 text-[11.5px] font-semibold" :class="row.source === 'manual' ? 'bg-muted text-default' : 'bg-info/10 text-info'">{{ row.source === 'manual' ? 'Outreach' : 'Inbound' }}</span>
-                </td>
-                <td class="hidden whitespace-nowrap px-4 py-3 text-[13px] text-default lg:table-cell">{{ row.source === 'manual' ? row.list : (row.source === 'call' ? 'Call' : 'Website') }}</td>
-                <td class="px-4 py-3" @click.stop>
-                  <UDropdownMenu :items="stageItems(row)">
-                    <button class="inline-flex items-center gap-1.5 rounded-full py-1 pl-3 pr-2 text-xs font-semibold" :class="stageChipClass(row.stage)">{{ STAGE_LABEL[row.stage] }}<UIcon name="i-lucide-chevron-down" class="size-3 opacity-60" /></button>
-                  </UDropdownMenu>
-                </td>
-                <td class="hidden whitespace-nowrap px-4 py-3 text-sm text-muted tabular-nums lg:table-cell">{{ row.source === 'manual' ? row.last : row.received }}</td>
-              </template>
-
+              <td v-if="section === 'all'" class="hidden px-4 py-3 lg:table-cell">
+                <span class="inline-flex items-center rounded-chip px-2.5 py-0.5 text-[11.5px] font-semibold" :class="row.source === 'manual' ? 'bg-muted text-default' : 'bg-info/10 text-info'">{{ row.source === 'manual' ? 'Outreach' : 'Inbound' }}</span>
+              </td>
+              <td class="px-4 py-3" @click.stop>
+                <UDropdownMenu :items="stageItems(row)">
+                  <button class="inline-flex items-center gap-1.5 rounded-full py-1 pl-3 pr-2 text-xs font-semibold" :class="stageChipClass(row.stage)">{{ STAGE_LABEL[row.stage] }}<UIcon name="i-lucide-chevron-down" class="size-3 opacity-60" /></button>
+                </UDropdownMenu>
+              </td>
+              <td class="px-4 py-3">
+                <span class="inline-flex items-center gap-1.5 whitespace-nowrap text-sm" :class="row.overdue ? 'font-semibold text-warning' : 'text-default'">
+                  <UIcon v-if="row.overdue" name="i-lucide-triangle-alert" class="size-3.5 flex-none" />{{ row.next }}
+                </span>
+              </td>
+              <td class="hidden whitespace-nowrap px-4 py-3 text-sm text-muted tabular-nums lg:table-cell">{{ row.source === 'manual' ? row.last : row.received }}</td>
               <td class="w-24 px-3 py-3 text-right" @click.stop>
                 <div class="inline-flex items-center gap-0.5">
                   <UButton icon="i-lucide-folder-plus" color="primary" variant="ghost" size="xs" title="Convert to Project" @click="convertTarget = row" />
@@ -436,8 +468,8 @@ const filterItems = [[{ label: 'Website Form', icon: 'i-lucide-layout-panel-top'
     <div v-else class="flex flex-col items-center px-6 py-16 text-center">
       <span class="mb-4 inline-flex size-12 items-center justify-center rounded-[12px] bg-muted text-muted"><UIcon name="i-lucide-search" class="size-6" /></span>
       <h3 class="font-display text-lg font-semibold text-highlighted">No Leads Match</h3>
-      <p class="mt-1.5 max-w-xs text-sm text-muted">Try a different search or clear the stage filter to see everyone.</p>
-      <UButton color="neutral" variant="outline" class="mt-5 rounded-full" @click="search = ''; stageFilter = 'all'">Clear Filters</UButton>
+      <p class="mt-1.5 max-w-xs text-sm text-muted">Try a different search or switch sections to see everyone.</p>
+      <UButton color="neutral" variant="outline" class="mt-5 rounded-full" @click="search = ''; setSection('all')">Clear Filters</UButton>
     </div>
   </div>
 

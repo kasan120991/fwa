@@ -101,6 +101,22 @@ const counts = computed(() => ({
   past: clients.value.filter(c => c.stage === 'past').length
 }))
 
+// The book's totals — the metastrip under the page title.
+const bookStrip = computed(() => {
+  const outstanding = clients.value.reduce((sum, c) => sum + c.outstanding, 0)
+  const overdue = clients.value.filter(c => c.overdue).length
+  const parts = [`${counts.value.active} Active`]
+  if (outstanding > 0) parts.push(`$${outstanding.toLocaleString('en-US')} Outstanding`)
+  if (overdue > 0) parts.push(`${overdue} Overdue`)
+  return parts.join(' · ')
+})
+
+// An active client with no touch in 30+ days gets a quiet warning tone.
+const STALE_DAYS = 30
+function isStale(c: Client) {
+  return c.stage === 'active' && c.days >= STALE_DAYS
+}
+
 const tabs = computed(() => ([
   { key: 'all' as const, label: 'All', count: counts.value.all },
   { key: 'active' as const, label: 'Active', count: counts.value.active },
@@ -207,8 +223,11 @@ function openClient(id: number) {
     icon="i-lucide-users"
     title="Clients"
     :count="counts.all"
-    subtitle="Active and past client relationships."
   >
+    <template #subtitle>
+      <p class="mt-1.5 text-sm text-muted">Active and past client relationships.</p>
+      <p class="mt-1 text-[10.5px] font-semibold uppercase leading-relaxed tracking-[0.06em] text-muted">{{ bookStrip }}</p>
+    </template>
     <template #actions>
       <UDropdownMenu :items="overflowItems">
         <UButton icon="i-lucide-ellipsis" color="neutral" variant="outline" square aria-label="More actions" />
@@ -217,22 +236,18 @@ function openClient(id: number) {
     </template>
   </PageHeader>
 
-  <!-- controls -->
-  <div class="flex flex-wrap items-center justify-between gap-4">
-    <!-- status pills -->
-    <div class="flex flex-wrap items-center gap-1.5">
+  <!-- controls — citrine-underline status tabs + search/filter/sort -->
+  <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-2.5">
+    <div class="flex min-w-0 gap-0.5 overflow-x-auto border-b border-default">
       <button
         v-for="t in tabs"
         :key="t.key"
-        class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] transition-colors"
-        :class="tab === t.key ? 'border-primary bg-mist font-semibold text-primary' : 'border-default bg-default font-medium text-muted hover:text-highlighted'"
+        class="-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-[13px] transition-colors"
+        :class="tab === t.key ? 'border-citrine font-semibold text-highlighted' : 'border-transparent font-medium text-muted hover:text-highlighted'"
         @click="tab = t.key"
       >
         {{ t.label }}
-        <span
-          class="rounded-chip px-1.5 text-[11px] font-semibold tabular-nums"
-          :class="tab === t.key ? 'bg-default text-primary' : 'bg-muted text-muted'"
-        >{{ t.count }}</span>
+        <span class="ml-1 text-[11px] tabular-nums text-muted">{{ t.count }}</span>
       </button>
     </div>
 
@@ -331,7 +346,7 @@ function openClient(id: number) {
               v-for="row in visibleRows"
               :key="row.id"
               class="cursor-pointer border-b border-default transition-colors last:border-b-0"
-              :class="selected[row.id] ? 'bg-mist' : 'hover:bg-muted'"
+              :class="[selected[row.id] ? 'bg-mist' : 'hover:bg-muted', row.stage === 'past' ? 'opacity-70' : '']"
               @click="openClient(row.id)"
             >
               <td class="w-11 py-3.5 pl-[18px] pr-2" @click.stop>
@@ -371,7 +386,7 @@ function openClient(id: number) {
               >
                 {{ money(row.outstanding) }}
               </td>
-              <td class="hidden whitespace-nowrap px-4 py-3 text-sm text-muted tabular-nums lg:table-cell">{{ row.activity }}</td>
+              <td class="hidden whitespace-nowrap px-4 py-3 text-sm tabular-nums lg:table-cell" :class="isStale(row) ? 'font-semibold text-warning' : 'text-muted'">{{ row.activity }}</td>
               <td class="w-[52px] px-4 py-3 text-right" @click.stop>
                 <UDropdownMenu :items="rowMenuItems(row)">
                   <UButton icon="i-lucide-ellipsis-vertical" color="neutral" variant="ghost" size="xs" :aria-label="`Actions for ${row.name}`" />
