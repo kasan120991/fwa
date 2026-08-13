@@ -64,7 +64,7 @@ onBeforeUnmount(() => {
     >
       <iframe
         :src="session.embedUrl"
-        class="h-[74vh] min-h-[560px] w-full border-0 bg-white"
+        class="h-[calc(100vh-220px)] min-h-[600px] w-full border-0 bg-white"
         title="Sign document"
         allow="fullscreen"
       />

@@ -28,7 +28,7 @@ const HEALTH: Record<string, { label: string, class: string }> = {
   up: { label: 'Online', class: 'bg-success/10 text-success' },
   degraded: { label: 'Slow', class: 'bg-warning/10 text-warning' },
   down: { label: 'Down', class: 'bg-error/10 text-error' },
-  unknown: { label: 'Checking', class: 'bg-muted text-muted' }
+  unknown: { label: 'Checking', class: 'bg-mist text-muted' }
 }
 </script>
 
@@ -36,7 +36,7 @@ const HEALTH: Record<string, { label: string, class: string }> = {
   <div class="flex flex-col gap-6">
     <div>
       <p class="eyebrow text-primary">
-        Your sites
+        Your Sites
       </p>
       <h1 class="mt-1 font-display text-[2rem] font-semibold leading-tight tracking-tight text-highlighted">
         Websites
@@ -62,56 +62,44 @@ const HEALTH: Record<string, { label: string, class: string }> = {
       </p>
     </div>
 
-    <div
-      v-else
-      class="grid grid-cols-1 gap-4 sm:grid-cols-2"
-    >
+    <!-- status table — one row per site -->
+    <div v-else>
+      <div class="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-x-6 border-b border-default pb-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+        <span>Site</span>
+        <span>Status</span>
+        <span class="text-right">Visitors · 30d</span>
+        <span class="text-right">Uptime</span>
+        <span />
+      </div>
       <NuxtLink
         v-for="s in sites"
         :key="s.id"
         :to="`/websites/${s.id}`"
-        class="flex flex-col gap-3 rounded-card bg-default p-5 ring ring-default transition-shadow hover:ring-primary/40"
+        class="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-x-6 border-b border-default py-3.5 transition-colors last:border-b-0 hover:bg-mist"
       >
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <h2 class="font-display text-[1.05rem] font-semibold text-highlighted">
-              {{ s.name }}
-            </h2>
-            <p class="mt-0.5 truncate text-[12.5px] text-muted">
-              {{ s.domain }}
-            </p>
-          </div>
+        <span class="min-w-0">
+          <span class="block truncate text-[14px] font-medium text-highlighted">{{ s.name }}</span>
+          <span class="block truncate text-[12px] text-muted">{{ s.domain }}</span>
+        </span>
+        <span
+          class="rounded-chip px-2.5 py-1 text-[11px] font-semibold"
+          :class="(HEALTH[s.health_state] || HEALTH.unknown)!.class"
+        >{{ (HEALTH[s.health_state] || HEALTH.unknown)!.label }}</span>
+        <span class="text-right text-[14px] font-semibold tabular-nums text-highlighted">
+          {{ (s.visitors_30d ?? 0).toLocaleString() }}
           <span
-            class="whitespace-nowrap rounded-chip px-2.5 py-1 text-[11px] font-semibold"
-            :class="(HEALTH[s.health_state] || HEALTH.unknown)!.class"
-          >{{ (HEALTH[s.health_state] || HEALTH.unknown)!.label }}</span>
-        </div>
-        <div class="flex items-end justify-between gap-3">
-          <div>
-            <div class="text-[12px] text-muted">
-              Visitors · 30 days
-            </div>
-            <div class="font-display text-[1.35rem] font-semibold tabular-nums text-highlighted">
-              {{ (s.visitors_30d ?? 0).toLocaleString() }}
-              <span
-                v-if="s.delta_pct != null"
-                class="text-[12px] font-normal"
-                :class="s.delta_pct >= 0 ? 'text-success' : 'text-warning'"
-              >{{ s.delta_pct >= 0 ? '+' : '' }}{{ s.delta_pct }}%</span>
-            </div>
-          </div>
-          <div
-            v-if="s.uptime_pct != null"
-            class="text-right"
-          >
-            <div class="text-[12px] text-muted">
-              Uptime
-            </div>
-            <div class="text-[14px] font-semibold tabular-nums text-highlighted">
-              {{ Number(s.uptime_pct).toFixed(2) }}%
-            </div>
-          </div>
-        </div>
+            v-if="s.delta_pct != null"
+            class="text-[11.5px] font-semibold"
+            :class="s.delta_pct >= 0 ? 'text-success' : 'text-warning'"
+          >{{ s.delta_pct >= 0 ? '+' : '' }}{{ s.delta_pct }}%</span>
+        </span>
+        <span class="text-right text-[13.5px] font-semibold tabular-nums text-highlighted">
+          {{ s.uptime_pct != null ? Number(s.uptime_pct).toFixed(2) + '%' : '—' }}
+        </span>
+        <UIcon
+          name="i-lucide-chevron-right"
+          class="size-4 text-muted"
+        />
       </NuxtLink>
     </div>
   </div>
