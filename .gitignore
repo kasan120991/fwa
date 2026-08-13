@@ -28,3 +28,7 @@ node_modules
 
 # Marketing website — its own git repo, tracked separately (see website/CLAUDE.md)
 website/
+
+# Brand strategy — internal positioning and price posture. Local-only; the rest of
+# brand/ (logos, tokens, system spec, voice guide) is public and intended to be.
+brand/rebrand/strategy/

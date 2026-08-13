@@ -174,8 +174,10 @@ Both projects co-deploy on one box.
 
 ### How to redeploy (ops app)
 
-- **Server:** DigitalOcean droplet (hostname `FWA`, IntelliJ alias `fwa-droplet`), `ssh root@104.248.119.235`
-  (key `~/.ssh/id_rsa`). Public URL `https://app.franciswebagency.com` (`OPS_DOMAIN`).
+- **Server:** DigitalOcean droplet (hostname `FWA`, IntelliJ alias `fwa-droplet`), reached as
+  `$DEPLOY_USER@$DEPLOY_HOST`. **Both live in `.env.deploy`** — untracked, local-only, covered by the
+  `.env.*` ignore rule and by the rsync `--exclude='.env*'` below, so it never lands in the repo or
+  on the server. Public URL `https://app.franciswebagency.com` (`OPS_DOMAIN`).
 - **The box is not a git checkout.** The ops app lives at `/opt/fwa-ops`, populated by
   **uploading the local working tree** (not `git pull` — this repo isn't pushed). Ops app is
   `/opt/fwa-ops`; marketing site is `/opt/fwa-site`.
@@ -184,14 +186,16 @@ Both projects co-deploy on one box.
 
   ```bash
   # from the repo root (/Users/kasanfrancis/Projects/fwa)
+  source .env.deploy          # sets DEPLOY_USER and DEPLOY_HOST
+
   rsync -az --itemize-changes \
     --exclude='.git' --exclude='node_modules' --exclude='.nuxt' --exclude='.output' \
     --exclude='dist' --exclude='.env.production' --exclude='.env*' --exclude='.DS_Store' \
     --exclude='.playwright-mcp' --exclude='website' --exclude='*.png' --exclude='uploads' \
     --exclude='.idea' --exclude='.claude' --exclude='.junie' \
-    ./ root@104.248.119.235:/opt/fwa-ops/
+    ./ "$DEPLOY_USER@$DEPLOY_HOST":/opt/fwa-ops/
 
-  ssh root@104.248.119.235 'cd /opt/fwa-ops && docker compose --env-file .env.production up -d --build'
+  ssh "$DEPLOY_USER@$DEPLOY_HOST" 'cd /opt/fwa-ops && docker compose --env-file .env.production up -d --build'
   ```
 
   Exclude `website/` — it deploys separately to `/opt/fwa-site`. Verify with
