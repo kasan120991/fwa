@@ -95,8 +95,8 @@ cd server
 npm install
 cp .env.example .env     # dev defaults work as-is; add keys for Stripe/PandaDoc/Vapi features
 npm run migrate          # creates the DB (default: fwa_ops) and applies the schema
-npm run seed
-npm run create-user      # your admin login
+npm run seed             # demo clients, leads, calls, projects, invoices, six months of payments
+npm run create-user -- --email you@fwa.com --name "Your Name" --password '…'
 npm run dev
 
 # Admin app → http://localhost:3000
@@ -105,6 +105,19 @@ cd ../app && npm install && npm run dev
 # Client portal → http://localhost:3001 (Nuxt takes the next free port)
 cd ../portal && npm install && npm run dev
 ```
+
+The seed is what the screenshots above were taken from. To see the portal side, add a client login
+and reseed — the portal's notification feed is per-user, so it fills in on the next seed:
+
+```bash
+cd server
+npm run create-user -- --email dana@northwind.com --name "Dana Cole" \
+  --password '…' --role client --company "Northwind Co."
+npm run seed -- --force
+```
+
+Both apps run on `localhost`, and cookies ignore the port — signing into one signs you out of the
+other. That's a local-only artifact; in production they sit on separate subdomains.
 
 The marketing site runs separately — see `website/CLAUDE.md`.
 
