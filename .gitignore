@@ -20,8 +20,12 @@ node_modules
 .env.*
 !.env.example
 
-# Design-system skill — a symlink to the (gitignored, local-only) design system
-.claude/skills/fwa-design
+# Claude Code workspace — skills (fwa-design is a symlink into brand/), worktrees.
+# Local tooling, not part of the product.
+.claude/
+
+# Instagram kit and rendered posts — marketing collateral, not product source.
+social/
 
 # Playwright MCP session artifacts (screenshots, snapshots, console logs)
 .playwright-mcp
