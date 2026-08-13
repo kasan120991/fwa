@@ -26,13 +26,41 @@ async function load() {
 onMounted(load)
 
 const STATUS_CHIP: Record<string, { label: string, class: string }> = {
-  open: { label: 'Open', class: 'bg-mist text-primary' },
-  in_progress: { label: 'In Progress', class: 'bg-mist text-primary' },
+  open: { label: 'Open', class: 'bg-info/10 text-info' },
+  in_progress: { label: 'In Progress', class: 'bg-info/10 text-info' },
   waiting: { label: 'Waiting on You', class: 'bg-warning/10 text-warning' },
   resolved: { label: 'Resolved', class: 'bg-success/10 text-success' },
-  closed: { label: 'Closed', class: 'bg-muted text-muted' }
+  closed: { label: 'Closed', class: 'bg-mist text-muted' }
+}
+const TYPE_LABEL: Record<string, string> = {
+  question: 'Question',
+  issue: 'Site Issue',
+  bug: 'Bug Report',
+  update: 'Content Update',
+  other: 'Request'
 }
 const code = (id: number) => `SR-${String(id).padStart(3, '0')}`
+
+function metaLine(t: Ticket) {
+  const parts = [TYPE_LABEL[t.type] || formatStatus(t.type)]
+  if (t.message_count) parts.push(`${t.message_count} ${t.message_count === 1 ? 'message' : 'messages'}`)
+  if (t.last_activity_at) {
+    parts.push(t.status === 'resolved' || t.status === 'closed'
+      ? `${STATUS_CHIP[t.status]!.label} ${shortDate(t.last_activity_at)}`
+      : `updated ${timeAgo(t.last_activity_at)}`)
+  }
+  return parts.join(' · ')
+}
+
+// The inbox groups by whose move it is: yours first, then ours, then history.
+const needsYou = computed(() => tickets.value.filter(t => t.status === 'waiting'))
+const openTickets = computed(() => tickets.value.filter(t => t.status === 'open' || t.status === 'in_progress'))
+const closedTickets = computed(() => tickets.value.filter(t => t.status === 'resolved' || t.status === 'closed'))
+const groups = computed(() => [
+  { key: 'needs-you', label: 'Needs Your Reply', items: needsYou.value, dim: false },
+  { key: 'open', label: 'Open', items: openTickets.value, dim: false },
+  { key: 'closed', label: 'Closed', items: closedTickets.value, dim: true }
+].filter(g => g.items.length))
 
 // ---- new ticket ----
 const formOpen = ref(false)
@@ -76,7 +104,7 @@ async function submit() {
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <p class="eyebrow text-primary">
-          We're here to help
+          We're Here to Help
         </p>
         <h1 class="mt-1 font-display text-[2rem] font-semibold leading-tight tracking-tight text-highlighted">
           Support
@@ -162,34 +190,37 @@ async function submit() {
       </p>
     </div>
 
-    <div
-      v-else
-      class="overflow-hidden rounded-card bg-default ring ring-default"
+    <!-- the inbox, grouped by whose move it is -->
+    <section
+      v-for="g in groups"
+      :key="g.key"
     >
+      <p class="eyebrow mb-1">
+        {{ g.label }}
+      </p>
       <NuxtLink
-        v-for="t in tickets"
+        v-for="t in g.items"
         :key="t.id"
         :to="`/support/${t.id}`"
-        class="flex items-center gap-4 border-b border-default px-5 py-4 transition-colors last:border-0 hover:bg-muted/50"
+        class="flex items-center gap-4 border-t border-default py-3.5 transition-colors first:border-t-0 hover:bg-muted/50"
       >
-        <span class="text-[12px] text-muted">{{ code(t.id) }}</span>
+        <span class="w-14 flex-none text-[12px] tabular-nums text-muted">{{ code(t.id) }}</span>
         <div class="min-w-0 flex-1">
-          <div class="truncate text-[14px] font-medium text-highlighted">
+          <div
+            class="truncate text-[13.5px] font-medium"
+            :class="g.dim ? 'text-muted' : 'text-highlighted'"
+          >
             {{ t.subject }}
           </div>
-          <div class="text-[12.5px] text-muted">
-            Updated {{ timeAgo(t.last_activity_at) }}
+          <div class="text-[12px] text-muted">
+            {{ metaLine(t) }}
           </div>
         </div>
         <span
           class="rounded-chip px-2.5 py-1 text-[11px] font-semibold"
           :class="(STATUS_CHIP[t.status] || STATUS_CHIP.open)!.class"
         >{{ (STATUS_CHIP[t.status] || STATUS_CHIP.open)!.label }}</span>
-        <UIcon
-          name="i-lucide-chevron-right"
-          class="size-4 flex-none text-muted"
-        />
       </NuxtLink>
-    </div>
+    </section>
   </div>
 </template>

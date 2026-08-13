@@ -3,6 +3,7 @@ const route = useRoute()
 const api = useApi()
 const socket = useSocket()
 const toast = useToast()
+const user = useAuthUser()
 const { upload, resolveUrl } = useUploads()
 
 interface Ticket {
@@ -56,27 +57,56 @@ onMounted(() => {
 })
 onBeforeUnmount(() => socket.off('ticket:updated', load))
 
-// attachments not tied to a specific message (e.g. added standalone)
-const ticketAttachments = computed(() => attachments.value.filter(a => a.message_id == null))
-function attachmentsFor(messageId: number) {
-  return attachments.value.filter(a => a.message_id === messageId)
+// The case-file thread: the ticket's own description opens it, then messages.
+interface Entry {
+  key: string
+  authorType: 'admin' | 'client'
+  who: string
+  at: string | null
+  body: string
+  attachments: Attachment[]
 }
+const entries = computed<Entry[]>(() => {
+  const list: Entry[] = []
+  if (ticket.value?.description) {
+    list.push({
+      key: 'opening',
+      authorType: 'client',
+      who: 'You',
+      at: ticket.value.created_at,
+      body: ticket.value.description,
+      attachments: attachments.value.filter(a => a.message_id == null)
+    })
+  }
+  for (const m of messages.value) {
+    list.push({
+      key: `m-${m.id}`,
+      authorType: m.author_type,
+      who: m.author_type === 'client' ? 'You' : (m.author_name ? `${m.author_name} · Francis Web Agency` : 'Francis Web Agency'),
+      at: m.created_at,
+      body: m.body,
+      attachments: attachments.value.filter(a => a.message_id === m.id)
+    })
+  }
+  return list
+})
 
 const STATUS_CHIP: Record<string, { label: string, class: string }> = {
-  open: { label: 'Open', class: 'bg-mist text-primary' },
-  in_progress: { label: 'In Progress', class: 'bg-mist text-primary' },
+  open: { label: 'Open', class: 'bg-info/10 text-info' },
+  in_progress: { label: 'In Progress', class: 'bg-info/10 text-info' },
   waiting: { label: 'Waiting on You', class: 'bg-warning/10 text-warning' },
   resolved: { label: 'Resolved', class: 'bg-success/10 text-success' },
-  closed: { label: 'Closed', class: 'bg-muted text-muted' }
+  closed: { label: 'Closed', class: 'bg-mist text-muted' }
+}
+const TYPE_LABEL: Record<string, string> = {
+  question: 'Question',
+  issue: 'Site Issue',
+  bug: 'Bug Report',
+  update: 'Content Update',
+  other: 'Request'
 }
 const code = (id: number) => `SR-${String(id).padStart(3, '0')}`
-
-function formatSize(bytes?: number | null) {
-  if (!bytes) return ''
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
+const clientInitials = computed(() => initials(user.value?.name))
 
 // ---- reply (with an optional attachment) ----
 const reply = ref('')
@@ -119,7 +149,7 @@ async function sendReply() {
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
+  <div class="flex flex-col gap-5">
     <NuxtLink
       to="/support"
       class="inline-flex w-fit items-center gap-1.5 text-[13px] font-medium text-muted hover:text-highlighted"
@@ -148,138 +178,166 @@ async function sendReply() {
     </div>
 
     <template v-else>
-      <!-- header -->
-      <div class="rounded-card bg-default p-6 ring ring-default">
-        <div class="flex flex-wrap items-start justify-between gap-3">
-          <div class="min-w-0">
-            <p class="eyebrow text-primary">
-              {{ code(ticket.id) }}
-            </p>
-            <h1 class="mt-1 font-display text-[1.6rem] font-semibold leading-tight tracking-tight text-highlighted">
-              {{ ticket.subject }}
-            </h1>
-            <p class="mt-1 text-[13px] text-muted">
-              Opened {{ shortDate(ticket.created_at) }}
-            </p>
-          </div>
-          <span
-            class="rounded-lg px-3 py-1.5 text-[12px] font-semibold"
-            :class="(STATUS_CHIP[ticket.status] || STATUS_CHIP.open)!.class"
-          >{{ (STATUS_CHIP[ticket.status] || STATUS_CHIP.open)!.label }}</span>
-        </div>
-        <p
-          v-if="ticket.description"
-          class="mt-4 border-t border-default pt-4 text-[14px] leading-relaxed text-default"
-        >
-          {{ ticket.description }}
+      <div>
+        <p class="eyebrow text-primary">
+          {{ code(ticket.id) }}
         </p>
-        <div
-          v-if="ticketAttachments.length"
-          class="mt-3 flex flex-wrap gap-2"
-        >
-          <a
-            v-for="att in ticketAttachments"
-            :key="att.id"
-            :href="resolveUrl(att.path)"
-            target="_blank"
-            rel="noopener"
-            class="inline-flex items-center gap-1.5 rounded-chip bg-muted px-2.5 py-1 text-[12px] font-medium text-primary"
-          >
-            <UIcon
-              name="i-lucide-paperclip"
-              class="size-3.5"
-            />
-            {{ att.name }}
-          </a>
-        </div>
+        <h1 class="mt-1 font-display text-[1.6rem] font-semibold leading-tight tracking-tight text-highlighted">
+          {{ ticket.subject }}
+        </h1>
       </div>
 
-      <!-- thread -->
-      <div class="flex flex-col gap-3">
-        <div
-          v-for="m in messages"
-          :key="m.id"
-          class="flex"
-          :class="m.author_type === 'client' ? 'justify-end' : 'justify-start'"
-        >
+      <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_300px]">
+        <!-- the thread — flat timestamped entries -->
+        <div>
           <div
-            class="max-w-[78%] rounded-card p-4"
-            :class="m.author_type === 'client' ? 'bg-mist ring ring-primary/15' : 'bg-default ring ring-default'"
+            v-for="e in entries"
+            :key="e.key"
+            class="flex gap-3 border-t border-default py-4 first:border-t-0 first:pt-0"
           >
-            <div class="mb-1 flex items-baseline gap-2">
-              <span class="text-[12px] font-semibold text-highlighted">
-                {{ m.author_type === 'client' ? 'You' : (m.author_name || 'Francis Web Agency') }}
-              </span>
-              <span class="text-[11px] text-muted">{{ timeAgo(m.created_at) }}</span>
+            <span
+              v-if="e.authorType === 'client'"
+              class="inline-flex size-[30px] flex-none items-center justify-center rounded-btn bg-sand text-[11px] font-bold text-highlighted"
+            >{{ clientInitials }}</span>
+            <span
+              v-else
+              class="inline-flex size-[30px] flex-none items-center justify-center rounded-btn bg-deep"
+            >
+              <img
+                src="/brand/fwa-mark-white.svg"
+                alt=""
+                class="size-3.5"
+              >
+            </span>
+            <div class="min-w-0 flex-1">
+              <div class="text-[12.5px] font-semibold text-highlighted">
+                {{ e.who }}
+                <span class="ml-1.5 font-normal text-muted">{{ shortDate(e.at) }} · {{ timeAgo(e.at) }}</span>
+              </div>
+              <p class="mt-1 whitespace-pre-line text-[13.5px] leading-relaxed text-default">
+                {{ e.body }}
+              </p>
+              <a
+                v-for="att in e.attachments"
+                :key="att.id"
+                :href="resolveUrl(att.path)"
+                target="_blank"
+                rel="noopener"
+                class="mt-2 mr-2 inline-flex items-center gap-1.5 rounded-chip bg-paper px-2.5 py-1 text-[12px] font-medium text-highlighted ring ring-default hover:ring-primary"
+              >
+                <UIcon
+                  name="i-lucide-paperclip"
+                  class="size-3.5"
+                />
+                {{ att.name }}
+                <span
+                  v-if="att.size_bytes"
+                  class="text-muted"
+                >{{ formatBytes(att.size_bytes) }}</span>
+              </a>
             </div>
-            <p class="whitespace-pre-line text-[13.5px] leading-relaxed text-default">
-              {{ m.body }}
+          </div>
+          <p
+            v-if="!entries.length"
+            class="py-4 text-center text-[13px] text-muted"
+          >
+            No replies yet — we'll respond here.
+          </p>
+
+          <!-- composer at the thread's end -->
+          <div class="mt-4 flex flex-col gap-3 rounded-card bg-default p-4 ring ring-default">
+            <UTextarea
+              v-model="reply"
+              :rows="3"
+              placeholder="Write a reply…"
+              class="w-full"
+            />
+            <input
+              ref="fileInput"
+              type="file"
+              class="hidden"
+              @change="onFilePicked"
+            >
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex min-w-0 items-center gap-2">
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  icon="i-lucide-paperclip"
+                  size="sm"
+                  @click="() => fileInput?.click()"
+                >
+                  Attach
+                </UButton>
+                <span
+                  v-if="pendingFile"
+                  class="truncate text-[12.5px] text-muted"
+                >{{ pendingFile.name }}</span>
+              </div>
+              <UButton
+                color="primary"
+                icon="i-lucide-send"
+                :loading="sending"
+                :disabled="!reply.trim() && !pendingFile"
+                @click="sendReply"
+              >
+                Send Reply
+              </UButton>
+            </div>
+          </div>
+        </div>
+
+        <!-- the case file rail -->
+        <aside class="flex flex-col gap-4">
+          <div class="rounded-card bg-default px-5 py-3 ring ring-default">
+            <div class="flex items-center justify-between gap-3 py-2 text-[13px]">
+              <span class="text-muted">Status</span>
+              <span
+                class="rounded-chip px-2.5 py-1 text-[11px] font-semibold"
+                :class="(STATUS_CHIP[ticket.status] || STATUS_CHIP.open)!.class"
+              >{{ (STATUS_CHIP[ticket.status] || STATUS_CHIP.open)!.label }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-3 border-t border-default py-2.5 text-[13px]">
+              <span class="text-muted">Type</span>
+              <span class="font-semibold text-highlighted">{{ TYPE_LABEL[ticket.type] || formatStatus(ticket.type) }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-3 border-t border-default py-2.5 text-[13px]">
+              <span class="text-muted">Opened</span>
+              <span class="font-semibold tabular-nums text-highlighted">{{ shortDate(ticket.created_at) }}</span>
+            </div>
+            <div class="flex items-center justify-between gap-3 border-t border-default py-2.5 text-[13px]">
+              <span class="text-muted">Last Activity</span>
+              <span class="font-semibold tabular-nums text-highlighted">{{ timeAgo(ticket.last_activity_at) }}</span>
+            </div>
+          </div>
+
+          <div
+            v-if="attachments.length"
+            class="rounded-card bg-default px-5 pb-2 pt-4 ring ring-default"
+          >
+            <p class="eyebrow pb-1.5">
+              Attachments
             </p>
             <a
-              v-for="att in attachmentsFor(m.id)"
+              v-for="att in attachments"
               :key="att.id"
               :href="resolveUrl(att.path)"
               target="_blank"
               rel="noopener"
-              class="mt-2 inline-flex items-center gap-1.5 rounded-chip bg-default/70 px-2.5 py-1 text-[12px] font-medium text-primary ring ring-default"
+              class="flex items-center gap-2 border-t border-default py-2.5 text-[12.5px] font-medium text-highlighted first:border-t-0 hover:underline"
             >
               <UIcon
                 name="i-lucide-paperclip"
-                class="size-3.5"
+                class="size-3.5 flex-none text-muted"
               />
-              {{ att.name }}
-              <span class="text-muted">{{ formatSize(att.size_bytes) }}</span>
+              <span class="min-w-0 flex-1 truncate">{{ att.name }}</span>
+              <span
+                v-if="att.size_bytes"
+                class="text-[11.5px] font-normal text-muted"
+              >{{ formatBytes(att.size_bytes) }}</span>
             </a>
           </div>
-        </div>
-        <p
-          v-if="!messages.length"
-          class="py-4 text-center text-[13px] text-muted"
-        >
-          No replies yet — we'll respond here.
-        </p>
-      </div>
-
-      <!-- reply box -->
-      <div class="flex flex-col gap-3 rounded-card bg-default p-4 ring ring-default">
-        <UTextarea
-          v-model="reply"
-          :rows="3"
-          placeholder="Write a reply…"
-          class="w-full"
-        />
-        <input
-          ref="fileInput"
-          type="file"
-          class="hidden"
-          @change="onFilePicked"
-        >
-        <div class="flex items-center justify-between gap-3">
-          <div class="flex min-w-0 items-center gap-2">
-            <UButton
-              color="neutral"
-              variant="ghost"
-              icon="i-lucide-paperclip"
-              size="sm"
-              @click="() => fileInput?.click()"
-            >
-              Attach
-            </UButton>
-            <span
-              v-if="pendingFile"
-              class="truncate text-[12.5px] text-muted"
-            >{{ pendingFile.name }}</span>
-          </div>
-          <UButton
-            color="primary"
-            icon="i-lucide-send"
-            :loading="sending"
-            :disabled="!reply.trim() && !pendingFile"
-            @click="sendReply"
-          >
-            Send Reply
-          </UButton>
-        </div>
+        </aside>
       </div>
     </template>
   </div>

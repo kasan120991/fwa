@@ -36,24 +36,40 @@ onMounted(async () => {
 })
 onBeforeUnmount(() => socket.off('file:changed', load))
 
-const CATEGORY_META: Record<string, { label: string, icon: string }> = {
-  deliverable: { label: 'Deliverables', icon: 'i-lucide-package' },
-  brand: { label: 'Brand assets', icon: 'i-lucide-palette' },
-  contract: { label: 'Contracts & documents', icon: 'i-lucide-file-text' },
-  yours: { label: 'Your uploads', icon: 'i-lucide-upload' }
-}
-const groups = computed(() => {
-  const g = ['deliverable', 'brand', 'contract']
-    .map(c => ({ key: c, meta: CATEGORY_META[c]!, items: files.value.filter(f => f.uploaded_by !== 'client' && f.category === c) }))
-  g.push({ key: 'yours', meta: CATEGORY_META.yours!, items: files.value.filter(f => f.uploaded_by === 'client') })
-  return g.filter(x => x.items.length)
-})
+// ---- the library tabs ----
+type TabKey = 'all' | 'deliverable' | 'brand' | 'contract' | 'yours'
+const TABS: { key: TabKey, label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'deliverable', label: 'Deliverables' },
+  { key: 'brand', label: 'Brand' },
+  { key: 'contract', label: 'Documents' },
+  { key: 'yours', label: 'Yours' }
+]
+const activeTab = ref<TabKey>('all')
 
-function formatSize(bytes?: number | null) {
-  if (!bytes) return ''
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+function tabOf(f: FileRow): TabKey {
+  return f.uploaded_by === 'client' ? 'yours' : (f.category as TabKey)
+}
+function countFor(key: TabKey) {
+  return key === 'all' ? files.value.length : files.value.filter(f => tabOf(f) === key).length
+}
+const visibleTabs = computed(() => TABS.filter(t => countFor(t.key) > 0 || t.key === 'all'))
+const shown = computed(() => activeTab.value === 'all'
+  ? files.value
+  : files.value.filter(f => tabOf(f) === activeTab.value))
+
+// Images render as thumbnails; anything that fails to load (missing file,
+// corrupt upload) falls back to the type glyph instead of a broken image.
+const brokenPreviews = ref(new Set<number>())
+function isImage(f: FileRow) {
+  return !!f.mime?.startsWith('image/') && !brokenPreviews.value.has(f.id)
+}
+function onPreviewError(f: FileRow) {
+  brokenPreviews.value = new Set([...brokenPreviews.value, f.id])
+}
+function glyph(f: FileRow) {
+  if (f.mime?.includes('zip')) return 'i-lucide-archive'
+  return 'i-lucide-file-text'
 }
 
 // ---- upload ----
@@ -88,43 +104,39 @@ async function onFilesPicked(e: Event) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
-    <div>
-      <p class="eyebrow text-primary">
-        Your files
-      </p>
-      <h1 class="mt-1 font-display text-[2rem] font-semibold leading-tight tracking-tight text-highlighted">
-        Files
-      </h1>
-      <p class="mt-1.5 text-[0.9375rem] text-muted">
-        Deliverables, brand assets, and documents we've shared with you.
-      </p>
-    </div>
-
-    <!-- upload -->
-    <div class="flex flex-wrap items-center gap-3 rounded-card bg-default p-4 ring ring-default">
-      <input
-        ref="fileInput"
-        type="file"
-        multiple
-        class="hidden"
-        @change="onFilesPicked"
-      >
-      <UButton
-        color="primary"
-        icon="i-lucide-upload"
-        :loading="uploading"
-        @click="() => fileInput?.click()"
-      >
-        Upload files
-      </UButton>
-      <USelect
-        v-model="uploadProject"
-        :items="projectItems"
-        placeholder="No project"
-        class="w-52"
-      />
-      <span class="text-[12.5px] text-muted">PDF, images, docs, or zip — up to 10 MB each.</span>
+  <div class="flex flex-col gap-5">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="eyebrow text-primary">
+          Your Files
+        </p>
+        <h1 class="mt-1 font-display text-[2rem] font-semibold leading-tight tracking-tight text-highlighted">
+          Files
+        </h1>
+      </div>
+      <div class="flex items-center gap-2.5">
+        <input
+          ref="fileInput"
+          type="file"
+          multiple
+          class="hidden"
+          @change="onFilesPicked"
+        >
+        <USelect
+          v-model="uploadProject"
+          :items="projectItems"
+          placeholder="No project"
+          class="w-48"
+        />
+        <UButton
+          color="primary"
+          icon="i-lucide-upload"
+          :loading="uploading"
+          @click="() => fileInput?.click()"
+        >
+          Upload Files
+        </UButton>
+      </div>
     </div>
 
     <div
@@ -135,57 +147,70 @@ async function onFilesPicked(e: Event) {
     </div>
 
     <div
-      v-else-if="!groups.length"
+      v-else-if="!files.length"
       class="rounded-card bg-default px-6 py-16 text-center ring ring-default"
     >
       <h3 class="font-display text-lg font-semibold text-highlighted">
         No files yet
       </h3>
       <p class="mt-1.5 text-sm text-muted">
-        Files we share with you will appear here for download.
+        Files we share with you will appear here — and you can send us yours (PDF, images, docs, or zip, up to 10 MB each).
       </p>
     </div>
 
-    <div
-      v-for="g in groups"
-      v-else
-      :key="g.key"
-      class="overflow-hidden rounded-card bg-default ring ring-default"
-    >
-      <div class="flex items-center gap-2 border-b border-default px-5 py-3.5">
-        <UIcon
-          :name="g.meta.icon"
-          class="size-4 text-primary"
-        />
-        <span class="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">{{ g.meta.label }}</span>
-        <span class="text-[12px] text-muted tabular-nums">{{ g.items.length }}</span>
-      </div>
-      <a
-        v-for="f in g.items"
-        :key="f.id"
-        :href="resolveUrl(f.path)"
-        target="_blank"
-        rel="noopener"
-        class="flex items-center gap-4 border-b border-default px-5 py-3.5 transition-colors last:border-0 hover:bg-muted/50"
-      >
-        <UIcon
-          name="i-lucide-file"
-          class="size-4.5 flex-none text-muted"
-        />
-        <div class="min-w-0 flex-1">
-          <div class="truncate text-[13.5px] font-medium text-highlighted">
-            {{ f.name }}
-          </div>
-          <div class="text-[12px] text-muted">
-            <span v-if="f.project_name">{{ f.project_name }} · </span>{{ shortDate(f.created_at) }}
-          </div>
+    <template v-else>
+      <!-- filter tabs -->
+      <div class="flex items-baseline justify-between gap-4 border-b border-default">
+        <div class="flex gap-0.5">
+          <button
+            v-for="t in visibleTabs"
+            :key="t.key"
+            class="-mb-px cursor-pointer border-b-2 px-3 py-2 text-[13px] transition-colors"
+            :class="activeTab === t.key
+              ? 'border-citrine font-semibold text-highlighted'
+              : 'border-transparent font-medium text-muted hover:text-highlighted'"
+            @click="activeTab = t.key"
+          >
+            {{ t.label }}
+            <span class="ml-1 text-[11px] tabular-nums text-muted">{{ countFor(t.key) }}</span>
+          </button>
         </div>
-        <span class="text-[12px] text-muted tabular-nums">{{ formatSize(f.size_bytes) }}</span>
-        <UIcon
-          name="i-lucide-download"
-          class="size-4 flex-none text-primary"
-        />
-      </a>
-    </div>
+        <span class="hidden text-[12px] text-muted sm:block">PDF, images, docs, or zip — up to 10 MB each</span>
+      </div>
+
+      <!-- the library -->
+      <div class="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4">
+        <a
+          v-for="f in shown"
+          :key="f.id"
+          :href="resolveUrl(f.path)"
+          target="_blank"
+          rel="noopener"
+          class="flex flex-col overflow-hidden rounded-card bg-default ring ring-default transition-colors hover:ring-primary"
+        >
+          <span class="flex h-28 items-center justify-center overflow-hidden border-b border-default bg-mist">
+            <img
+              v-if="isImage(f)"
+              :src="resolveUrl(f.path)"
+              :alt="f.name"
+              loading="lazy"
+              class="size-full object-cover"
+              @error="onPreviewError(f)"
+            >
+            <UIcon
+              v-else
+              :name="glyph(f)"
+              class="size-8 text-muted"
+            />
+          </span>
+          <span class="flex-1 px-3.5 pb-3 pt-2.5">
+            <span class="block truncate text-[12.5px] font-semibold text-highlighted">{{ f.name }}</span>
+            <span class="mt-0.5 block truncate text-[11px] text-muted">
+              {{ shortDate(f.created_at) }}<template v-if="f.size_bytes"> · {{ formatBytes(f.size_bytes) }}</template><template v-if="f.project_name"> · {{ f.project_name }}</template>
+            </span>
+          </span>
+        </a>
+      </div>
+    </template>
   </div>
 </template>
