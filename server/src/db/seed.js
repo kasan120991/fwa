@@ -3,6 +3,7 @@
 //        npm run seed -- --force  (wipes everything first)
 import { getPool, closePool } from './pool.js'
 import { seedWebsites } from './seedWebsites.js'
+import { ticketCode } from '../repositories/tickets.repo.js'
 
 const force = process.argv.includes('--force')
 const pool = getPool()
@@ -19,6 +20,11 @@ const daysAhead = d => fmt(now + d * 86400e3)
 // DATE-column variants (no time component).
 const dateAgo = d => daysAgo(d).slice(0, 10)
 const dateAhead = d => daysAhead(d).slice(0, 10)
+// Same day offset, pinned to a UTC hour. Rows that inherit the run clock all
+// land in the same hour bucket, which skews any hour-of-day metric — the
+// receptionist's "after-hours answered" counts everything outside 09:00–17:00,
+// so a seed run in the evening would report 100% after-hours.
+const daysAgoAtHour = (d, hour) => `${dateAgo(d)} ${String(hour).padStart(2, '0')}:00:00`
 
 // ---- clients (status active/past) ----
 const CLIENTS = [
@@ -73,7 +79,7 @@ const CALLS = [
     summary: 'Sofia owns a flower shop and wants e-commerce with same-day delivery scheduling. Currently takes orders by phone.',
     captured: [['Name', 'Sofia Nguyen'], ['Business', 'Bloom Floral'], ['Reason for call', 'E-commerce + delivery scheduling']],
     transcript: [{ r: true, t: 'Francis Web Agency, how can I help?' }, { r: false, t: 'I want to start selling flowers online with delivery times.' }] },
-  { classification: 'client', linkClient: 'Northwind Co.', caller_name: 'Dana Cole', caller_number: '(503) 555-0110', business: 'Northwind Co. · Client', occurred_at: daysAgo(1), reviewed: true, duration_seconds: 125,
+  { classification: 'client', linkClient: 'Northwind Co.', caller_name: 'Dana Cole', caller_number: '(503) 555-0110', business: 'Northwind Co. · Client', occurred_at: daysAgoAtHour(1, 11), reviewed: true, duration_seconds: 125,
     summary: 'Dana from Northwind (existing client) called about an invoice question on their latest milestone.',
     captured: [['Name', 'Dana Cole'], ['Account', 'Active client'], ['Reason for call', 'Invoice question']],
     transcript: [{ r: true, t: 'Francis Web Agency, front desk.' }, { r: false, t: "It's Dana from Northwind — a quick invoice question." }] },
@@ -81,15 +87,15 @@ const CALLS = [
     summary: 'Automated robocall about an expiring vehicle warranty. Receptionist ended the call.',
     captured: [['Number', '(800) 555-0011'], ['Detected as', 'Robocall']],
     transcript: [{ r: true, t: 'Francis Web Agency, how can I help?' }, { r: false, t: '(Pre-recorded) …your vehicle warranty…' }] },
-  { classification: 'wrong_number', caller_number: '(646) 555-0295', occurred_at: daysAgo(2), reviewed: true, duration_seconds: 22,
+  { classification: 'wrong_number', caller_number: '(646) 555-0295', occurred_at: daysAgoAtHour(2, 10), reviewed: true, duration_seconds: 22,
     summary: 'Caller wanted a pharmacy and dialed the wrong number.',
     captured: [['Number', '(646) 555-0295'], ['Reason', 'Wanted a pharmacy']],
     transcript: [{ r: true, t: 'Francis Web Agency, how can I help?' }, { r: false, t: 'Is this the pharmacy on 5th?' }] },
-  { classification: 'other', caller_name: 'City of Portland', caller_number: '(503) 555-0777', business: 'Permitting Office', occurred_at: daysAgo(3), reviewed: true, duration_seconds: 70,
+  { classification: 'other', caller_name: 'City of Portland', caller_number: '(503) 555-0777', business: 'Permitting Office', occurred_at: daysAgoAtHour(3, 14), reviewed: true, duration_seconds: 70,
     summary: 'City permitting office following up on a business license renewal. Left a reference number.',
     captured: [['Caller', 'City of Portland'], ['Reference', 'BL-2026-4471']],
     transcript: [{ r: true, t: 'Francis Web Agency, front desk.' }, { r: false, t: 'Portland permitting office re: license renewal BL-2026-4471.' }] },
-  { classification: 'inquiry', caller_name: 'Tom Fielder', caller_number: '(503) 555-0192', business: 'Fielder Roofing', occurred_at: daysAgo(3), reviewed: false, duration_seconds: 347,
+  { classification: 'inquiry', caller_name: 'Tom Fielder', caller_number: '(503) 555-0192', business: 'Fielder Roofing', occurred_at: daysAgoAtHour(3, 15), reviewed: false, duration_seconds: 347,
     summary: 'Tom wants a lead-generation site with quote-request forms; comparing two agencies, so a fast proposal matters.',
     captured: [['Name', 'Tom Fielder'], ['Business', 'Fielder Roofing'], ['Note', 'Comparing 2 agencies']],
     transcript: [{ r: true, t: 'Francis Web Agency, how can I help?' }, { r: false, t: 'I need a site that brings in roofing leads.' }] }
@@ -178,8 +184,66 @@ const INVOICES = [
 ]
 
 // ---- payments ---- (invoiceKey references an INVOICES.key)
+// Rows without an invoiceKey are historical collections that predate the seeded
+// invoices. They exist so the dashboard's collected-revenue chart has a curve
+// instead of a single bar: spaced ~15 days apart across the last six months, so
+// every month in the 6M window carries two whenever the seed happens to run.
 const PAYMENTS = [
-  { invoiceKey: 'inv-northwind-dep', company: 'Northwind Co.', amount: 9000, method: 'card', paid_at: daysAgo(5), note: null }
+  { invoiceKey: 'inv-northwind-dep', company: 'Northwind Co.', amount: 9000, method: 'card', paid_at: daysAgo(5), note: null },
+  { company: 'Lumen Labs', amount: 5400, method: 'card', paid_at: daysAgo(12), note: 'Customer dashboard — deposit' },
+  { company: 'Northwind Co.', amount: 1800, method: 'bank', paid_at: daysAgo(20), note: 'Care plan — quarterly' },
+  { company: 'Bright & Salt', amount: 2900, method: 'card', paid_at: daysAgo(35), note: 'Care plan — half-year' },
+  { company: 'Harborview', amount: 3600, method: 'bank', paid_at: daysAgo(48), note: 'Booking site — final' },
+  { company: 'Mintleaf', amount: 8800, method: 'card', paid_at: daysAgo(62), note: 'E-commerce storefront — deposit' },
+  { company: 'Lumen Labs', amount: 2400, method: 'card', paid_at: daysAgo(75), note: 'Brand site — final' },
+  { company: 'Ridgeline', amount: 7500, method: 'bank', paid_at: daysAgo(90), note: 'Customer dashboard — deposit' },
+  { company: 'Bright & Salt', amount: 6200, method: 'card', paid_at: daysAgo(105), note: 'Brand site — final' },
+  { company: 'Northwind Co.', amount: 1800, method: 'bank', paid_at: daysAgo(120), note: 'Care plan — quarterly' },
+  { company: 'Harborview', amount: 2800, method: 'card', paid_at: daysAgo(135), note: 'Booking site — deposit' },
+  { company: 'Lumen Labs', amount: 4500, method: 'card', paid_at: daysAgo(150), note: 'Site build — deposit' },
+  { company: 'Vantage Group', amount: 3400, method: 'bank', paid_at: daysAgo(165), note: 'Retainer — final month' }
+]
+
+// ---- support tickets ---- (the portal's Support page, the admin Support
+// Tickets page, and the dashboard's open/high-priority Needs Attention rows.
+// Both stay `open` so the dashboard reads "2 Open Tickets · 1 High Priority".)
+const TICKETS = [
+  { key: 'northwind-form', company: 'Northwind Co.', subject: 'Contact form submissions aren’t arriving', type: 'issue', status: 'open', priority: 'high', opened_by: 'client',
+    description: 'We filled in the contact form twice this morning and nothing came through to our inbox. Nothing in spam either.',
+    created_at: daysAgo(4), last_activity_at: daysAgo(1),
+    messages: [
+      { author_type: 'client', body: 'Tested from two different browsers — the form says it sent, but no email arrives.', at: daysAgo(4) },
+      { author_type: 'admin', body: 'Found it: the notification address bounced after your domain move. Repointed it and sent a test through — can you confirm you got it?', at: daysAgo(1) }
+    ] },
+  { key: 'lumen-safari', company: 'Lumen Labs', subject: 'Dashboard login loop on Safari', type: 'bug', status: 'open', priority: 'medium', opened_by: 'client',
+    description: 'Signing in on Safari bounces straight back to the login screen. Chrome is fine.',
+    created_at: daysAgo(6), last_activity_at: daysAgo(2),
+    messages: [
+      { author_type: 'client', body: 'Two of our team hit this on Safari 18. Chrome and Firefox log in normally.', at: daysAgo(6) },
+      { author_type: 'admin', body: 'Reproduced — Safari is dropping the session cookie under ITP. Testing a fix on staging today.', at: daysAgo(2) }
+    ] }
+]
+
+// ---- files ---- (Workspace › Files, and the portal's "Recently shared" rail.)
+// Metadata only: `path` points into the shared upload store, but the seed writes
+// no bytes there, so downloading a seeded row 404s. Everything the UI renders —
+// name, type, size, who shared it, when — comes from the row.
+const FILES = [
+  { company: 'Northwind Co.', projectKey: null, category: 'deliverable', name: 'Brand-guidelines.pdf', title: null, mime: 'application/pdf', size_bytes: 1204338, uploaded_by: 'admin', created_at: daysAgo(3), path: '/uploads/seed-brand-guidelines.pdf' },
+  { company: 'Northwind Co.', projectKey: 'northwind-rebuild', category: 'deliverable', name: 'Homepage-mockup-v3.png', title: 'Homepage Mockup — v3', mime: 'image/png', size_bytes: 842113, uploaded_by: 'admin', created_at: daysAgo(7), path: '/uploads/seed-homepage-mockup-v3.png' },
+  { company: 'Northwind Co.', projectKey: null, category: 'brand', name: 'Northwind-logo.png', title: 'Northwind Primary Logo', mime: 'image/png', size_bytes: 118204, uploaded_by: 'client', created_at: daysAgo(12), path: '/uploads/seed-northwind-logo.png' },
+  { company: 'Mintleaf', projectKey: 'mintleaf-store', category: 'deliverable', name: 'Product-photography.zip', title: null, mime: 'application/zip', size_bytes: 24880512, uploaded_by: 'client', created_at: daysAgo(9), path: '/uploads/seed-product-photography.zip' }
+]
+
+// ---- client notifications ---- (the portal bell + the portal home's "Latest
+// activity" rail). Notifications are strictly per-user, so these are only
+// inserted when a portal login already exists for the client — `npm run
+// create-user -- --role client --company "…"` makes one. `ticketKey` resolves
+// to that ticket's SR- code and deep link once the ticket has an id.
+const CLIENT_NOTIFICATIONS = [
+  { company: 'Northwind Co.', category: 'ticket', tone: 'info', icon: 'i-lucide-life-buoy', ticketKey: 'northwind-form', title: 'New Reply on {code}', body: 'Contact form submissions aren’t arriving', read: false, created_at: daysAgo(1) },
+  { company: 'Northwind Co.', category: 'payment', tone: 'success', icon: 'i-lucide-check-circle-2', title: 'Payment Received', body: 'Thanks — your $1,800 payment was received.', link: '/invoices', read: true, created_at: daysAgo(2) },
+  { company: 'Northwind Co.', category: 'system', tone: 'brand', icon: 'i-lucide-check-circle-2', title: 'New File Shared', body: 'Homepage-mockup-v3.png', link: '/files', read: true, created_at: daysAgo(7) }
 ]
 
 // ---- expenses ---- (money out). `company` (optional) links to a client;
@@ -261,12 +325,22 @@ try {
     await closePool()
     process.exit(0)
   }
+  // users.client_id is ON DELETE SET NULL, so wiping clients silently unlinks
+  // every portal login and leaves it unable to see anything. Remember which
+  // company each one belonged to and re-link by name once the new rows exist.
+  let portalLinks = []
   if (force) {
+    ;[portalLinks] = await pool.query(
+      "SELECT u.id, c.company FROM users u JOIN clients c ON c.id = u.client_id WHERE u.role = 'client'"
+    )
     // Children first — everything that FK-references clients (RESTRICT) must go
     // before clients. Line-item tables cascade with their parent. calls SET NULL,
     // deleted explicitly. leads has no children.
     await pool.query('DELETE FROM payments')
     await pool.query('DELETE FROM expenses') // client_id RESTRICT, must precede clients
+    await pool.query('DELETE FROM tickets') // cascades ticket_messages + ticket_attachments
+    await pool.query('DELETE FROM files') // client/project FKs are SET NULL — clear explicitly
+                                          // or old rows survive every reseed, unattached
     await pool.query('DELETE FROM websites') // cascades website_metrics
     await pool.query('DELETE FROM invoices') // cascades invoice_line_items
     await pool.query('DELETE FROM contracts') // cascades contract_line_items
@@ -287,6 +361,10 @@ try {
 
   for (const c of CLIENTS) {
     companyToClientId[c.company] = await insertRow('clients', { ...c })
+  }
+  for (const link of portalLinks) {
+    const clientId = companyToClientId[link.company]
+    if (clientId) await pool.query('UPDATE users SET client_id = ? WHERE id = ?', [clientId, link.id])
   }
   for (const l of INBOUND) {
     const { slug, createdAt, ...rest } = l
@@ -425,6 +503,58 @@ try {
     await pool.query(`INSERT INTO expenses ${sql}`, params)
   }
 
+  const ticketKeyToId = {}
+  for (const t of TICKETS) {
+    const { key, company, messages, ...rest } = t
+    const row = { ...rest, client_id: companyToClientId[company] }
+    const { sql, params } = cols(row)
+    const [res] = await pool.query(`INSERT INTO tickets ${sql}`, params)
+    ticketKeyToId[key] = res.insertId
+    for (const m of messages ?? []) {
+      await pool.query(
+        'INSERT INTO ticket_messages (ticket_id, author_type, body, created_at) VALUES (?, ?, ?, ?)',
+        [res.insertId, m.author_type, m.body, m.at]
+      )
+    }
+  }
+
+  for (const f of FILES) {
+    const { company, projectKey, ...rest } = f
+    const row = {
+      ...rest,
+      client_id: company ? companyToClientId[company] : null,
+      project_id: projectKey ? projectKeyToId[projectKey] : null
+    }
+    const { sql, params } = cols(row)
+    await pool.query(`INSERT INTO files ${sql}`, params)
+  }
+
+  // Portal-side notifications hang off a login, not a client, so they can only
+  // be seeded for clients that already have one.
+  const [portalUsers] = await pool.query("SELECT id, client_id FROM users WHERE role = 'client' AND client_id IS NOT NULL")
+  const clientIdToUserId = Object.fromEntries(portalUsers.map(u => [u.client_id, u.id]))
+  let clientNotes = 0
+  for (const note of CLIENT_NOTIFICATIONS) {
+    const { company, ticketKey, read, ...rest } = note
+    const userId = clientIdToUserId[companyToClientId[company]]
+    if (!userId) continue
+    const ticketId = ticketKey ? (ticketKeyToId[ticketKey] ?? null) : null
+    const row = {
+      ...rest,
+      user_id: userId,
+      title: ticketId ? rest.title.replace('{code}', ticketCode(ticketId)) : rest.title,
+      link: ticketId ? `/support/${ticketId}` : (rest.link ?? null),
+      read_at: read ? daysAgo(0) : null
+    }
+    const { sql, params } = cols(row)
+    await pool.query(`INSERT INTO notifications ${sql}`, params)
+    clientNotes++
+  }
+  if (clientNotes === 0) {
+    console.log('• No client logins found — skipped the portal notification feed. Create one, then reseed:')
+    console.log('  npm run create-user -- --email dana@northwind.com --name "Dana Cole" --password \'…\' --role client --company "Northwind Co."')
+  }
+
   // websites + 90d of daily metrics (idempotent; links to the clients/projects above).
   const web = await seedWebsites()
 
@@ -438,7 +568,9 @@ try {
   const [[ic]] = await pool.query('SELECT COUNT(*) AS n FROM invoices')
   const [[yc]] = await pool.query('SELECT COUNT(*) AS n FROM payments')
   const [[ec]] = await pool.query('SELECT COUNT(*) AS n FROM expenses')
-  console.log(`✔ Seeded ${lc.n} leads (${lt.n} touches), ${cc.n} clients, ${kc.n} calls, ${nc.n} notifications, ${pc.n} projects, ${tc.n} tasks, ${ic.n} invoices, ${yc.n} payments, ${ec.n} expenses, and ${web.created} websites (${web.metricsInserted} metric rows).`)
+  const [[sc]] = await pool.query('SELECT COUNT(*) AS n FROM tickets')
+  const [[fc]] = await pool.query('SELECT COUNT(*) AS n FROM files')
+  console.log(`✔ Seeded ${lc.n} leads (${lt.n} touches), ${cc.n} clients, ${kc.n} calls, ${nc.n} notifications, ${pc.n} projects, ${tc.n} tasks, ${ic.n} invoices, ${yc.n} payments, ${ec.n} expenses, ${sc.n} tickets, ${fc.n} files, and ${web.created} websites (${web.metricsInserted} metric rows).`)
 } finally {
   await closePool()
 }
