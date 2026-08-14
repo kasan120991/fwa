@@ -181,7 +181,18 @@ Both projects co-deploy on one box.
 - **The box is not a git checkout.** The ops app lives at `/opt/fwa-ops`, populated by
   **uploading the local working tree** (not `git pull` — this repo isn't pushed). Ops app is
   `/opt/fwa-ops`; marketing site is `/opt/fwa-site`.
-- **`/opt/fwa-ops/.env.production` is server-only** (root-owned) — never overwrite it during a sync.
+- **`/opt/fwa-ops/.env.production` is server-only** (owned by `deploy`, mode 600) — never overwrite
+  it during a sync.
+- **The box is hardened (14 Aug 2026)** — deploys run as the non-root **`deploy`** user, not root:
+  - SSH is key-only and `AllowUsers deploy`; **root login over SSH is off**. Adding a second user
+    means adding it to `AllowUsers` in `/etc/ssh/sshd_config.d/10-hardening.conf` — and that file's
+    `10-` prefix is load-bearing (sshd takes the *first* value it obtains for a keyword, and
+    `sshd_config` Includes the dir at the top, so a `99-` file would lose to `50-cloud-init.conf`).
+  - A DO cloud firewall fronts the box: SSH is source-restricted, 80/443 open, outbound wide open
+    (the UDP rule is what keeps DNS working). **Deploying from a new network needs the SSH rule
+    updated first** — see the DO dashboard. Recovery if that goes wrong is out-of-band, documented
+    outside this repo.
+  - `deploy` is in the `docker` group, so the rebuild below needs no `sudo`.
 - **Redeploy = rsync the tree up, then rebuild the stack:**
 
   ```bash
