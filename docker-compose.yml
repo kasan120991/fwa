@@ -98,6 +98,68 @@ services:
     depends_on:
       - api
 
+  # ---------------------------------------------------------------------------
+  # Public demo (DEMO_DOMAIN) — the same two images as the real app, pointed at a
+  # separate `fwa_ops_demo` database inside the SAME mysql container. The box is
+  # a 2 GB droplet, so a second mysqld is the one thing we don't duplicate; the
+  # demo still gets full data isolation (own schema, own uploads volume).
+  #
+  # Behind the `demo` profile, so the normal deploy command never starts, stops,
+  # or rebuilds it. Bring it up by NAMING the two services — enabling the profile
+  # without them would sweep the real api/app into the same rebuild+recreate:
+  #   docker compose --env-file .env.production --profile demo up -d --build api-demo app-demo
+  #
+  # Every integration key is deliberately LEFT UNSET here (they default to '' in
+  # server/src/config/env.js, which disables each one). That's what makes the
+  # demo safe to hand to a stranger: no Stripe customer, no PandaDoc document,
+  # no Resend email, and no Vapi call can leave this instance.
+  # ---------------------------------------------------------------------------
+  api-demo:
+    profiles: [demo]
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      # Passwordless demo sign-in — the ONLY container where this is on.
+      DEMO_MODE: "true"
+      DEMO_USER_EMAIL: ${DEMO_USER_EMAIL:-demo@franciswebagency.com}
+      CORS_ORIGIN: https://${DEMO_DOMAIN}
+      APP_BASE_URL: https://${DEMO_DOMAIN}
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: ${DB_ROOT_PASSWORD}
+      DB_NAME: fwa_ops_demo
+      # Background jobs off: uptime checks would hit the seeded placeholder
+      # domains, and reminders/alerts would drift the data away from the seed
+      # between nightly resets.
+      WEBSITE_CHECKS_ENABLED: "false"
+      EXPENSE_REMINDERS_ENABLED: "false"
+      DIGITALOCEAN_ALERTS_ENABLED: "false"
+    volumes:
+      - demo_uploads:/app/uploads
+    networks: [internal, proxy]
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  app-demo:
+    profiles: [demo]
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NUXT_PUBLIC_API_BASE: https://${DEMO_DOMAIN}/api
+      # Auto-sign-in as the demo account + the "resets nightly" strip.
+      NUXT_PUBLIC_DEMO_MODE: "true"
+    networks: [internal, proxy]
+    depends_on:
+      - api-demo
+
 networks:
   internal:
   proxy:
@@ -110,3 +172,4 @@ networks:
 volumes:
   mysql_data:
   api_uploads:
+  demo_uploads:

@@ -139,6 +139,16 @@ export const config = {
     reminderDays: Number(process.env.EXPENSE_REMINDER_DAYS) || 7,
     reminderIntervalMs: Number(process.env.EXPENSE_REMINDER_INTERVAL_MS) || 24 * 60 * 60_000
   },
+  demo: {
+    // The public demo instance (demo.franciswebagency.com). When on, the API
+    // exposes POST /api/auth/demo-login — a passwordless session as the demo
+    // account — so a prospect lands straight in the app. OFF everywhere else:
+    // the route 404s unless this is explicitly 'true', so production never
+    // carries a passwordless door. The demo DB is separate (DB_NAME) and reset
+    // nightly by deploy/demo-reset.sh.
+    enabled: process.env.DEMO_MODE === 'true',
+    email: process.env.DEMO_USER_EMAIL || 'demo@franciswebagency.com'
+  },
   db: {
     host: process.env.DB_HOST || '127.0.0.1',
     port: Number(process.env.DB_PORT) || 3306,

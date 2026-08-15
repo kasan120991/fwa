@@ -40,7 +40,11 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       // Base URL of the FWA Ops API. Override with NUXT_PUBLIC_API_BASE.
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:4000/api'
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:4000/api',
+      // Demo instance (demo.franciswebagency.com): auto-sign-in as the demo
+      // account and show the "sample data, resets nightly" strip. The API side
+      // is gated separately by DEMO_MODE — this flag alone grants nothing.
+      demoMode: process.env.NUXT_PUBLIC_DEMO_MODE === 'true'
     }
   },
 
