@@ -7,6 +7,10 @@ one system.
 
 Built solo. Three deployable projects live side by side in this repo.
 
+**▶ Live demo — [demo.franciswebagency.com](https://demo.franciswebagency.com)**
+The Ops admin app, signed in automatically as a demo account. Everything in it is sample data and it
+resets nightly, so click anything — the integrations are key-gated off, so nothing leaves the box.
+
 ![The FWA Ops dashboard — KPI cards, collected-revenue chart, and a cross-source Needs Attention
 feed](docs/screenshots/dashboard.png)
 *Ops dashboard — what the agency owner sees first: the numbers, the money collected, and everything
@@ -22,8 +26,8 @@ shared files, and latest activity](docs/screenshots/portal.png)
 *Client portal — the same API, a different audience. Clients see their projects, invoices, files,
 and tickets, and pay in-portal through Stripe.*
 
-<sub>Screenshots are the local dev build at 1440×900 with seeded demo data — every client, call, and
-dollar figure in them is fictional.</sub>
+<sub>Screenshots are the local dev build at 1440×900, running the same seed the live demo does — every
+client, call, and dollar figure in them is fictional.</sub>
 
 ## What's in here
 
@@ -135,6 +139,10 @@ front door** for both; the ops stack attaches to the website's Docker network.
 docker compose --env-file .env.production up -d --build
 ```
 
+The public demo runs from that same compose file behind a `demo` profile: the same two images
+pointed at their own database, every integration key left unset so each one no-ops, and a nightly
+job that drops the schema and reseeds it.
+
 Host details, the rsync deploy procedure, and the full architecture rationale are in
 [`CLAUDE.md`](./CLAUDE.md).
 
@@ -147,7 +155,7 @@ server/     Express API — routes/ → services/ → repositories/ → db/
 portal/     Nuxt client portal
 website/    Marketing site — separate git repo, separate CLAUDE.md
 brand/      Design system: tokens, styles, voice guide (the `fwa-design` skill)
-deploy/     Caddyfile for the ops vhost
+deploy/     Caddyfile for the ops vhost, and the demo's nightly reset script
 ```
 
 Backend work belongs in `server/`, admin-frontend work in `app/`. The marketing site does **not**
