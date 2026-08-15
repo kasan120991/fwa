@@ -15,10 +15,12 @@ node_modules
 # Logs
 *.log
 
-# Local env files
+# Local env files. The two *.example files are templates and MUST stay
+# value-free — real keys belong only in the untracked .env / .env.production.
 .env
 .env.*
 !.env.example
+!.env.production.example
 
 # Claude Code workspace — skills (fwa-design is a symlink into brand/), worktrees.
 # Local tooling, not part of the product.
