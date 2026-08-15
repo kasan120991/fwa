@@ -24,6 +24,16 @@ export function useAuth() {
     return u
   }
 
+  /**
+   * Start a session as the demo account (no credentials). Only the demo
+   * instance's API answers this — everywhere else it 404s.
+   */
+  async function demoLogin() {
+    const { user: u } = await api<{ user: AuthUser }>('/auth/demo-login', { method: 'POST' })
+    user.value = u
+    return u
+  }
+
   async function logout() {
     try {
       await api('/auth/logout', { method: 'POST' })
@@ -43,5 +53,5 @@ export function useAuth() {
     return user.value
   }
 
-  return { user, login, logout, fetchMe }
+  return { user, login, demoLogin, logout, fetchMe }
 }

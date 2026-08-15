@@ -6,7 +6,12 @@ definePageMeta({
 
 useHead({ title: 'Sign in · Francis Web Agency' })
 
-const { login } = useAuth()
+const { login, demoLogin } = useAuth()
+
+// On the demo instance there are no credentials to type — the startup plugin
+// signs everyone in automatically, so this page is only reached after an
+// explicit sign-out. Offer the same door as a button rather than a dead form.
+const demoMode = useRuntimeConfig().public.demoMode
 
 const email = ref('')
 const password = ref('')
@@ -27,6 +32,21 @@ async function onSubmit() {
   } catch (err: unknown) {
     const e = err as { data?: { error?: { message?: string } } }
     errorMessage.value = e?.data?.error?.message || 'Couldn\'t sign in. Check your connection and try again.'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function onEnterDemo() {
+  if (loading.value) return
+  errorMessage.value = ''
+  loading.value = true
+  try {
+    await demoLogin()
+    await navigateTo('/')
+  } catch (err: unknown) {
+    const e = err as { data?: { error?: { message?: string } } }
+    errorMessage.value = e?.data?.error?.message || 'The demo isn\'t available right now. Try again in a moment.'
   } finally {
     loading.value = false
   }
@@ -70,14 +90,42 @@ async function onSubmit() {
 
         <div>
           <h1 class="text-[2.125rem] leading-[1.1] tracking-tight text-highlighted">
-            Welcome Back
+            {{ demoMode ? 'Take a Look Around' : 'Welcome Back' }}
           </h1>
           <p class="mt-2 mb-[30px] text-[0.9375rem] leading-relaxed text-muted">
-            Sign in to your Francis Web Agency workspace.
+            {{ demoMode
+              ? 'This is a live demo of the Francis Web Agency platform, loaded with sample data. No sign-up, nothing to fill in.'
+              : 'Sign in to your Francis Web Agency workspace.' }}
           </p>
         </div>
 
-        <form class="flex flex-col gap-[18px]" @submit.prevent="onSubmit">
+        <!-- DEMO — one button in, no credentials -->
+        <div v-if="demoMode" class="flex flex-col gap-[18px]">
+          <UAlert
+            v-if="errorMessage"
+            color="error"
+            variant="soft"
+            icon="i-lucide-circle-alert"
+            :title="errorMessage"
+            :ui="{ root: 'items-center' }"
+          />
+
+          <UButton
+            block
+            size="lg"
+            :loading="loading"
+            trailing-icon="i-lucide-arrow-right"
+            @click="onEnterDemo"
+          >
+            Enter the Demo
+          </UButton>
+
+          <p class="m-0 text-center text-sm text-muted">
+            Everything here is sample data, and it resets every night — click around freely.
+          </p>
+        </div>
+
+        <form v-else class="flex flex-col gap-[18px]" @submit.prevent="onSubmit">
           <UAlert
             v-if="errorMessage"
             color="error"
@@ -145,15 +193,30 @@ async function onSubmit() {
         </form>
 
         <!-- divider + help -->
-        <div class="my-[26px] mb-[18px] flex items-center gap-3.5">
-          <div class="h-px flex-1 bg-default" />
-          <span class="eyebrow text-muted">Trouble signing in</span>
-          <div class="h-px flex-1 bg-default" />
-        </div>
-        <p class="m-0 text-center text-sm text-muted">
-          Contact your workspace admin or
-          <ULink to="#" class="font-medium text-primary">get support</ULink>.
-        </p>
+        <template v-if="!demoMode">
+          <div class="my-[26px] mb-[18px] flex items-center gap-3.5">
+            <div class="h-px flex-1 bg-default" />
+            <span class="eyebrow text-muted">Trouble signing in</span>
+            <div class="h-px flex-1 bg-default" />
+          </div>
+          <p class="m-0 text-center text-sm text-muted">
+            Contact your workspace admin or
+            <ULink to="#" class="font-medium text-primary">get support</ULink>.
+          </p>
+        </template>
+
+        <!-- demo: point a convinced visitor at the real thing -->
+        <template v-else>
+          <div class="my-[26px] mb-[18px] flex items-center gap-3.5">
+            <div class="h-px flex-1 bg-default" />
+            <span class="eyebrow text-muted">Want this for your agency</span>
+            <div class="h-px flex-1 bg-default" />
+          </div>
+          <p class="m-0 text-center text-sm text-muted">
+            Talk to us at
+            <ULink to="https://franciswebagency.com/contact" class="font-medium text-primary">franciswebagency.com</ULink>.
+          </p>
+        </template>
 
         <p class="mt-10 text-center text-xs text-muted/70">
           © {{ year }} Francis Web Agency. All rights reserved.

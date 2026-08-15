@@ -213,6 +213,46 @@ Both projects co-deploy on one box.
   `docker ps --filter name=fwa-ops`, `docker logs fwa-ops-api-1 --tail 15`, and
   `curl -I https://app.franciswebagency.com/`.
 
+### The public demo (`demo.franciswebagency.com`)
+
+A prospect-facing copy of the admin app, added 15 Aug 2026. Same two images as the real app,
+behind the **`demo` compose profile** (`api-demo` + `app-demo`) — so the normal redeploy command
+above never starts, stops, or rebuilds it.
+
+- **Data:** a separate `fwa_ops_demo` schema **inside the same `mysql` container** (the box is a
+  2 GB droplet; a second mysqld is the one thing not duplicated). Own `demo_uploads` volume.
+- **Safety:** every integration key is deliberately left unset on `api-demo`, so each one no-ops —
+  no Stripe customer, PandaDoc document, Resend email, or Vapi call can escape the demo. The
+  background jobs (uptime checks, expense reminders, DO alerts) are off too, so the data doesn't
+  drift from the seed.
+- **Auto-login:** `DEMO_MODE=true` is the *only* place `POST /api/auth/demo-login` exists (it 404s
+  everywhere else). The app's startup plugin calls it when `NUXT_PUBLIC_DEMO_MODE=true`, so a
+  visitor lands on the dashboard as the demo account; `/login` offers the same door as a button.
+- **Nightly reset:** `deploy/demo-reset.sh` (cron, 04:10 UTC, `deploy` user) drops and recreates
+  the schema, migrates, seeds, and recreates the demo account with a fresh random password.
+- **Front door:** the `demo.` vhost lives in `website/deploy/Caddyfile` with the others — and it's
+  `noindex`, so the demo never competes with the marketing site in search. **Changing it means
+  redeploying `website/`, not the ops stack.**
+
+> **Caddyfile gotcha:** it's bind-mounted as a *file*, so an rsync (which writes a temp file and
+> renames) leaves the container pinned to the old inode — `caddy reload` then cheerfully reports
+> "config is unchanged". After syncing the Caddyfile you must `docker restart website-caddy-1`
+> (~1s blip on every vhost). Validate before restarting:
+> `docker compose --env-file .env.production exec -T caddy caddy validate --adapter caddyfile --config /etc/caddy/Caddyfile`.
+
+Bring it up (or rebuild it after a sync) — **name the two services**, or enabling the profile
+sweeps the real `api`/`app` into the same rebuild-and-recreate:
+
+```bash
+ssh "$DEPLOY_USER@$DEPLOY_HOST" \
+  'cd /opt/fwa-ops && docker compose --env-file .env.production --profile demo up -d --build api-demo app-demo'
+```
+
+`.env.production` is server-only (the rsync excludes `.env*`), so `DEMO_DOMAIN`, `DEMO_USER_EMAIL`,
+and `DEMO_USER_NAME` have to be added there by hand — see `.env.production.example`.
+
+Reset it by hand at any time: `ssh … '/opt/fwa-ops/deploy/demo-reset.sh'`.
+
 ---
 
 ## The marketing website (`website/`)

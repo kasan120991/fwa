@@ -9,6 +9,7 @@ import {
   cookieOptions
 } from '../auth/session.js'
 import { findLiveInvite, markInviteUsed, setUserPassword, getUserById, updateUser, findUserByEmail } from '../repositories/users.repo.js'
+import { config } from '../config/env.js'
 
 export const authRouter = Router()
 
@@ -33,6 +34,47 @@ authRouter.post('/login', async (req, res) => {
   if (!ok) {
     return res.status(401).json({ error: { message: 'Invalid email or password' } })
   }
+
+  const { token, maxAgeMs } = await createSession(user.id, {
+    userAgent: req.get('user-agent'),
+    ip: req.ip
+  })
+  await query('UPDATE users SET last_login_at = NOW() WHERE id = :id', { id: user.id })
+
+  res.cookie(SESSION_COOKIE, token, cookieOptions(maxAgeMs))
+  res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role, client_id: user.client_id } })
+})
+
+// POST /api/auth/demo-login — start a session as the demo account without a
+// password, so a visitor to the demo instance lands straight in the app.
+//
+// Gated on DEMO_MODE (config.demo.enabled), which is only ever set on the demo
+// stack's api container. Anywhere else this 404s exactly like an unknown route,
+// so production exposes no passwordless door and no hint that one exists.
+authRouter.post('/demo-login', async (req, res) => {
+  if (!config.demo.enabled) {
+    return res.status(404).json({ error: { message: 'Not found' } })
+  }
+
+  const rows = await query(
+    `SELECT id, email, name, role, client_id
+       FROM users
+      WHERE email = :email AND role = 'admin' AND is_active = 1
+      LIMIT 1`,
+    { email: config.demo.email }
+  )
+  const user = rows[0]
+  if (!user) {
+    return res.status(503).json({ error: { message: 'The demo account isn\'t provisioned yet.' } })
+  }
+
+  // Every visitor mints a session against this one account, so prune the stale
+  // ones as we go — otherwise the table grows unbounded between resets. Keeps
+  // the last day, which covers anyone mid-visit across a nightly reset.
+  await query(
+    'DELETE FROM sessions WHERE user_id = :id AND created_at < (NOW() - INTERVAL 1 DAY)',
+    { id: user.id }
+  )
 
   const { token, maxAgeMs } = await createSession(user.id, {
     userAgent: req.get('user-agent'),
