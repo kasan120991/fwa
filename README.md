@@ -86,7 +86,8 @@ over the union queries and rollups the dashboards need.
 
 **One API, two front ends, one front door.** Caddy proxies `/api`, `/socket.io`, and `/uploads` to
 the API and everything else to the Nuxt app, so both front ends are same-origin and CORS is mostly
-moot. Background jobs handle Plausible analytics sync and scheduled uptime checks.
+moot. Background jobs handle analytics sync (Plausible and GA4), uptime checks, infrastructure
+alerts, and recurring-expense reminders — each independently gated on its own key or flag.
 
 ## Running it locally
 
@@ -131,7 +132,8 @@ and PandaDoc webhooks simply never fire without their secrets.
 ## Deployment
 
 Both projects co-deploy on one box. The Ops app is a Docker stack of `mysql` + `api` (:4000) +
-`app` (:3000), configured from `.env.production` (template: `.env.production.example`). The
+`app` (:3000) + `portal` (:3000), configured from `.env.production` (template:
+`.env.production.example`). The
 marketing site deploys from `website/` with its own compose file, and **its Caddy is the shared
 front door** for both; the ops stack attaches to the website's Docker network.
 
@@ -155,7 +157,7 @@ server/     Express API — routes/ → services/ → repositories/ → db/
 portal/     Nuxt client portal
 website/    Marketing site — separate git repo, separate CLAUDE.md
 brand/      Design system: tokens, styles, voice guide (the `fwa-design` skill)
-deploy/     Caddyfile for the ops vhost, and the demo's nightly reset script
+deploy/     The demo's nightly reset script (the live Caddyfile lives in website/deploy/)
 ```
 
 Backend work belongs in `server/`, admin-frontend work in `app/`. The marketing site does **not**
