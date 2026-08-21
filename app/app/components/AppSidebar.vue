@@ -63,9 +63,8 @@ onBeforeUnmount(() => {
   socket.off('ticket:deleted', loadOpenTickets)
 })
 
-// Nav follows CLAUDE.md (source of truth), which includes Leads and AI Receptionist
-// that the original dashboard prototype omitted. ✓ items are in scope this phase;
-// the rest are deferred stub routes.
+// Nav follows CLAUDE.md (source of truth). Every destination here is built except
+// Calendar, which still falls through to the [...slug].vue placeholder.
 const groups: NavGroup[] = [
   { items: [
     { label: 'Dashboard', to: '/', icon: 'i-lucide-layout-dashboard' },
