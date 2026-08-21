@@ -163,8 +163,9 @@ async function enableUptime() {
       toast.add({ title: 'Uptime monitoring enabled', color: 'success' })
       refreshDetail()
     }
-  } catch {
-    toast.add({ title: "Couldn't enable uptime monitoring", description: 'Check the connection and try again.', color: 'error' })
+  } catch (err: unknown) {
+    const e = err as { data?: { error?: { message?: string } } }
+    toast.add({ title: "Couldn't enable uptime monitoring", description: e?.data?.error?.message || 'Check the connection and try again.', color: 'error' })
   } finally {
     uptimeBusy.value = false
   }
@@ -176,8 +177,9 @@ async function disableUptime() {
     await api(`/websites/${route.params.id}/uptime`, { method: 'DELETE' })
     toast.add({ title: 'Uptime monitoring disabled', color: 'success' })
     refreshDetail()
-  } catch {
-    toast.add({ title: "Couldn't disable uptime monitoring", description: 'Check the connection and try again.', color: 'error' })
+  } catch (err: unknown) {
+    const e = err as { data?: { error?: { message?: string } } }
+    toast.add({ title: "Couldn't disable uptime monitoring", description: e?.data?.error?.message || 'Check the connection and try again.', color: 'error' })
   } finally {
     uptimeBusy.value = false
   }
@@ -197,8 +199,11 @@ async function syncNow() {
     else if (data.synced) toast.add({ title: 'Analytics synced', color: 'success' })
     else toast.add({ title: data.reason || 'Nothing to sync', color: 'neutral' })
     refreshDetail()
-  } catch {
-    toast.add({ title: 'Sync failed', description: 'Check the connection and try again.', color: 'error' })
+  } catch (err: unknown) {
+    // Surface the server's reason — a provider 401/400 (bad key, wrong site id,
+    // lapsed account) reads as a connection problem otherwise.
+    const e = err as { data?: { error?: { message?: string } } }
+    toast.add({ title: 'Sync failed', description: e?.data?.error?.message || 'Check the connection and try again.', color: 'error' })
   } finally {
     syncing.value = false
   }
