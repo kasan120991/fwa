@@ -20,7 +20,7 @@ const MAP: Record<string, PageMeta> = {
   '/calendar': { title: 'Calendar', breadcrumb: 'Workspace · Calendar' },
   '/websites': { title: 'Websites', breadcrumb: 'Workspace · Websites' },
   '/receptionist': { title: 'AI Receptionist', breadcrumb: 'Workspace · AI Receptionist' },
-  '/support': { title: 'Support tickets', breadcrumb: 'Support' },
+  '/support': { title: 'Support Tickets', breadcrumb: 'Support' },
   '/settings': { title: 'Settings', breadcrumb: 'Settings' }
 }
 
