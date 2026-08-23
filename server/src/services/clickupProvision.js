@@ -109,13 +109,17 @@ export async function missingMilestoneOptions() {
  * up at noon UTC (see dateToClickUp) so timezone normalization on either side
  * can't cross midnight and shift the day.
  */
-export function projectDates(project) {
+export function projectDates(project, { clearEmpty = false } = {}) {
   const start = dateToClickUp(project.start_date)
   const due = dateToClickUp(project.target_launch_date)
-  return {
-    ...(start ? { start_date: start, start_date_time: false } : {}),
-    ...(due ? { due_date: due, due_date_time: false } : {})
-  }
+  // On create, omit what isn't set — a project is created before it's scoped,
+  // so both dates are normally still null at that point. On update, send an
+  // explicit null instead, or clearing a date in Ops would leave the old one
+  // standing in ClickUp.
+  const field = (key, value) => (value
+    ? { [key]: value, [`${key}_time`]: false }
+    : (clearEmpty ? { [key]: null } : {}))
+  return { ...field('start_date', start), ...field('due_date', due) }
 }
 
 export function folderName(client) {

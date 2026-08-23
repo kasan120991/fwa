@@ -467,7 +467,7 @@ export async function pushProject(projectId) {
     await cu.updateTask(link.clickup_task_id, {
       name: `${project.code ? project.code + ' — ' : ''}${project.name}`,
       description: project.goals || '',
-      ...projectDates(project)
+      ...projectDates(project, { clearEmpty: true })
     })
     return { pushed: true, clickup_task_id: link.clickup_task_id }
   } catch (err) {
