@@ -5,13 +5,25 @@ export const TASK_PRIORITIES = new Set(['low', 'medium', 'high'])
 
 const UPDATABLE = ['project_id', 'milestone_id', 'title', 'description', 'status', 'priority', 'due_date', 'position']
 
-// Join the parent project for display on the cross-project /tasks page, plus a
-// checklist rollup so every task row carries its checklist progress.
-const BASE_SELECT = `SELECT t.*, p.name AS project_name, p.code AS project_code,
+// Join the parent project and the task's milestone for display on the
+// cross-project /tasks page, plus a checklist rollup so every row carries its
+// checklist progress.
+//
+// Columns are listed explicitly rather than `t.*`: clickup_shadow and
+// clickup_version are internal sync bookkeeping and have no business reaching
+// the frontend. clickup_task_id and clickup_sync_error DO — the UI links out
+// and surfaces failures.
+const BASE_SELECT = `SELECT t.id, t.project_id, t.milestone_id, t.title, t.description,
+    t.status, t.priority, t.due_date, t.position, t.completed_at,
+    t.created_at, t.updated_at,
+    t.clickup_task_id, t.clickup_status, t.clickup_synced_at, t.clickup_sync_error,
+    p.name AS project_name, p.code AS project_code,
+    m.title AS milestone_title,
     (SELECT COUNT(*) FROM task_checklist_items c WHERE c.task_id = t.id) AS checklist_total,
     (SELECT COUNT(*) FROM task_checklist_items c WHERE c.task_id = t.id AND c.done = 1) AS checklist_done
   FROM tasks t
-  LEFT JOIN projects p ON p.id = t.project_id`
+  LEFT JOIN projects p ON p.id = t.project_id
+  LEFT JOIN project_milestones m ON m.id = t.milestone_id`
 
 const mapItem = r => (r ? { ...r, done: !!r.done } : r)
 const ITEM_COLS = 'id, task_id, title, done, position'

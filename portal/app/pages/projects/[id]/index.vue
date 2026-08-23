@@ -20,6 +20,7 @@ interface Milestone {
   description: string | null
   state: MilestoneState
   target_date: string | null
+  completed_at: string | null
   task_total: number
   task_done: number
 }
@@ -49,11 +50,35 @@ const STATUS_LABEL: Record<string, string> = {
   on_hold: 'On Hold',
   completed: 'Completed'
 }
-const STATE_META: Record<MilestoneState, { label: string, chip: string }> = {
-  upcoming: { label: 'Upcoming', chip: 'bg-mist text-muted' },
-  in_progress: { label: 'In Progress', chip: 'bg-info/10 text-info' },
-  complete: { label: 'Complete', chip: 'bg-success/10 text-success' }
+// A finished phase used to render as a bare title. Now that state is derived
+// from the work itself rather than set by hand, it can say what it finished and
+// when — so each phase carries its own one-line receipt.
+function receipt(m: Milestone) {
+  if (m.state === 'complete') {
+    const items = m.task_total ? `All ${m.task_total} ${m.task_total === 1 ? 'item' : 'items'} complete` : 'Complete'
+    return m.completed_at ? `${items} · finished ${shortDate(m.completed_at)}` : items
+  }
+  if (m.state === 'in_progress') return m.target_date ? `Due ${shortDate(m.target_date)}` : 'In progress'
+  return m.target_date ? `Target ${shortDate(m.target_date)}` : 'Up next'
 }
+
+const timelineItems = computed(() => milestones.value.map(m => ({
+  title: m.title,
+  date: receipt(m),
+  icon: m.state === 'complete' ? 'i-lucide-check' : m.state === 'in_progress' ? 'i-lucide-loader' : 'i-lucide-circle',
+  // Only the active phase needs a custom body (description + progress); the
+  // named slot reads from `currentPhase` in scope rather than slot props.
+  slot: m.state === 'in_progress' ? ('active' as const) : undefined,
+  value: m.id
+})))
+
+// Colour the rail up to and including the phase in flight.
+const activeIndex = computed(() => {
+  const i = milestones.value.findIndex(m => m.state === 'in_progress')
+  if (i >= 0) return i
+  const lastDone = milestones.value.map(m => m.state).lastIndexOf('complete')
+  return lastDone >= 0 ? lastDone : 0
+})
 
 // Delivery work happens in ClickUp, so a milestone bar can move while this page
 // is open. The server pushes project:updated / milestone:changed into the
@@ -91,9 +116,6 @@ onBeforeUnmount(() => {
   socket.off('project:updated', refresh)
 })
 
-function pct(m: Milestone) {
-  return m.task_total ? Math.round((m.task_done / m.task_total) * 100) : 0
-}
 const overallPct = computed(() => project.value && project.value.task_total
   ? Math.round((project.value.task_done / project.value.task_total) * 100)
   : 0)
@@ -202,70 +224,37 @@ const currentPhase = computed(() =>
             Milestones for this project will appear here as we plan the work.
           </div>
 
-          <ol
+          <UTimeline
             v-else
-            class="flex flex-col"
+            :items="timelineItems"
+            :default-value="activeIndex"
+            value-key="value"
+            color="primary"
+            size="sm"
           >
-            <li
-              v-for="(m, i) in milestones"
-              :key="m.id"
-              class="flex gap-4"
-            >
-              <div class="flex w-3.5 flex-none flex-col items-center">
-                <span
-                  class="mt-1 size-3 flex-none rounded-full"
-                  :class="{
-                    'bg-primary': m.state === 'complete',
-                    'border-2 border-primary bg-citrine': m.state === 'in_progress',
-                    'border-2 border-accented bg-default': m.state === 'upcoming'
-                  }"
-                />
-                <span
-                  v-if="i < milestones.length - 1"
-                  class="my-1 w-0.5 flex-1 bg-accented"
-                />
-              </div>
-              <div
-                class="flex-1"
-                :class="i < milestones.length - 1 ? 'pb-6' : ''"
+            <template #active-description>
+              <p
+                v-if="currentPhase?.description"
+                class="max-w-[640px] text-[13.5px] leading-relaxed text-muted"
               >
-                <div class="flex flex-wrap items-center gap-2.5">
-                  <h3 class="font-display text-[15px] font-semibold text-highlighted">
-                    {{ m.title }}
-                  </h3>
-                  <span
-                    class="rounded-chip px-2.5 py-1 text-[11px] font-semibold"
-                    :class="STATE_META[m.state].chip"
-                  >
-                    {{ STATE_META[m.state].label }}
-                  </span>
-                  <span
-                    v-if="m.target_date"
-                    class="ms-auto whitespace-nowrap text-[12px] tabular-nums text-muted"
-                  >
-                    {{ m.state === 'in_progress' ? 'due ' : '' }}{{ shortDate(m.target_date) }}
-                  </span>
-                </div>
-                <template v-if="m.state === 'in_progress'">
-                  <p
-                    v-if="m.description"
-                    class="mt-1.5 max-w-[640px] text-[13.5px] leading-relaxed text-muted"
-                  >
-                    {{ m.description }}
-                  </p>
-                  <div class="mt-2.5 flex max-w-[420px] items-center gap-2.5">
-                    <div class="h-[5px] flex-1 overflow-hidden rounded-full bg-mist">
-                      <div
-                        class="h-full rounded-full bg-primary"
-                        :style="{ width: pct(m) + '%' }"
-                      />
-                    </div>
-                    <span class="text-[12px] font-semibold tabular-nums text-muted">{{ m.task_done }} / {{ m.task_total }}</span>
-                  </div>
-                </template>
+                {{ currentPhase.description }}
+              </p>
+              <div
+                v-if="currentPhase"
+                class="mt-2.5 flex max-w-[420px] items-center gap-2.5"
+              >
+                <UProgress
+                  :model-value="currentPhase.task_done"
+                  :max="Math.max(currentPhase.task_total, 1)"
+                  size="xs"
+                  class="flex-1"
+                />
+                <span class="whitespace-nowrap text-[12px] font-semibold tabular-nums text-muted">
+                  {{ currentPhase.task_done }} of {{ currentPhase.task_total }}
+                </span>
               </div>
-            </li>
-          </ol>
+            </template>
+          </UTimeline>
         </div>
 
         <!-- project files rail -->

@@ -2,6 +2,12 @@
 // A single project task: check + title on line 1, a wrapping meta row of chips
 // (priority / due / checklist) below, and hover-revealed actions. All mutations
 // emit back to the page — this component makes no API calls of its own.
+//
+// Since delivery moved to ClickUp, a task that HAS a checklist no longer owns
+// its own status: finishing the checklist completes the task and un-ticking an
+// item reopens it (services/delivery.service.js). So the done toggle is
+// disabled for those tasks in both directions — otherwise the click is
+// accepted and then silently reversed a second later.
 type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'done'
 interface Task {
   id: number
@@ -11,6 +17,8 @@ interface Task {
   due_date: string | null
   checklist_total: number
   checklist_done: number
+  clickup_task_id?: string | null
+  clickup_sync_error?: string | null
 }
 interface ChecklistItem { id: number, task_id: number, title: string, done: boolean, position: number }
 interface MenuItem { label: string, icon?: string, color?: 'error', onSelect: () => void }
@@ -40,7 +48,11 @@ const overdue = computed(() => {
   const d = daysFromNow(props.task.due_date)
   return d != null && d < 0 && !done.value
 })
-const checklistPct = computed(() => (props.task.checklist_total ? Math.round((props.task.checklist_done / props.task.checklist_total) * 100) : 0))
+// A checklist makes the task's status derived, not chosen.
+const governed = computed(() => props.task.checklist_total > 0)
+const clickupUrl = computed(() => (props.task.clickup_task_id
+  ? `https://app.clickup.com/t/${props.task.clickup_task_id}`
+  : null))
 
 const newItem = ref('')
 function submitItem() {
@@ -54,26 +66,46 @@ function submitItem() {
 <template>
   <div class="border-b border-default last:border-b-0">
     <div class="group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted">
-      <!-- done toggle -->
-      <button
-        type="button"
-        class="mt-0.5 flex size-[18px] flex-none items-center justify-center rounded-full border transition-colors"
-        :class="done ? 'border-primary bg-primary text-inverted' : 'border-accented hover:border-primary'"
-        :aria-label="done ? 'Mark not done' : 'Mark done'"
-        @click="emit('toggle')"
+      <!-- done toggle — read-only while a checklist governs the status -->
+      <UTooltip
+        :disabled="!governed"
+        :text="done ? 'Completed by its checklist. Un-tick an item to reopen it.' : 'Finish the checklist to complete this task.'"
       >
-        <UIcon
-          v-if="done"
-          name="i-lucide-check"
-          class="size-3"
+        <UCheckbox
+          :model-value="done"
+          :disabled="governed"
+          :aria-label="done ? 'Mark not done' : 'Mark done'"
+          class="mt-0.5"
+          :ui="{ base: 'rounded-full' }"
+          @update:model-value="emit('toggle')"
         />
-      </button>
+      </UTooltip>
 
       <div class="min-w-0 flex-1">
         <span
           class="block text-[13.5px] leading-snug"
           :class="done ? 'text-muted line-through' : 'text-highlighted'"
         >{{ task.title }}</span>
+
+        <!-- checklist — leads the meta row, because it's what closes the task -->
+        <button
+          v-if="governed"
+          type="button"
+          class="mt-2 flex w-full max-w-[280px] items-center gap-2.5 text-left transition-opacity hover:opacity-80"
+          :aria-label="expanded ? 'Hide checklist' : 'Show checklist'"
+          @click="emit('toggle-expand')"
+        >
+          <UProgress
+            :model-value="task.checklist_done"
+            :max="task.checklist_total"
+            size="2xs"
+            :color="task.checklist_done === task.checklist_total ? 'success' : 'primary'"
+            class="flex-1"
+          />
+          <span class="flex-none text-[11px] text-muted tabular-nums">
+            {{ task.checklist_done }}/{{ task.checklist_total }}
+          </span>
+        </button>
 
         <!-- wrapping meta row -->
         <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -119,44 +151,49 @@ function submitItem() {
             </template>
           </UPopover>
 
-          <!-- checklist mini-bar -->
-          <button
-            v-if="task.checklist_total > 0"
-            type="button"
-            class="inline-flex items-center gap-2 transition-opacity hover:opacity-80"
-            :aria-label="expanded ? 'Hide checklist' : 'Show checklist'"
-            @click="emit('toggle-expand')"
+          <!-- a push to ClickUp failed; the row is stale until it succeeds -->
+          <UTooltip
+            v-if="task.clickup_sync_error"
+            :text="task.clickup_sync_error"
           >
-            <span class="h-1 w-16 overflow-hidden rounded-full bg-muted">
-              <span
-                class="block h-full rounded-full bg-primary transition-[width] duration-300"
-                :style="{ width: checklistPct + '%' }"
+            <span class="inline-flex items-center gap-1 text-[11.5px] font-semibold text-error">
+              <UIcon
+                name="i-lucide-triangle-alert"
+                class="size-3.5"
               />
+              Not synced
             </span>
-            <span class="text-[11px] text-muted tabular-nums">{{ task.checklist_done }}/{{ task.checklist_total }}</span>
-          </button>
+          </UTooltip>
         </div>
       </div>
 
       <!-- actions -->
       <div class="flex flex-none items-center gap-0.5">
-        <button
-          type="button"
-          class="inline-flex items-center rounded-chip px-1.5 py-1 text-muted opacity-0 transition-colors hover:text-highlighted group-hover:opacity-100"
-          :class="expanded ? 'opacity-100' : ''"
+        <UTooltip
+          v-if="clickupUrl"
+          text="Open in ClickUp"
+        >
+          <UButton
+            :to="clickupUrl"
+            target="_blank"
+            icon="i-lucide-external-link"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            class="opacity-0 transition-opacity group-hover:opacity-100"
+            aria-label="Open in ClickUp"
+          />
+        </UTooltip>
+        <UButton
+          v-if="governed"
+          :icon="expanded ? 'i-lucide-chevron-up' : 'i-lucide-list-checks'"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          :class="expanded ? '' : 'opacity-0 transition-opacity group-hover:opacity-100'"
           :aria-label="expanded ? 'Hide checklist' : 'Show checklist'"
           @click="emit('toggle-expand')"
-        >
-          <UIcon
-            name="i-lucide-list-checks"
-            class="size-3.5"
-          />
-          <UIcon
-            name="i-lucide-chevron-down"
-            class="size-3.5 transition-transform"
-            :class="expanded ? 'rotate-180' : ''"
-          />
-        </button>
+        />
         <UDropdownMenu :items="menu">
           <UButton
             icon="i-lucide-ellipsis-vertical"
@@ -179,34 +216,24 @@ function submitItem() {
         :key="item.id"
         class="group/item flex items-center gap-2.5 py-1"
       >
-        <button
-          type="button"
-          class="flex size-4 flex-none items-center justify-center rounded-[5px] border transition-colors"
-          :class="item.done ? 'border-primary bg-primary text-inverted' : 'border-accented hover:border-primary'"
+        <UCheckbox
+          :model-value="item.done"
           :aria-label="item.done ? 'Mark item not done' : 'Mark item done'"
-          @click="emit('toggle-item', item)"
-        >
-          <UIcon
-            v-if="item.done"
-            name="i-lucide-check"
-            class="size-2.5"
-          />
-        </button>
+          @update:model-value="emit('toggle-item', item)"
+        />
         <span
           class="min-w-0 flex-1 text-[13px]"
           :class="item.done ? 'text-muted line-through' : 'text-default'"
         >{{ item.title }}</span>
-        <button
-          type="button"
-          class="flex-none text-muted opacity-0 transition-opacity hover:text-error group-hover/item:opacity-100"
+        <UButton
+          icon="i-lucide-x"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          class="flex-none opacity-0 transition-opacity hover:text-error group-hover/item:opacity-100"
           aria-label="Remove item"
           @click="emit('remove-item', item)"
-        >
-          <UIcon
-            name="i-lucide-x"
-            class="size-3.5"
-          />
-        </button>
+        />
       </div>
       <UInput
         v-model="newItem"
@@ -214,7 +241,6 @@ function submitItem() {
         size="xs"
         icon="i-lucide-plus"
         class="mt-1 w-full"
-        :ui="{ base: 'rounded-full' }"
         @keydown.enter="submitItem"
       />
     </div>

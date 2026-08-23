@@ -62,6 +62,8 @@ interface Task {
   completed_at: string | null
   checklist_total: number
   checklist_done: number
+  clickup_task_id: string | null
+  clickup_sync_error: string | null
 }
 type MilestoneState = 'upcoming' | 'in_progress' | 'complete'
 interface Milestone {
@@ -144,6 +146,8 @@ async function loadProject() {
 async function loadTasks() {
   const { data } = await api<{ data: Task[] }>(`/projects/${route.params.id}/tasks`)
   tasks.value = data.map(t => ({ ...t, checklist_total: Number(t.checklist_total ?? 0), checklist_done: Number(t.checklist_done ?? 0) }))
+  // Fire and forget: the boards render immediately, checklists fill in.
+  expandActiveChecklists().catch(() => {})
 }
 async function loadMilestones() {
   const { data } = await api<{ data: Milestone[] }>('/milestones', { query: { project_id: route.params.id } })
@@ -329,11 +333,15 @@ async function deleteTask(t: Task) {
   }
 }
 function taskMenu(t: Task) {
-  const statusGroup = TASK_ORDER.map(s => ({
-    label: `Move to ${TASK_META[s].label}`,
-    icon: t.status === s ? 'i-lucide-check' : undefined,
-    onSelect: () => setTaskStatus(t, s)
-  }))
+  // A task with a checklist has a derived status — offering "Move to Done"
+  // would be accepted and then reversed by the rule a second later.
+  const statusGroup = t.checklist_total > 0
+    ? [{ label: 'Status follows the checklist', icon: 'i-lucide-list-checks', disabled: true, onSelect: () => {} }]
+    : TASK_ORDER.map(s => ({
+        label: `Move to ${TASK_META[s].label}`,
+        icon: t.status === s ? 'i-lucide-check' : undefined,
+        onSelect: () => setTaskStatus(t, s)
+      }))
   const milestoneGroup = [
     ...milestones.value.map(m => ({
       label: m.title,
@@ -406,7 +414,9 @@ function milestoneMenu(m: Milestone, index: number, total: number) {
   return [
     [
       ...MILESTONE_STATES.map(s => ({
-        label: `Mark ${MILESTONE_STATE_META[s].label}`,
+        // Setting a state by hand pins the milestone — say so, rather than
+        // letting it silently drop off auto-pilot.
+        label: m.state_manual ? `Mark ${MILESTONE_STATE_META[s].label}` : `Mark ${MILESTONE_STATE_META[s].label} (stops auto)`,
         icon: m.state === s ? 'i-lucide-check' : undefined,
         onSelect: () => setMilestoneState(m, s)
       })),
@@ -451,6 +461,26 @@ const checklist = reactive<Record<number, ChecklistItem[]>>({})
 async function loadChecklist(taskId: number) {
   const { data } = await api<{ data: ChecklistItem[] }>(`/tasks/${taskId}/checklist`)
   checklist[taskId] = data
+}
+
+/**
+ * Open the checklist of the task you're most likely working on — the first
+ * unfinished one that has a checklist, per milestone. Since ticking the last
+ * item is what completes the task, the checklist is the task's real state and
+ * shouldn't need a click to see. One per milestone keeps the boards short.
+ */
+async function expandActiveChecklists() {
+  const seen = new Set<number | null>()
+  for (const t of tasks.value) {
+    if (t.status === 'done' || t.checklist_total === 0) continue
+    if (seen.has(t.milestone_id)) continue
+    seen.add(t.milestone_id)
+    if (expanded[t.id]) continue
+    expanded[t.id] = true
+    await loadChecklist(t.id).catch(() => {
+      expanded[t.id] = false
+    })
+  }
 }
 async function toggleExpand(t: Task) {
   expanded[t.id] = !expanded[t.id]
@@ -868,22 +898,53 @@ const scopeFields = computed(() => project.value
                         {{ MILESTONE_STATE_META[board.milestone.state].label }}
                       </StatusChip>
                       <span class="font-display text-[15px] font-semibold text-highlighted">{{ board.milestone.title }}</span>
-                      <!-- Pinned: this state was set by hand, so it no longer
-                           follows the task rollup. Worth showing, or it just
-                           looks like auto-pilot is broken. -->
-                      <UIcon
-                        v-if="board.milestone.state_manual"
-                        name="i-lucide-pin"
-                        class="size-3.5 text-muted"
-                        title="Set manually — not following task progress"
-                      />
+                      <!-- State is derived from the task rollup. Pinned means it
+                           was set by hand and has stopped following the tasks —
+                           worth showing, or auto-pilot just looks broken. -->
+                      <UTooltip
+                        :text="board.milestone.state_manual
+                          ? 'Set by hand — no longer follows task progress. Use Resume Auto to release it.'
+                          : 'Follows task progress automatically'"
+                      >
+                        <span
+                          class="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide"
+                          :class="board.milestone.state_manual ? 'text-warning' : 'text-muted'"
+                        >
+                          <UIcon
+                            :name="board.milestone.state_manual ? 'i-lucide-pin' : 'i-lucide-refresh-cw'"
+                            class="size-3"
+                          />
+                          {{ board.milestone.state_manual ? 'Pinned' : 'Auto' }}
+                        </span>
+                      </UTooltip>
                     </template>
                     <template v-else>
                       <span class="font-display text-[15px] font-semibold text-highlighted">General</span>
-                      <span class="text-[12px] text-muted">Unassigned</span>
+                      <UTooltip text="These tasks count toward the project bar but no milestone, so the client never sees them.">
+                        <span class="text-[12px] text-muted">Unassigned</span>
+                      </UTooltip>
                     </template>
-                    <span class="text-[12px] text-muted tabular-nums">{{ board.count }}</span>
                     <div class="ms-auto flex items-center gap-3">
+                      <!-- the milestone's own rollup — what the client sees -->
+                      <span
+                        v-if="board.milestone"
+                        class="hidden items-center gap-2 sm:flex"
+                      >
+                        <UProgress
+                          :model-value="board.milestone.task_done"
+                          :max="Math.max(board.milestone.task_total, 1)"
+                          size="2xs"
+                          :color="board.milestone.state === 'complete' ? 'success' : 'primary'"
+                          class="w-16"
+                        />
+                        <span class="text-[12px] text-muted tabular-nums">
+                          {{ board.milestone.task_done }}/{{ board.milestone.task_total }}
+                        </span>
+                      </span>
+                      <span
+                        v-else
+                        class="text-[12px] text-muted tabular-nums"
+                      >{{ board.count }}</span>
                       <span
                         v-if="board.milestone?.target_date"
                         class="inline-flex items-center gap-1 whitespace-nowrap text-[12px] text-muted"
