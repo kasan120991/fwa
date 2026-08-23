@@ -773,6 +773,10 @@ CREATE TABLE IF NOT EXISTS project_milestones (
   clickup_option_id VARCHAR(100) NULL,
   description  TEXT            NULL,
   state        ENUM('upcoming', 'in_progress', 'complete') NOT NULL DEFAULT 'upcoming',
+  -- state is normally derived from the child-task rollup (see
+  -- services/delivery.service.js). Setting it by hand pins it: this flips to 1
+  -- and auto-pilot leaves the milestone alone from then on.
+  state_manual TINYINT(1)      NOT NULL DEFAULT 0,
   position     INT             NOT NULL DEFAULT 0,
   target_date  DATE            NULL,
   completed_at TIMESTAMP       NULL,

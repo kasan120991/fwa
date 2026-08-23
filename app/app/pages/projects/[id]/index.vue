@@ -70,6 +70,9 @@ interface Milestone {
   title: string
   description: string | null
   state: MilestoneState
+  // 1 = the state was set by hand and is pinned there; auto-pilot (which
+  // derives state from the task rollup) skips it until it's released.
+  state_manual: 0 | 1
   position: number
   target_date: string | null
   task_total: number
@@ -392,13 +395,26 @@ async function moveMilestone(m: Milestone, dir: -1 | 1) {
     toast.add({ title: 'Could not reorder milestones', color: 'error' })
   }
 }
+// Releasing a pin hands the milestone back to auto-pilot, which recomputes it
+// from the task rollup immediately.
+async function resumeAutoMilestone(m: Milestone) {
+  await api(`/milestones/${m.id}`, { method: 'PATCH', body: { state_manual: false } })
+  await Promise.all([loadMilestones(), loadTasks()])
+}
+
 function milestoneMenu(m: Milestone, index: number, total: number) {
   return [
-    MILESTONE_STATES.map(s => ({
-      label: `Mark ${MILESTONE_STATE_META[s].label}`,
-      icon: m.state === s ? 'i-lucide-check' : undefined,
-      onSelect: () => setMilestoneState(m, s)
-    })),
+    [
+      ...MILESTONE_STATES.map(s => ({
+        label: `Mark ${MILESTONE_STATE_META[s].label}`,
+        icon: m.state === s ? 'i-lucide-check' : undefined,
+        onSelect: () => setMilestoneState(m, s)
+      })),
+      // Marking a state pins it, so offer the way back out.
+      ...(m.state_manual
+        ? [{ label: 'Resume Auto', icon: 'i-lucide-refresh-cw', onSelect: () => resumeAutoMilestone(m) }]
+        : [])
+    ],
     [
       { label: 'Edit', icon: 'i-lucide-pencil', onSelect: () => openEditMilestone(m) },
       ...(index > 0 ? [{ label: 'Move up', icon: 'i-lucide-arrow-up', onSelect: () => moveMilestone(m, -1) }] : []),
@@ -852,6 +868,15 @@ const scopeFields = computed(() => project.value
                         {{ MILESTONE_STATE_META[board.milestone.state].label }}
                       </StatusChip>
                       <span class="font-display text-[15px] font-semibold text-highlighted">{{ board.milestone.title }}</span>
+                      <!-- Pinned: this state was set by hand, so it no longer
+                           follows the task rollup. Worth showing, or it just
+                           looks like auto-pilot is broken. -->
+                      <UIcon
+                        v-if="board.milestone.state_manual"
+                        name="i-lucide-pin"
+                        class="size-3.5 text-muted"
+                        title="Set manually — not following task progress"
+                      />
                     </template>
                     <template v-else>
                       <span class="font-display text-[15px] font-semibold text-highlighted">General</span>

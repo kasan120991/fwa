@@ -41,7 +41,8 @@ const ADDITIVE_COLUMNS = {
   // Pins a milestone to its ClickUp dropdown option, so renaming the milestone
   // in Ops doesn't detach every subtask that carries the old option.
   project_milestones: [
-    ['clickup_option_id', 'VARCHAR(100) NULL AFTER title']
+    ['clickup_option_id', 'VARCHAR(100) NULL AFTER title'],
+    ['state_manual', 'TINYINT(1) NOT NULL DEFAULT 0 AFTER state']
   ],
   websites: [
     ['do_droplet_id', 'BIGINT UNSIGNED NULL AFTER notes'],

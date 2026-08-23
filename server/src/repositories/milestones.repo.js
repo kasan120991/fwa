@@ -2,7 +2,7 @@ import { query } from '../db/pool.js'
 
 export const MILESTONE_STATES = new Set(['upcoming', 'in_progress', 'complete'])
 
-const UPDATABLE = ['title', 'description', 'state', 'position', 'target_date']
+const UPDATABLE = ['title', 'description', 'state', 'position', 'target_date', 'state_manual']
 
 const int = v => (v == null ? 0 : Number(v))
 
@@ -72,6 +72,10 @@ export async function updateMilestone(id, data) {
   // Cross the complete boundary: stamp/clear completed_at when state changes.
   if (data.state !== undefined) {
     set.push(data.state === 'complete' ? 'completed_at = NOW()' : 'completed_at = NULL')
+    // Setting the state by hand PINS it — auto-pilot (services/delivery.service.js)
+    // derives state from the task rollup and skips any milestone flagged here.
+    // Callers that recompute pass state_manual explicitly to avoid re-pinning.
+    if (data.state_manual === undefined) set.push('state_manual = 1')
   }
   await query(`UPDATE project_milestones SET ${set.join(', ')} WHERE id = :id`, params)
   return getMilestone(id)

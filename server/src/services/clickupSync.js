@@ -7,7 +7,7 @@ import * as tasksService from './tasks.service.js'
 import { getTask } from '../repositories/tasks.repo.js'
 import { getProject } from '../repositories/projects.repo.js'
 import { emitTaskCreated, emitTaskUpdated } from '../realtime/io.js'
-import { notifyDeliveryChanged } from './delivery.notify.js'
+import { deliveryChanged } from './delivery.service.js'
 
 // The bidirectional engine. Two directions live in two functions that never
 // call each other — applyRemoteTask (ClickUp -> Ops) can't push, pushTask
@@ -109,7 +109,7 @@ export async function applyRemoteTask(project, remote, local, field, { position 
       })
       const fresh = await getTask(adopt.id)
       if (fresh) emitTaskUpdated(fresh)
-      await notifyDeliveryChanged(project.id)
+      await deliveryChanged(project.id)
       return { updated: true, id: adopt.id, adopted: true, warn: mapped.warn }
     }
     // Insert already-linked, in one statement. ClickUp fires taskCreated and
@@ -139,7 +139,7 @@ export async function applyRemoteTask(project, remote, local, field, { position 
     }
     const created = await getTask(newId)
     if (created) emitTaskCreated(created)
-    await notifyDeliveryChanged(project.id)
+    await deliveryChanged(project.id)
     return { created: true, id: newId, warn: mapped.warn }
   }
 
@@ -170,7 +170,7 @@ export async function applyRemoteTask(project, remote, local, field, { position 
   }
   const fresh = await getTask(local.id)
   if (fresh) emitTaskUpdated(fresh)
-  await notifyDeliveryChanged(project.id)
+  await deliveryChanged(project.id)
   return { updated: true, id: local.id, warn: mapped.warn }
 }
 
@@ -373,7 +373,7 @@ export async function reconcileClient(client) {
   }
 
   if (out.deleted || out.created || out.updated) {
-    for (const p of linked) await notifyDeliveryChanged(p.id)
+    for (const p of linked) await deliveryChanged(p.id)
   }
   return out
 }

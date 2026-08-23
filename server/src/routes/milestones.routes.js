@@ -49,6 +49,12 @@ function validateMilestone(body, { partial = false } = {}) {
     if (!Number.isInteger(n) || n < 0) fields.position = 'must be a non-negative integer'
     else data.position = n
   }
+  // Setting `state` pins the milestone (the repo flips state_manual). Pass
+  // state_manual: false explicitly to hand it back to auto-pilot, which
+  // recomputes it from the task rollup on the next task change.
+  if (body.state_manual !== undefined) {
+    data.state_manual = body.state_manual ? 1 : 0
+  }
 
   if (Object.keys(fields).length) throw badRequest('Validation failed', fields)
   return data
