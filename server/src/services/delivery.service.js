@@ -1,8 +1,10 @@
 import { query } from '../db/pool.js'
 import { getProject } from '../repositories/projects.repo.js'
 import { listMilestones } from '../repositories/milestones.repo.js'
+import { getTask, updateTask } from '../repositories/tasks.repo.js'
+import { checklistCounts } from '../repositories/clickup.repo.js'
 import {
-  emitMilestoneUpdated, emitClientProjectChanged, emitClientMilestoneChanged
+  emitMilestoneUpdated, emitTaskUpdated, emitClientProjectChanged, emitClientMilestoneChanged
 } from '../realtime/io.js'
 
 // The single choke point for "a task changed, so the delivery picture moved".
@@ -81,4 +83,44 @@ export async function deliveryChanged(projectId) {
   } catch (err) {
     console.error(`[delivery] project ${projectId}:`, err.message)
   }
+}
+
+/**
+ * A fully-ticked checklist completes its parent task; un-ticking reopens it.
+ *
+ * This makes the checklist the definition of the task being done, which is the
+ * first link in the chain the whole feature exists for: tick the last item ->
+ * task done -> milestone rollup moves -> milestone state advances -> the
+ * client's portal bar fills.
+ *
+ * Two deliberate limits. A task with NO checklist items is never touched —
+ * "every item is done" is vacuously true of an empty list, and the rule would
+ * otherwise complete every checklist-free task in the system. And the rule only
+ * moves a task INTO or OUT OF 'done'; it never picks between todo and
+ * in_progress, which stays ClickUp's business.
+ *
+ * Consequence worth knowing: a task can't be marked done while items remain
+ * unticked — it reopens on the next pass. That's the reactive behavior asked
+ * for, not an accident.
+ *
+ * Writes through the repo rather than tasks.service to avoid a cycle
+ * (tasks.service -> delivery.service). Returns the new status when it acted.
+ */
+export async function applyChecklistRule(taskId) {
+  if (!taskId) return { changed: false }
+  const { total, done } = await checklistCounts(taskId)
+  if (total === 0) return { changed: false, reason: 'no checklist' }
+
+  const task = await getTask(taskId)
+  if (!task) return { changed: false }
+  const allDone = done === total
+
+  let next = null
+  if (allDone && task.status !== 'done') next = 'done'
+  else if (!allDone && task.status === 'done') next = 'in_progress'
+  if (!next) return { changed: false }
+
+  const updated = await updateTask(taskId, { status: next })
+  if (updated) emitTaskUpdated(updated)
+  return { changed: true, status: next, project_id: task.project_id }
 }

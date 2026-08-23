@@ -19,7 +19,7 @@ import { logClientActivity } from '../services/clientActivity.service.js'
 import { getProject } from '../repositories/projects.repo.js'
 import { issueDeposit } from '../services/projectBilling.js'
 import * as clickup from '../services/clickup.js'
-import { applyRemoteTask } from '../services/clickupSync.js'
+import { syncRemoteTask } from '../services/clickupSync.js'
 import { ensureMilestoneField } from '../services/clickupProvision.js'
 import {
   getTaskByClickupId, getProjectByClickupTaskId
@@ -1000,7 +1000,7 @@ webhooksRouter.post('/clickup', async (req, res) => {
     // Look up by remote id first — the uq_calls_vapi / upsertFromStripe
     // convention, and what makes a taskCreated racing our own create safe.
     const local = await getTaskByClickupId(remote.id)
-    await applyRemoteTask(project, remote, local, await ensureMilestoneField())
+    await syncRemoteTask(project, remote, local, await ensureMilestoneField())
     return res.json({ received: true })
   } catch (err) {
     // DELIBERATE DEVIATION from this file's "500 so the sender retries" rule.

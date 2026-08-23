@@ -7,7 +7,7 @@ import * as tasksService from './tasks.service.js'
 import { getTask } from '../repositories/tasks.repo.js'
 import { getProject } from '../repositories/projects.repo.js'
 import { emitTaskCreated, emitTaskUpdated } from '../realtime/io.js'
-import { deliveryChanged } from './delivery.service.js'
+import { deliveryChanged, applyChecklistRule } from './delivery.service.js'
 
 // The bidirectional engine. Two directions live in two functions that never
 // call each other — applyRemoteTask (ClickUp -> Ops) can't push, pushTask
@@ -16,6 +16,22 @@ import { deliveryChanged } from './delivery.service.js'
 // the loop, because that function is called by both directions.
 //
 // Shaped results, never thrown, per the websiteSync.js convention.
+
+/* --------------------------------------------------------------- task locks */
+
+// ClickUp delivers TWO webhooks for a single change (taskUpdated alongside the
+// specific event), so two handlers routinely process the same task at once.
+// Chain per-task work so they run in order: without this, both see the same
+// pre-write state and duplicate whatever they create.
+const taskLocks = new Map()
+function withTaskLock(key, fn) {
+  const prev = taskLocks.get(key) ?? Promise.resolve()
+  const next = prev.then(fn, fn)
+  taskLocks.set(key, next.catch(() => {}).finally(() => {
+    if (taskLocks.get(key) === next) taskLocks.delete(key)
+  }))
+  return next
+}
 
 /* ------------------------------------------------------------- status cache */
 
@@ -82,6 +98,94 @@ async function toOpsTask(projectId, remote, field) {
 }
 
 /**
+ * Flatten a remote task's checklists into the one flat list Ops keeps.
+ *
+ * ClickUp allows several named checklists per task and can nest items; Ops has
+ * a single flat list. The model is one checklist per task, but items from ALL of
+ * them are mirrored so nothing on the task is invisible in Ops — and so a
+ * forgotten second checklist can't let the auto-done rule fire early. Nesting is
+ * flattened in order; it survives in ClickUp, it just isn't represented here.
+ */
+function flattenChecklists(remote) {
+  const out = []
+  const walk = (items) => {
+    for (const it of items ?? []) {
+      out.push({ id: it.id, title: String(it.name ?? '').trim(), done: !!it.resolved })
+      if (it.children?.length) walk(it.children)
+    }
+  }
+  for (const cl of [...(remote.checklists ?? [])].sort((a, b) => (a.orderindex ?? 0) - (b.orderindex ?? 0))) {
+    walk(cl.items)
+  }
+  return out
+}
+
+/**
+ * Reconcile a task's checklist against ClickUp.
+ *
+ * Called on EVERY pull path, including the echo path: ticking a checklist item
+ * leaves the task's synced fields untouched, so the shadow compares equal and
+ * the task itself is a no-op — the checklist change would be dropped if this
+ * only ran when the task changed.
+ */
+async function applyRemoteChecklist(taskId, remote) {
+  const first = [...(remote.checklists ?? [])].sort((a, b) => (a.orderindex ?? 0) - (b.orderindex ?? 0))[0]
+  await repo.setTaskChecklistId(taskId, first?.id ?? null)
+
+  const wanted = flattenChecklists(remote)
+  const local = await repo.listSyncChecklistItems(taskId)
+  const byRemote = new Map(local.filter(i => i.clickup_item_id).map(i => [i.clickup_item_id, i]))
+  const seen = new Set()
+  let changed = 0
+
+  for (const [pos, w] of wanted.entries()) {
+    seen.add(w.id)
+    const existing = byRemote.get(w.id)
+    if (!existing) {
+      try {
+        await repo.createLinkedChecklistItem(taskId, { title: w.title, done: w.done, position: pos, clickupItemId: w.id })
+        changed++
+      } catch (err) {
+        if (err?.code !== 'ER_DUP_ENTRY') throw err // another delivery won the race
+      }
+    } else if (await repo.updateChecklistItemFields(existing.id, { title: w.title, done: w.done, position: pos })) {
+      changed++
+    }
+  }
+  // Linked locally but gone from ClickUp — the item was deleted there.
+  for (const i of local) {
+    if (i.clickup_item_id && !seen.has(i.clickup_item_id)) {
+      await repo.deleteChecklistItemRow(i.id)
+      changed++
+    }
+  }
+  return { changed, unlinked: local.filter(i => !i.clickup_item_id) }
+}
+
+/**
+ * Everything that must follow a pulled task, on every path.
+ *
+ * Reconciles the checklist, then applies the auto-done rule. If the rule moved
+ * the task, the new status is pushed straight back up — the one place the pull
+ * path deliberately writes to ClickUp. It converges rather than loops: once
+ * ClickUp holds the corrected status, the rule agrees with it and stops acting.
+ */
+async function afterRemoteTask(taskId, remote, projectId) {
+  const cl = await applyRemoteChecklist(taskId, remote)
+  const rule = await applyChecklistRule(taskId)
+  if (rule.changed) {
+    console.log(`[clickupSync] task ${taskId}: checklist ${rule.status === 'done' ? 'completed' : 'reopened'} it`)
+    await pushTask(taskId).catch(err => console.error('[clickupSync] push rule status:', err.message))
+    await deliveryChanged(projectId)
+  }
+  // NOTE: unlinked local items are deliberately NOT pushed from here. This runs
+  // on every delivery, so pushing would race itself and create a remote item per
+  // delivery, each returning as a fresh Ops row. Unlinked items go up once, from
+  // pushTask, which the link/backfill paths call sequentially.
+  return { checklistChanged: cl.changed, ruleChanged: rule.changed }
+}
+
+/**
  * Apply one remote task. The four outcomes, in order:
  *   created — no local row yet
  *   echo    — remote maps to exactly the shadow, so nothing happened. This is
@@ -139,11 +243,19 @@ export async function applyRemoteTask(project, remote, local, field, { position 
     }
     const created = await getTask(newId)
     if (created) emitTaskCreated(created)
+    await afterRemoteTask(newId, remote, project.id)
     await deliveryChanged(project.id)
     return { created: true, id: newId, warn: mapped.warn }
   }
 
-  if (map.shadowEq(shadow, local.clickup_shadow)) return { echo: true, warn: mapped.warn }
+  // Reconcile the checklist BEFORE the shadow comparison: ticking an item
+  // doesn't touch any synced task field, so this is an echo as far as the task
+  // is concerned and would otherwise return with the checklist change dropped.
+  const post = await afterRemoteTask(local.id, remote, project.id)
+
+  if (map.shadowEq(shadow, local.clickup_shadow)) {
+    return { echo: !post.checklistChanged, updated: post.checklistChanged, id: local.id, warn: mapped.warn }
+  }
 
   // Whether the LOCAL row had also drifted from the shadow, i.e. there is an
   // unpushed Ops edit about to be discarded. Resolve the milestone title the
@@ -172,6 +284,16 @@ export async function applyRemoteTask(project, remote, local, field, { position 
   if (fresh) emitTaskUpdated(fresh)
   await deliveryChanged(project.id)
   return { updated: true, id: local.id, warn: mapped.warn }
+}
+
+/**
+ * The entry point external callers should use. Serializes per remote task id so
+ * ClickUp's two-deliveries-per-change can't be processed concurrently. The
+ * recursive call inside applyRemoteTask stays unlocked on purpose — re-entering
+ * here would deadlock.
+ */
+export function syncRemoteTask(project, remote, local, field, opts) {
+  return withTaskLock(remote.id, () => applyRemoteTask(project, remote, local, field, opts))
 }
 
 /* ------------------------------------------------------------ Ops -> remote */
@@ -247,6 +369,13 @@ export async function pushTask(taskId) {
       Number(remote.date_updated) || Date.now(),
       confirmed.clickup_status
     )
+    // Carry up any checklist items that have never been linked (a template
+    // seed, or items added while ClickUp was unreachable). Sequential and only
+    // from this path, so it can't race itself the way a per-delivery push would.
+    for (const i of await repo.listSyncChecklistItems(local.id)) {
+      if (i.clickup_item_id) continue
+      await pushChecklistItem(i.id).catch(e => console.error(`[clickupSync] push item ${i.id}:`, e.message))
+    }
     return { pushed: true, clickup_task_id: remote.id }
   } catch (err) {
     // Unknown remote state -> NULL shadow, which makes the next pull apply
@@ -255,6 +384,64 @@ export async function pushTask(taskId) {
     console.error(`[clickupSync] push task ${local.id}:`, err.message)
     return { pushed: false, error: err.message }
   }
+}
+
+/**
+ * Push one Ops checklist item up. Creates the task's checklist on first use —
+ * Ops keeps exactly one per task, which is why the id is cached on the task.
+ */
+export async function pushChecklistItem(itemId) {
+  if (!isConfigured()) return { pushed: false, configured: false }
+  const item = await repo.getChecklistItemById(itemId)
+  if (!item) return { pushed: false, notFound: true }
+  const task = await repo.getSyncTask(item.task_id)
+  if (!task?.clickup_task_id) return { pushed: false, reason: 'task not linked' }
+
+  let checklistId = task.clickup_checklist_id
+  if (!checklistId) {
+    // Reuse the task's existing checklist if it already has one, so an Ops-side
+    // add doesn't create a second list alongside the one you made in ClickUp.
+    const remote = await cu.getTask(task.clickup_task_id)
+    checklistId = [...(remote.checklists ?? [])].sort((a, b) => (a.orderindex ?? 0) - (b.orderindex ?? 0))[0]?.id
+      ?? (await cu.createChecklist(task.clickup_task_id)).id
+    await repo.setTaskChecklistId(task.id, checklistId)
+  }
+
+  if (item.clickup_item_id) {
+    await cu.updateChecklistItem(checklistId, item.clickup_item_id, {
+      name: item.title, resolved: !!item.done
+    })
+    return { pushed: true, clickup_item_id: item.clickup_item_id }
+  }
+
+  // Create returns the whole checklist; the new item is the one carrying our
+  // name that no local row has claimed yet.
+  const checklist = await cu.createChecklistItem(checklistId, item.title)
+  const known = new Set((await repo.listSyncChecklistItems(item.task_id))
+    .map(i => i.clickup_item_id).filter(Boolean))
+  const created = (checklist.items ?? []).find(i => i.name === item.title && !known.has(i.id))
+  if (!created) return { pushed: false, error: 'could not identify the created item' }
+  await repo.linkChecklistItem(item.id, created.id)
+  if (item.done) {
+    await cu.updateChecklistItem(checklistId, created.id, { resolved: true })
+  }
+  return { pushed: true, clickup_item_id: created.id }
+}
+
+/** Remove a checklist item from ClickUp after it's deleted in Ops. */
+export async function deleteRemoteChecklistItem(task, clickupItemId) {
+  if (!isConfigured() || !clickupItemId) return { deleted: false }
+  // The delete path is nested under the checklist, so fall back to reading it
+  // off the task rather than skipping the delete — silently leaving the remote
+  // item behind means the next sweep mirrors it straight back into Ops.
+  let checklistId = task?.clickup_checklist_id
+  if (!checklistId && task?.clickup_task_id) {
+    const remote = await cu.getTask(task.clickup_task_id)
+    checklistId = [...(remote.checklists ?? [])].sort((a, b) => (a.orderindex ?? 0) - (b.orderindex ?? 0))[0]?.id
+  }
+  if (!checklistId) return { deleted: false, reason: 'no checklist on task' }
+  await cu.deleteChecklistItem(checklistId, clickupItemId)
+  return { deleted: true }
 }
 
 /** Push every not-yet-linked task on a project (template seed, or backfill). */
@@ -336,7 +523,7 @@ export async function reconcileClient(client) {
 
     const ranked = [...rSubs].sort((a, b) => Number(a.orderindex ?? 0) - Number(b.orderindex ?? 0))
     for (const [i, s] of ranked.entries()) {
-      const res = await applyRemoteTask(p, s, byCu.get(s.id) ?? null, field, { position: i })
+      const res = await syncRemoteTask(p, s, byCu.get(s.id) ?? null, field, { position: i })
       if (res.created) out.created++
       else if (res.updated) out.updated++
       else if (res.echo) out.echo++

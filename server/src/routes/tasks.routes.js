@@ -2,8 +2,9 @@ import { Router } from 'express'
 import { getTask, listTasks, listChecklist, TASK_STATUSES, TASK_PRIORITIES } from '../repositories/tasks.repo.js'
 import { createTask, updateTask, deleteTask, addChecklistItem, updateChecklistItem, deleteChecklistItem } from '../services/tasks.service.js'
 import { getProject } from '../repositories/projects.repo.js'
-import { pushTask } from '../services/clickupSync.js'
-import { getSyncTask } from '../repositories/clickup.repo.js'
+import { pushTask, pushChecklistItem, deleteRemoteChecklistItem } from '../services/clickupSync.js'
+import { getSyncTask, getChecklistItemById } from '../repositories/clickup.repo.js'
+import { applyChecklistRule } from '../services/delivery.service.js'
 import * as clickup from '../services/clickup.js'
 import { config } from '../config/env.js'
 
@@ -20,6 +21,19 @@ export const tasksRouter = Router()
 function pushLater(taskId) {
   if (!taskId) return
   pushTask(taskId).catch(err => console.error(`[clickup] push task ${taskId}:`, err.message))
+}
+
+/**
+ * A checklist edit can complete or reopen its parent task, which in turn moves
+ * the milestone rollup and the client's portal bar. Run the rule first, then
+ * push the item — and the task too when the rule acted.
+ */
+function pushChecklistLater(itemId, taskId) {
+  ;(async () => {
+    const rule = await applyChecklistRule(taskId)
+    await pushChecklistItem(itemId)
+    if (rule.changed) await pushTask(taskId)
+  })().catch(err => console.error(`[clickup] push checklist item ${itemId}:`, err.message))
 }
 
 function badRequest(message, fields) {
@@ -181,7 +195,9 @@ tasksRouter.post('/:id/checklist', async (req, res) => {
   if (!task) return res.status(404).json({ error: { message: 'Task not found' } })
   const title = String(req.body?.title ?? '').trim()
   if (!title) throw badRequest('Validation failed', { title: 'title is required' })
-  res.status(201).json({ data: await addChecklistItem(id, title) })
+  const item = await addChecklistItem(id, title)
+  res.status(201).json({ data: item })
+  pushChecklistLater(item?.id, id)
 })
 
 // PATCH /api/tasks/:id/checklist/:itemId  { done?, title? }
@@ -196,11 +212,24 @@ tasksRouter.patch('/:id/checklist/:itemId', async (req, res) => {
   const item = await updateChecklistItem(parseItemId(req), data)
   if (!item) return res.status(404).json({ error: { message: 'Checklist item not found' } })
   res.json({ data: item })
+  pushChecklistLater(item.id, item.task_id)
 })
 
 // DELETE /api/tasks/:id/checklist/:itemId
 tasksRouter.delete('/:id/checklist/:itemId', async (req, res) => {
-  const ok = await deleteChecklistItem(parseItemId(req))
+  const itemId = parseItemId(req)
+  // Read the remote id before the local delete — the row is about to go.
+  const existing = await getChecklistItemById(itemId)
+  const ok = await deleteChecklistItem(itemId)
   if (!ok) return res.status(404).json({ error: { message: 'Checklist item not found' } })
   res.json({ ok: true })
+  ;(async () => {
+    if (existing?.clickup_item_id) {
+      const task = await getSyncTask(existing.task_id)
+      await deleteRemoteChecklistItem(task, existing.clickup_item_id)
+    }
+    // Removing the last unticked item can complete the task.
+    const rule = await applyChecklistRule(existing?.task_id)
+    if (rule.changed) await pushTask(existing.task_id)
+  })().catch(err => console.error(`[clickup] delete checklist item ${itemId}:`, err.message))
 })

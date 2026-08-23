@@ -71,7 +71,11 @@ const ADDITIVE_COLUMNS = {
     ['clickup_version', 'BIGINT UNSIGNED NULL AFTER clickup_shadow'],
     ['clickup_sync_error', 'VARCHAR(255) NULL AFTER clickup_version'],
     ['clickup_status', 'VARCHAR(50) NULL AFTER status'],
-    ['clickup_synced_at', 'DATETIME NULL AFTER completed_at']
+    ['clickup_synced_at', 'DATETIME NULL AFTER completed_at'],
+    ['clickup_checklist_id', 'VARCHAR(100) NULL AFTER clickup_sync_error']
+  ],
+  task_checklist_items: [
+    ['clickup_item_id', 'VARCHAR(100) NULL AFTER done']
   ],
   // Client-portal: link a portal login to its client (soft column on existing
   // DBs; fresh installs get the FK from schema.sql). portal_invites is a new
@@ -121,6 +125,9 @@ const ADDITIVE_INDEXES = {
   ],
   projects: [
     ['uq_projects_clickup', 'ADD UNIQUE KEY uq_projects_clickup (clickup_task_id)']
+  ],
+  task_checklist_items: [
+    ['uq_tci_clickup', 'ADD UNIQUE KEY uq_tci_clickup (clickup_item_id)']
   ]
 }
 

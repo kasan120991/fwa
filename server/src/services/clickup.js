@@ -134,6 +134,32 @@ export async function listFields(listId) {
   return json.fields ?? []
 }
 
+/* --------------------------------------------------------------- checklists */
+// A task's checklists ride along in getTask()/listTasks() as `checklists[]`, so
+// reading costs no extra request. Note item `orderindex` comes back null in
+// practice — order is the array order.
+
+/** Create a checklist on a task (Ops keeps one per task). */
+export async function createChecklist(taskId, name = 'Checklist') {
+  const json = await cuFetch(`/task/${taskId}/checklist`, { method: 'POST', body: { name } })
+  return json.checklist ?? json
+}
+
+export async function createChecklistItem(checklistId, name) {
+  const json = await cuFetch(`/checklist/${checklistId}/checklist_item`, { method: 'POST', body: { name } })
+  return json.checklist ?? json
+}
+
+/** Rename or resolve an item. Note the path is nested under its checklist. */
+export async function updateChecklistItem(checklistId, itemId, body) {
+  const json = await cuFetch(`/checklist/${checklistId}/checklist_item/${itemId}`, { method: 'PUT', body })
+  return json.checklist ?? json
+}
+
+export async function deleteChecklistItem(checklistId, itemId) {
+  return cuFetch(`/checklist/${checklistId}/checklist_item/${itemId}`, { method: 'DELETE' })
+}
+
 /* ----------------------------------------------------------------- webhooks */
 
 export async function listWebhooks() {

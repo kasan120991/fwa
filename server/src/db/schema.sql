@@ -811,6 +811,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   -- monotonic guard: out-of-order and re-delivered webhooks can't regress us.
   clickup_version   BIGINT UNSIGNED NULL,
   clickup_sync_error VARCHAR(255) NULL,
+  -- Which ClickUp checklist new Ops items are appended to (the task's first).
+  clickup_checklist_id VARCHAR(100) NULL,
   title        VARCHAR(255)    NOT NULL,
   description  TEXT            NULL,
   status       ENUM('todo', 'in_progress', 'blocked', 'done') NOT NULL DEFAULT 'todo',
@@ -841,11 +843,16 @@ CREATE TABLE IF NOT EXISTS task_checklist_items (
   task_id    BIGINT UNSIGNED NOT NULL,
   title      VARCHAR(255)    NOT NULL,
   done       TINYINT(1)      NOT NULL DEFAULT 0,
+  -- The matching item in the task's ClickUp checklist. ClickUp allows several
+  -- named checklists per task while this list is flat, so items from all of
+  -- them mirror here and new ones are written to the first.
+  clickup_item_id VARCHAR(100) NULL,
   position   INT             NOT NULL DEFAULT 0,
   created_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
                              ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
+  UNIQUE KEY uq_tci_clickup (clickup_item_id),
   KEY idx_tci_task (task_id, position),
   CONSTRAINT fk_tci_task
     FOREIGN KEY (task_id) REFERENCES tasks (id)

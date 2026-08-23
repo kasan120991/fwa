@@ -80,7 +80,7 @@ export async function listProjectsForClient(clientId) {
 
 const TASK_COLS = `id, project_id, milestone_id, title, description, status, priority,
   due_date, position, completed_at, clickup_task_id, clickup_shadow, clickup_version,
-  clickup_status, clickup_synced_at, clickup_sync_error`
+  clickup_status, clickup_synced_at, clickup_sync_error, clickup_checklist_id`
 
 function mapTask(row) {
   if (!row) return null
@@ -221,4 +221,75 @@ export async function listMilestonesForSync(projectId) {
     `SELECT id, title, clickup_option_id, position FROM project_milestones
       WHERE project_id = :projectId ORDER BY position, id`,
     { projectId })
+}
+
+/* --------------------------------------------------------------- checklists */
+
+/** Which ClickUp checklist Ops appends new items to (the task's first). */
+export async function setTaskChecklistId(taskId, checklistId) {
+  await query('UPDATE tasks SET clickup_checklist_id = :checklistId WHERE id = :taskId',
+    { taskId, checklistId })
+}
+
+export async function listSyncChecklistItems(taskId) {
+  return query(
+    `SELECT id, task_id, title, done, position, clickup_item_id
+       FROM task_checklist_items WHERE task_id = :taskId ORDER BY position, id`,
+    { taskId })
+}
+
+export async function getChecklistItemById(id) {
+  const rows = await query(
+    `SELECT id, task_id, title, done, position, clickup_item_id
+       FROM task_checklist_items WHERE id = :id LIMIT 1`, { id })
+  return rows[0] ?? null
+}
+
+export async function getChecklistItemByClickupId(clickupItemId) {
+  const rows = await query(
+    `SELECT id, task_id, title, done, position, clickup_item_id
+       FROM task_checklist_items WHERE clickup_item_id = :clickupItemId LIMIT 1`,
+    { clickupItemId })
+  return rows[0] ?? null
+}
+
+/**
+ * Insert an item already linked to its remote id, in one statement — the same
+ * reason tasks use createLinkedTask: ClickUp can deliver two webhooks for one
+ * change, and an insert-then-link would let both land a row before either
+ * claimed the id.
+ */
+export async function createLinkedChecklistItem(taskId, { title, done, position, clickupItemId }) {
+  const res = await query(
+    `INSERT INTO task_checklist_items (task_id, title, done, position, clickup_item_id)
+     VALUES (:taskId, :title, :done, :position, :clickupItemId)`,
+    { taskId, title, done: done ? 1 : 0, position, clickupItemId })
+  return res.insertId
+}
+
+export async function updateChecklistItemFields(id, { title, done, position }) {
+  const res = await query(
+    `UPDATE task_checklist_items SET title = :title, done = :done, position = :position
+      WHERE id = :id AND (title <> :title OR done <> :done OR position <> :position)`,
+    { id, title, done: done ? 1 : 0, position })
+  return res.affectedRows > 0
+}
+
+export async function deleteChecklistItemRow(id) {
+  const res = await query('DELETE FROM task_checklist_items WHERE id = :id', { id })
+  return res.affectedRows > 0
+}
+
+export async function linkChecklistItem(id, clickupItemId) {
+  await query('UPDATE task_checklist_items SET clickup_item_id = :clickupItemId WHERE id = :id',
+    { id, clickupItemId })
+}
+
+/** Item counts for the auto-done rule. */
+export async function checklistCounts(taskId) {
+  const rows = await query(
+    `SELECT COUNT(*) AS total, COALESCE(SUM(done = 1), 0) AS done
+       FROM task_checklist_items WHERE task_id = :taskId`,
+    { taskId })
+  return { total: Number(rows[0]?.total ?? 0), done: Number(rows[0]?.done ?? 0) }
 }
