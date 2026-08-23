@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import { config } from '../config/env.js'
 import {
-  isConfigured, syncAllClickup, reconcileClient, ensureClientSpace, ensureProjectTask, pushProjectTasks
+  isConfigured, syncAllClickup, reconcileClient, ensureClientSpace,
+  pushProjectTasks, pushProject
 } from '../services/clickupSync.js'
 import { ensureMilestoneField, missingMilestoneOptions } from '../services/clickupProvision.js'
 import { getClient } from '../repositories/clients.repo.js'
@@ -77,8 +78,11 @@ clickupRouter.post('/projects/:id/link', async (req, res) => {
   const id = parseId(req)
   const project = await getProject(id)
   if (!project) return res.status(404).json({ error: { message: 'Project not found' } })
-  const link = await ensureProjectTask(project)
-  if (!link.linked) return res.json({ data: link })
+  // pushProject ensures the task exists AND carries the current name/goals/dates
+  // up — ensureProjectTask alone short-circuits on an already-linked project, so
+  // an existing one would never receive its schedule.
+  const link = await pushProject(id)
+  if (!link.pushed) return res.json({ data: link })
   res.json({ data: { ...link, ...(await pushProjectTasks(id)) } })
 })
 
@@ -97,8 +101,8 @@ clickupRouter.post('/backfill', async (req, res) => {
     out.clients++
     const projects = await query('SELECT id FROM projects WHERE client_id = :id ORDER BY id', { id: c.id })
     for (const p of projects) {
-      const link = await ensureProjectTask(p.id)
-      if (!link.linked) { out.errors.push(`Project ${p.id}: ${link.error ?? link.reason}`); continue }
+      const link = await pushProject(p.id)
+      if (!link.pushed) { out.errors.push(`Project ${p.id}: ${link.error ?? link.reason}`); continue }
       out.projects++
       out.tasks += (await pushProjectTasks(p.id)).pushed
     }

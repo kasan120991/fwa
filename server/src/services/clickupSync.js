@@ -1,7 +1,10 @@
 import { config } from '../config/env.js'
 import * as cu from './clickup.js'
 import * as map from './clickupMap.js'
-import { ensureMilestoneField, ensureMilestoneOption, ensureClientSpace, ensureProjectTask, isConfigured } from './clickupProvision.js'
+import {
+  ensureMilestoneField, ensureMilestoneOption, ensureClientSpace, ensureProjectTask,
+  projectDates, isConfigured
+} from './clickupProvision.js'
 import * as repo from '../repositories/clickup.repo.js'
 import * as tasksService from './tasks.service.js'
 import { getTask } from '../repositories/tasks.repo.js'
@@ -442,6 +445,36 @@ export async function deleteRemoteChecklistItem(task, clickupItemId) {
   if (!checklistId) return { deleted: false, reason: 'no checklist on task' }
   await cu.deleteChecklistItem(checklistId, clickupItemId)
   return { deleted: true }
+}
+
+/**
+ * Push the project's own fields onto its ClickUp task — name, goals, and the
+ * schedule: start_date comes from the project's start date, due_date from its
+ * target launch date, so the ClickUp task carries the same window as the SOW.
+ *
+ * One-way by design. These are Statement of Work fields that drive the contract
+ * and the client's portal, so Ops owns them; the webhook already ignores
+ * parentless tasks rather than reading a project back out of ClickUp.
+ */
+export async function pushProject(projectId) {
+  if (!isConfigured()) return { pushed: false, configured: false }
+  const project = await getProject(projectId)
+  if (!project) return { pushed: false, notFound: true }
+  const link = await ensureProjectTask(project)
+  if (!link.linked) return { pushed: false, ...link }
+  if (link.created) return { pushed: true, created: true } // dates went up with the create
+  try {
+    await cu.updateTask(link.clickup_task_id, {
+      name: `${project.code ? project.code + ' — ' : ''}${project.name}`,
+      description: project.goals || '',
+      ...projectDates(project)
+    })
+    return { pushed: true, clickup_task_id: link.clickup_task_id }
+  } catch (err) {
+    await repo.setProjectSyncError(project.id, err.message)
+    console.error(`[clickupSync] push project ${project.id}:`, err.message)
+    return { pushed: false, error: err.message }
+  }
 }
 
 /** Push every not-yet-linked task on a project (template seed, or backfill). */

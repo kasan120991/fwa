@@ -17,7 +17,7 @@ import { notify } from '../services/notifications.service.js'
 import { emitInvoiceChanged, emitContractChanged } from '../realtime/io.js'
 
 import { config } from '../config/env.js'
-import { ensureProjectTask, pushProjectTasks } from '../services/clickupSync.js'
+import { ensureProjectTask, pushProjectTasks, pushProject } from '../services/clickupSync.js'
 import * as clickupApi from '../services/clickup.js'
 
 export const projectsRouter = Router()
@@ -31,6 +31,13 @@ function provisionLater(projectId) {
   ensureProjectTask(projectId)
     .then(link => (link.linked ? pushProjectTasks(projectId) : null))
     .catch(err => console.error(`[clickup] provision project ${projectId}:`, err.message))
+}
+
+// A SOW edit can move the name or the schedule, and the ClickUp task carries
+// both. Fire-and-forget, like every other push: ClickUp must never fail a save.
+function pushProjectLater(projectId) {
+  if (!projectId) return
+  pushProject(projectId).catch(err => console.error(`[clickup] push project ${projectId}:`, err.message))
 }
 
 function badRequest(message, fields) {
@@ -183,6 +190,10 @@ projectsRouter.patch('/:id', async (req, res) => {
   const data = validateProject(req.body ?? {}, { partial: true })
   const project = await updateProject(id, data)
   res.json({ data: project })
+  // Only when something the ClickUp task actually shows has moved.
+  if (['name', 'goals', 'start_date', 'target_launch_date'].some(f => f in data)) {
+    pushProjectLater(id)
+  }
 })
 
 // POST /api/projects/:id/contract — generate the project's contract from its SOW.

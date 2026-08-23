@@ -1,6 +1,6 @@
 import { config } from '../config/env.js'
 import * as cu from './clickup.js'
-import { normTitle } from './clickupMap.js'
+import { normTitle, dateToClickUp } from './clickupMap.js'
 import { getClient } from '../repositories/clients.repo.js'
 import { getProject } from '../repositories/projects.repo.js'
 import * as repo from '../repositories/clickup.repo.js'
@@ -103,6 +103,21 @@ export async function missingMilestoneOptions() {
 
 /* ------------------------------------------------------------ client folder */
 
+/**
+ * The project's schedule, as ClickUp wants it. start_date/due_date are epoch ms;
+ * the *_time flags off keep them date-only, matching Ops' DATE columns. Dates go
+ * up at noon UTC (see dateToClickUp) so timezone normalization on either side
+ * can't cross midnight and shift the day.
+ */
+export function projectDates(project) {
+  const start = dateToClickUp(project.start_date)
+  const due = dateToClickUp(project.target_launch_date)
+  return {
+    ...(start ? { start_date: start, start_date_time: false } : {}),
+    ...(due ? { due_date: due, due_date_time: false } : {})
+  }
+}
+
 export function folderName(client) {
   return client.company?.trim() || client.name?.trim() || `Client ${client.id}`
 }
@@ -167,7 +182,8 @@ export async function ensureProjectTask(projectOrId) {
   try {
     const remote = await cu.createTask(space.listId, {
       name: `${project.code ? project.code + ' — ' : ''}${project.name}`,
-      description: project.goals || undefined
+      description: project.goals || undefined,
+      ...projectDates(project)
     })
     await repo.setProjectClickup(project.id, { clickup_task_id: remote.id })
     return { linked: true, listId: space.listId, clickup_task_id: remote.id, created: true, project }
