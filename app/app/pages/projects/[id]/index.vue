@@ -252,25 +252,48 @@ const tabs = computed(() => [
 
 // Tasks board: group by milestone (in order), each with the status sub-grouping
 // nested inside. Unassigned tasks fall into a trailing "General" board.
-function statusGroupsFor(list: Task[]) {
-  return TASK_ORDER
-    .map(s => ({ status: s, meta: TASK_META[s], items: list.filter(t => t.status === s) }))
-    .filter(g => g.items.length)
+// Tasks used to be banded by status inside each milestone, which cost a header
+// row per status — a lot of chrome for two or three tasks. Each row already
+// shows its own state, so order carries it instead: unfinished first, then by
+// due date, with completed work sinking to the bottom.
+const STATUS_RANK: Record<TaskStatus, number> = { in_progress: 0, blocked: 1, todo: 2, done: 3 }
+function orderTasks(list: Task[]) {
+  return [...list].sort((a, b) =>
+    STATUS_RANK[a.status] - STATUS_RANK[b.status]
+    || (a.due_date ?? '9999').localeCompare(b.due_date ?? '9999')
+    || a.position - b.position)
 }
 const taskBoards = computed(() => {
   const boards = milestones.value.map((m) => {
     const list = tasks.value.filter(t => t.milestone_id === m.id)
-    return { key: `m-${m.id}`, milestone: m as Milestone | null, statusGroups: statusGroupsFor(list), count: list.length }
+    return {
+      key: `m-${m.id}`,
+      milestone: m as Milestone | null,
+      items: orderTasks(list),
+      count: list.length,
+      // A finished milestone is reference material, not work in progress.
+      done: list.length > 0 && list.every(t => t.status === 'done')
+    }
   })
   const general = tasks.value.filter(t => t.milestone_id == null)
   if (general.length) {
-    boards.push({ key: 'general', milestone: null, statusGroups: statusGroupsFor(general), count: general.length })
+    boards.push({ key: 'general', milestone: null, items: orderTasks(general), count: general.length, done: false })
   }
   return boards
 })
-function milestonePct(m: Milestone) {
-  return m.task_total ? Math.round((m.task_done / m.task_total) * 100) : 0
+
+// Completed milestones start collapsed; anything in flight stays open.
+const collapsed = reactive<Record<string, boolean>>({})
+function boardOpen(board: { key: string, done: boolean }) {
+  return collapsed[board.key] === undefined ? !board.done : !collapsed[board.key]
 }
+function toggleBoard(board: { key: string, done: boolean }) {
+  collapsed[board.key] = boardOpen(board)
+}
+
+// One add-task field on the page at a time, revealed on demand — a permanent
+// input under every milestone was four rows of chrome nobody asked for.
+const addingTo = ref<string | null>(null)
 
 // Overdue or due-within-3-days, not done — the "what's next" focus strip.
 const focusTasks = computed(() => tasks.value
@@ -470,17 +493,19 @@ async function loadChecklist(taskId: number) {
  * shouldn't need a click to see. One per milestone keeps the boards short.
  */
 async function expandActiveChecklists() {
-  const seen = new Set<number | null>()
-  for (const t of tasks.value) {
-    if (t.status === 'done' || t.checklist_total === 0) continue
-    if (seen.has(t.milestone_id)) continue
-    seen.add(t.milestone_id)
-    if (expanded[t.id]) continue
-    expanded[t.id] = true
-    await loadChecklist(t.id).catch(() => {
-      expanded[t.id] = false
-    })
-  }
+  // Just the one task you're most likely working on — in progress first, then
+  // whatever is furthest along. Opening one per milestone buried the boards.
+  const candidates = tasks.value
+    .filter(t => t.status !== 'done' && t.checklist_total > 0)
+    .sort((a, b) =>
+      (a.status === 'in_progress' ? 0 : 1) - (b.status === 'in_progress' ? 0 : 1)
+      || (b.checklist_done / b.checklist_total) - (a.checklist_done / a.checklist_total))
+  const t = candidates[0]
+  if (!t || expanded[t.id]) return
+  expanded[t.id] = true
+  await loadChecklist(t.id).catch(() => {
+    expanded[t.id] = false
+  })
 }
 async function toggleExpand(t: Task) {
   expanded[t.id] = !expanded[t.id]
@@ -893,6 +918,14 @@ const scopeFields = computed(() => project.value
                 <!-- board header -->
                 <div class="border-b border-default px-4 py-3">
                   <div class="flex items-center gap-2.5">
+                    <UButton
+                      :icon="boardOpen(board) ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      :aria-label="boardOpen(board) ? 'Collapse' : 'Expand'"
+                      @click="toggleBoard(board)"
+                    />
                     <template v-if="board.milestone">
                       <StatusChip :status="MILESTONE_STATE_META[board.milestone.state].status">
                         {{ MILESTONE_STATE_META[board.milestone.state].label }}
@@ -970,35 +1003,14 @@ const scopeFields = computed(() => project.value
                       </UDropdownMenu>
                     </div>
                   </div>
-                  <!-- per-milestone progress (from task rollup) -->
-                  <div
-                    v-if="board.milestone"
-                    class="mt-2.5 flex items-center gap-2.5"
-                  >
-                    <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                      <div
-                        class="h-full rounded-full bg-primary transition-[width] duration-500"
-                        :style="{ width: milestonePct(board.milestone) + '%' }"
-                      />
-                    </div>
-                    <span class="text-[12px] font-semibold text-highlighted tabular-nums">{{ milestonePct(board.milestone) }}%</span>
-                    <span class="whitespace-nowrap text-[12px] text-muted tabular-nums">{{ board.milestone.task_done }}/{{ board.milestone.task_total }}</span>
-                  </div>
                 </div>
 
-                <!-- status sub-groups nested inside the milestone -->
-                <div
-                  v-for="g in board.statusGroups"
-                  :key="g.status"
-                >
-                  <div class="flex items-center gap-2 border-b border-default bg-muted/40 px-4 py-1.5">
-                    <StatusChip :status="g.meta.status">
-                      {{ g.meta.label }}
-                    </StatusChip>
-                    <span class="text-[12px] text-muted tabular-nums">{{ g.items.length }}</span>
-                  </div>
+                <!-- tasks — ordered, not banded by status: each row already
+                     shows its own state, and a header per status cost more
+                     room than the tasks it introduced -->
+                <template v-if="boardOpen(board)">
                   <TaskCard
-                    v-for="t in g.items"
+                    v-for="t in board.items"
                     :key="t.id"
                     :task="t"
                     :expanded="!!expanded[t.id]"
@@ -1011,30 +1023,55 @@ const scopeFields = computed(() => project.value
                     @toggle-item="(item) => toggleItem(t.id, item)"
                     @remove-item="(item) => removeChecklistItem(t.id, item)"
                   />
-                </div>
 
-                <!-- per-board add task -->
-                <div class="flex items-center gap-2 px-4 py-2.5">
-                  <UInput
-                    v-model="newTaskByBoard[board.key]"
-                    placeholder="Add a task…"
-                    icon="i-lucide-plus"
-                    class="flex-1"
-                    :ui="{ base: 'rounded-full' }"
-                    @keydown.enter="addTaskTo(board.milestone ? board.milestone.id : null)"
-                  />
-                  <UButton
-                    size="sm"
-                    color="neutral"
-                    variant="soft"
-                    class="rounded-full"
-                    :loading="addingByBoard[board.key]"
-                    :disabled="!(newTaskByBoard[board.key] || '').trim()"
-                    @click="addTaskTo(board.milestone ? board.milestone.id : null)"
-                  >
-                    Add
-                  </UButton>
-                </div>
+                  <!-- add task, on demand -->
+                  <div class="px-4 py-2">
+                    <UButton
+                      v-if="addingTo !== board.key"
+                      icon="i-lucide-plus"
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      class="rounded-full"
+                      @click="addingTo = board.key"
+                    >
+                      Add Task
+                    </UButton>
+                    <div
+                      v-else
+                      class="flex items-center gap-2"
+                    >
+                      <UInput
+                        v-model="newTaskByBoard[board.key]"
+                        placeholder="Task name…"
+                        size="sm"
+                        autofocus
+                        class="flex-1"
+                        @keydown.enter="addTaskTo(board.milestone ? board.milestone.id : null)"
+                        @keydown.esc="addingTo = null"
+                      />
+                      <UButton
+                        size="sm"
+                        color="neutral"
+                        variant="soft"
+                        class="rounded-full"
+                        :loading="addingByBoard[board.key]"
+                        :disabled="!(newTaskByBoard[board.key] || '').trim()"
+                        @click="addTaskTo(board.milestone ? board.milestone.id : null)"
+                      >
+                        Add
+                      </UButton>
+                      <UButton
+                        icon="i-lucide-x"
+                        color="neutral"
+                        variant="ghost"
+                        size="xs"
+                        aria-label="Cancel"
+                        @click="addingTo = null"
+                      />
+                    </div>
+                  </div>
+                </template>
               </div>
             </div>
 
