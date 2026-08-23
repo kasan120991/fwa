@@ -18,6 +18,7 @@ export function createApp() {
   // Buffer for those paths before the JSON parser claims it.
   app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }))
   app.use('/api/webhooks/pandadoc', express.raw({ type: '*/*' }))
+  app.use('/api/webhooks/clickup', express.raw({ type: '*/*' }))
   app.use(express.json())
   app.use(cookieParser())
   // credentials:true so the session cookie flows on cross-origin XHR from the frontend.

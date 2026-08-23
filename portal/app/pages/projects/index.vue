@@ -59,21 +59,39 @@ const spotlight = computed(() => {
 const alsoInMotion = computed(() => inMotion.value.filter(p => p.id !== spotlight.value?.id))
 const pausedPast = computed(() => projects.value.filter(p => p.status === 'completed' || p.status === 'on_hold'))
 
+// Progress can move while this page is open (delivery work happens in ClickUp),
+// so refetch on the client-room delivery events.
+const socket = useSocket()
+async function loadProjects() {
+  const { data } = await api<{ data: Project[] }>('/portal/projects')
+  projects.value = data.map(p => ({ ...p, task_total: Number(p.task_total ?? 0), task_done: Number(p.task_done ?? 0) }))
+}
+async function loadPhase() {
+  // One extra request for the spotlight's current phase — worth it, not N+1.
+  if (!spotlight.value) return
+  try {
+    const { data } = await api<{ data: { milestones: Milestone[] } }>(`/portal/projects/${spotlight.value.id}`)
+    const current = data.milestones.find(m => m.state === 'in_progress') || data.milestones.find(m => m.state === 'upcoming')
+    currentPhase.value = current?.title ?? null
+  } catch { /* the phase fact just stays hidden */ }
+}
+const refresh = () => {
+  loadProjects().then(loadPhase).catch(() => {})
+}
+
 onMounted(async () => {
   try {
-    const { data } = await api<{ data: Project[] }>('/portal/projects')
-    projects.value = data.map(p => ({ ...p, task_total: Number(p.task_total ?? 0), task_done: Number(p.task_done ?? 0) }))
+    await loadProjects()
   } finally {
     pending.value = false
   }
-  // One extra request for the spotlight's current phase — worth it, not N+1.
-  if (spotlight.value) {
-    try {
-      const { data } = await api<{ data: { milestones: Milestone[] } }>(`/portal/projects/${spotlight.value.id}`)
-      const current = data.milestones.find(m => m.state === 'in_progress') || data.milestones.find(m => m.state === 'upcoming')
-      currentPhase.value = current?.title ?? null
-    } catch { /* the phase fact just stays hidden */ }
-  }
+  await loadPhase()
+  socket.on('milestone:changed', refresh)
+  socket.on('project:updated', refresh)
+})
+onBeforeUnmount(() => {
+  socket.off('milestone:changed', refresh)
+  socket.off('project:updated', refresh)
 })
 </script>
 

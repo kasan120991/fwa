@@ -18,6 +18,13 @@ import { advanceProject } from '../services/projects.service.js'
 import { logClientActivity } from '../services/clientActivity.service.js'
 import { getProject } from '../repositories/projects.repo.js'
 import { issueDeposit } from '../services/projectBilling.js'
+import * as clickup from '../services/clickup.js'
+import { applyRemoteTask } from '../services/clickupSync.js'
+import { ensureMilestoneField } from '../services/clickupProvision.js'
+import {
+  getTaskByClickupId, getProjectByClickupTaskId
+} from '../repositories/clickup.repo.js'
+import { deleteTask as deleteTaskService } from '../services/tasks.service.js'
 import { getProposalByDocumentId, updateProposal } from '../repositories/proposals.repo.js'
 import {
   getContractByDocumentId, getContractByProposalId, generateContractFromProposal, updateContract
@@ -925,4 +932,83 @@ webhooksRouter.post('/vapi', async (req, res) => {
 
   // Any other server message (status-update, etc.) — acknowledge, no retry.
   res.json({ received: true })
+})
+
+
+// --- ClickUp ----------------------------------------------------------------
+// Delivery work happens in ClickUp; Ops mirrors it so milestone progress (and
+// the client portal's bars) stay live. The payload is thin — { event, task_id,
+// history_items } with no task body — so every non-delete event re-fetches the
+// task. That re-fetch is what makes the handler idempotent and current, and
+// it's what feeds the no-op-when-equal comparison in applyRemoteTask.
+
+/** HMAC-SHA256 hex of the raw body, constant-time compared (as PandaDoc does). */
+function clickupSignatureValid(rawBody, signature) {
+  if (!config.clickup.webhookSecret || !signature) return false
+  const expected = crypto.createHmac('sha256', config.clickup.webhookSecret).update(rawBody).digest('hex')
+  const a = Buffer.from(expected)
+  const b = Buffer.from(String(signature))
+  return a.length === b.length && crypto.timingSafeEqual(a, b)
+}
+
+const CLICKUP_TASK_EVENTS = new Set([
+  'taskCreated', 'taskUpdated', 'taskStatusUpdated', 'taskPriorityUpdated',
+  'taskDueDateUpdated', 'taskMoved'
+])
+
+webhooksRouter.post('/clickup', async (req, res) => {
+  if (!config.clickup.webhookSecret) {
+    return res.status(503).json({ error: { message: 'ClickUp webhook is not configured' } })
+  }
+  if (!clickupSignatureValid(req.body, req.headers['x-signature'])) {
+    return res.status(401).json({ error: { message: 'Invalid ClickUp signature' } })
+  }
+
+  let payload
+  try {
+    payload = JSON.parse(Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body)
+  } catch {
+    return res.status(400).json({ error: { message: 'Malformed payload' } })
+  }
+  const { event, task_id: taskId } = payload ?? {}
+  if (!taskId) return res.json({ received: true })
+
+  try {
+    if (event === 'taskDeleted') {
+      // The remote task is already gone, so there is nothing to re-fetch —
+      // act on the local link alone. An explicit delete event is unambiguous
+      // intent, unlike absence from a list read (see clickupSync.confirmRemote).
+      const local = await getTaskByClickupId(taskId)
+      if (local && config.clickup.allowRemoteDeletes) await deleteTaskService(local.id)
+      else if (local) console.log(`[clickup] delete of task ${local.id} ignored (remote deletes off)`)
+      return res.json({ received: true })
+    }
+
+    if (!CLICKUP_TASK_EVENTS.has(event)) return res.json({ received: true })
+
+    const remote = await clickup.getTask(taskId)
+    if (!remote?.parent) {
+      // A top-level task in a Projects list. Never auto-create an Ops project:
+      // a project carries commercial data (client, type, fee, contract) a
+      // ClickUp task cannot supply, and projects are the SOW hub that
+      // originate contracts. The sweep reports these as orphans.
+      return res.json({ received: true })
+    }
+    const project = await getProjectByClickupTaskId(remote.parent)
+    if (!project) return res.json({ received: true })
+
+    // Look up by remote id first — the uq_calls_vapi / upsertFromStripe
+    // convention, and what makes a taskCreated racing our own create safe.
+    const local = await getTaskByClickupId(remote.id)
+    await applyRemoteTask(project, remote, local, await ensureMilestoneField())
+    return res.json({ received: true })
+  } catch (err) {
+    // DELIBERATE DEVIATION from this file's "500 so the sender retries" rule.
+    // ClickUp tracks per-webhook health and disables a webhook after sustained
+    // non-2xx, so a bad deploy could silently kill the subscription. Ack with
+    // 200 and let the reconcile sweep be the backstop — it re-reads every
+    // linked list on an interval and converges anything a 200 swallowed.
+    console.error('[clickup] webhook handler:', err.message)
+    return res.json({ received: true, error: err.message })
+  }
 })

@@ -33,20 +33,44 @@ const ADDITIVE_COLUMNS = {
     ['project_id', 'BIGINT UNSIGNED NULL AFTER proposal_id']
   ],
   projects: [
-    ['deposit_pct', 'DECIMAL(5,2) NOT NULL DEFAULT 50.00 AFTER project_fee']
+    ['deposit_pct', 'DECIMAL(5,2) NOT NULL DEFAULT 50.00 AFTER project_fee'],
+    // The ClickUp task standing for this project; its work items are subtasks.
+    ['clickup_task_id', 'VARCHAR(100) NULL AFTER code'],
+    ['clickup_sync_error', 'VARCHAR(255) NULL AFTER clickup_task_id']
+  ],
+  // Pins a milestone to its ClickUp dropdown option, so renaming the milestone
+  // in Ops doesn't detach every subtask that carries the old option.
+  project_milestones: [
+    ['clickup_option_id', 'VARCHAR(100) NULL AFTER title']
   ],
   websites: [
     ['do_droplet_id', 'BIGINT UNSIGNED NULL AFTER notes'],
     ['do_uptime_check_id', 'VARCHAR(36) NULL AFTER do_droplet_id']
   ],
   clients: [
-    ['do_project_id', 'VARCHAR(36) NULL AFTER stripe_customer_id']
+    ['do_project_id', 'VARCHAR(36) NULL AFTER stripe_customer_id'],
+    // ClickUp: the client's Folder + its two lists. The Care Plan list is
+    // provisioned for your own use and deliberately never synced.
+    ['clickup_folder_id', 'VARCHAR(100) NULL AFTER do_project_id'],
+    ['clickup_list_id', 'VARCHAR(100) NULL AFTER clickup_folder_id'],
+    ['clickup_careplan_list_id', 'VARCHAR(100) NULL AFTER clickup_list_id'],
+    ['clickup_sync_error', 'VARCHAR(255) NULL AFTER clickup_careplan_list_id']
   ],
   // Delivery milestones: tasks gain a soft milestone_id (no FK, like the
   // project back-links above). project_milestones/milestone_templates are new
   // tables handled by CREATE TABLE IF NOT EXISTS, so they need no entry here.
   tasks: [
-    ['milestone_id', 'BIGINT UNSIGNED NULL AFTER project_id']
+    ['milestone_id', 'BIGINT UNSIGNED NULL AFTER project_id'],
+    // ClickUp mirror. clickup_shadow is the last state both sides agreed on
+    // (in Ops values) — the echo-loop guard and the push field-diff basis.
+    // clickup_version is ClickUp's date_updated, a monotonic guard so an
+    // out-of-order or re-delivered webhook can't regress newer state.
+    ['clickup_task_id', 'VARCHAR(100) NULL AFTER milestone_id'],
+    ['clickup_shadow', 'JSON NULL AFTER clickup_task_id'],
+    ['clickup_version', 'BIGINT UNSIGNED NULL AFTER clickup_shadow'],
+    ['clickup_sync_error', 'VARCHAR(255) NULL AFTER clickup_version'],
+    ['clickup_status', 'VARCHAR(50) NULL AFTER status'],
+    ['clickup_synced_at', 'DATETIME NULL AFTER completed_at']
   ],
   // Client-portal: link a portal login to its client (soft column on existing
   // DBs; fresh installs get the FK from schema.sql). portal_invites is a new
@@ -89,7 +113,13 @@ const ADDITIVE_INDEXES = {
     ['uq_calls_vapi', 'ADD UNIQUE KEY uq_calls_vapi (vapi_call_id)']
   ],
   tasks: [
-    ['idx_tasks_milestone', 'ADD KEY idx_tasks_milestone (milestone_id)']
+    ['idx_tasks_milestone', 'ADD KEY idx_tasks_milestone (milestone_id)'],
+    // MySQL allows unlimited NULLs in a UNIQUE key, so this is the same
+    // look-up-by-remote-id-first idempotency guard as uq_calls_vapi.
+    ['uq_tasks_clickup', 'ADD UNIQUE KEY uq_tasks_clickup (clickup_task_id)']
+  ],
+  projects: [
+    ['uq_projects_clickup', 'ADD UNIQUE KEY uq_projects_clickup (clickup_task_id)']
   ]
 }
 

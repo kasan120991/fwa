@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { ensureClientSpace, ensureProjectTask, pushProjectTasks } from '../services/clickupSync.js'
 import {
   listLeads, getLead, createLead, updateLead, deleteLead
 } from '../repositories/leads.repo.js'
@@ -214,6 +215,14 @@ leadsRouter.post('/:id/convert', async (req, res) => {
   }
 
   res.status(201).json({ data: { client, project } })
+
+  // ClickUp, also last and for the same reason: everything above can still roll
+  // the conversion back, and a rolled-back conversion must not leave an orphan
+  // folder behind. Fire-and-forget once the response is out.
+  ensureClientSpace(client)
+    .then(() => (project ? ensureProjectTask(project.id) : null))
+    .then(link => (link?.linked ? pushProjectTasks(project.id) : null))
+    .catch(err => console.error(`[clickup] provision converted client ${client.id}:`, err.message))
 })
 
 // ---- outreach touch log ----------------------------------------------------

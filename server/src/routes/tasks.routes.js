@@ -2,8 +2,25 @@ import { Router } from 'express'
 import { getTask, listTasks, listChecklist, TASK_STATUSES, TASK_PRIORITIES } from '../repositories/tasks.repo.js'
 import { createTask, updateTask, deleteTask, addChecklistItem, updateChecklistItem, deleteChecklistItem } from '../services/tasks.service.js'
 import { getProject } from '../repositories/projects.repo.js'
+import { pushTask } from '../services/clickupSync.js'
+import { getSyncTask } from '../repositories/clickup.repo.js'
+import * as clickup from '../services/clickup.js'
+import { config } from '../config/env.js'
 
 export const tasksRouter = Router()
+
+// Push an Ops edit up to ClickUp. Fire-and-forget after the response is
+// shaped: a ClickUp outage must never fail the business action, and a 15s
+// request timeout on the hot path would be a terrible experience. Failures
+// land in tasks.clickup_sync_error and the sweep re-converges.
+//
+// Deliberately here in the route layer, not in tasks.service: the ClickUp
+// webhook writes through the SERVICE, so keeping the push out of it is what
+// guarantees the pull path can never bounce an edit back up.
+function pushLater(taskId) {
+  if (!taskId) return
+  pushTask(taskId).catch(err => console.error(`[clickup] push task ${taskId}:`, err.message))
+}
 
 function badRequest(message, fields) {
   const err = new Error(message)
@@ -104,6 +121,7 @@ tasksRouter.post('/', async (req, res) => {
   }
   const task = await createTask(data)
   res.status(201).json({ data: task })
+  pushLater(task?.id)
 })
 
 // PATCH /api/tasks/:id
@@ -118,12 +136,27 @@ tasksRouter.patch('/:id', async (req, res) => {
   }
   const task = await updateTask(id, data)
   res.json({ data: task })
+  pushLater(id)
 })
 
 // DELETE /api/tasks/:id
 tasksRouter.delete('/:id', async (req, res) => {
-  const ok = await deleteTask(parseId(req))
+  const id = parseId(req)
+  // Read the remote id BEFORE the local delete — the row (and its link) is
+  // about to disappear, and without it the ClickUp subtask is unreachable.
+  const linked = await getSyncTask(id)
+  const ok = await deleteTask(id)
   if (!ok) return res.status(404).json({ error: { message: 'Task not found' } })
+  if (linked?.clickup_task_id && config.clickup.allowRemoteDeletes) {
+    // Awaited, unlike the push: if this fails the local row is already gone,
+    // and the next sweep would mirror the surviving ClickUp subtask back as a
+    // new task. Logged rather than thrown so the delete still reports success.
+    try {
+      await clickup.deleteTask(linked.clickup_task_id)
+    } catch (err) {
+      console.error(`[clickup] delete task ${linked.clickup_task_id}:`, err.message)
+    }
+  }
   res.json({ ok: true })
 })
 

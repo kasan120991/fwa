@@ -138,6 +138,14 @@ CREATE TABLE IF NOT EXISTS clients (
   -- DigitalOcean Project (resource group) for this client's hosting; set on first provision.
   do_project_id      VARCHAR(36) NULL,
 
+  -- ClickUp: the client's Folder in the Clients space, and the two lists inside
+  -- it. clickup_list_id is the "Projects" list Ops syncs; the Care Plan list is
+  -- provisioned for your own use and deliberately never synced.
+  clickup_folder_id        VARCHAR(100) NULL,
+  clickup_list_id          VARCHAR(100) NULL,
+  clickup_careplan_list_id VARCHAR(100) NULL,
+  clickup_sync_error       VARCHAR(255) NULL,   -- last link failure; cleared on success
+
   created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                        ON UPDATE CURRENT_TIMESTAMP,
@@ -701,6 +709,9 @@ CREATE TABLE IF NOT EXISTS projects (
   client_id            BIGINT UNSIGNED NOT NULL,
   project_type_id      BIGINT UNSIGNED NOT NULL,
   code                 VARCHAR(50)     NULL,              -- 'WEB-0007', assigned on create
+  -- The ClickUp task representing this project; its work items are subtasks.
+  clickup_task_id      VARCHAR(100)    NULL,
+  clickup_sync_error   VARCHAR(255)    NULL,    -- last link failure; cleared on success
   name                 VARCHAR(255)    NOT NULL,
   status               ENUM('planning', 'awaiting_signature', 'awaiting_deposit', 'in_progress',
                             'in_review', 'awaiting_final', 'on_hold', 'completed')
@@ -756,6 +767,10 @@ CREATE TABLE IF NOT EXISTS project_milestones (
   id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   project_id   BIGINT UNSIGNED NOT NULL,
   title        VARCHAR(160)    NOT NULL,
+  -- UUID of the matching option in ClickUp's "Milestone" dropdown. Resolved by
+  -- title on first sync, then pinned here so renaming the milestone in Ops
+  -- doesn't break the link.
+  clickup_option_id VARCHAR(100) NULL,
   description  TEXT            NULL,
   state        ENUM('upcoming', 'in_progress', 'complete') NOT NULL DEFAULT 'upcoming',
   position     INT             NOT NULL DEFAULT 0,
@@ -781,17 +796,31 @@ CREATE TABLE IF NOT EXISTS tasks (
   id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   project_id   BIGINT UNSIGNED NULL,
   milestone_id BIGINT UNSIGNED NULL,             -- soft link (no FK); app nulls on milestone delete
+  -- ClickUp mirror. clickup_status keeps the remote label verbatim so the app's
+  -- 4-value enum stays lossless; clickup_synced_at is when Ops and ClickUp last agreed.
+  clickup_task_id   VARCHAR(100) NULL,
+  -- The last state Ops and ClickUp agreed on, stored in OPS space (mapped
+  -- values, not ClickUp's). Comparing against this is what kills the echo
+  -- loop and lets a push send only the fields that actually changed.
+  clickup_shadow    JSON         NULL,
+  -- ClickUp's date_updated (epoch ms) of the last applied remote state. A
+  -- monotonic guard: out-of-order and re-delivered webhooks can't regress us.
+  clickup_version   BIGINT UNSIGNED NULL,
+  clickup_sync_error VARCHAR(255) NULL,
   title        VARCHAR(255)    NOT NULL,
   description  TEXT            NULL,
   status       ENUM('todo', 'in_progress', 'blocked', 'done') NOT NULL DEFAULT 'todo',
+  clickup_status    VARCHAR(50)  NULL,
   priority     ENUM('low', 'medium', 'high') NOT NULL DEFAULT 'medium',
   due_date     DATE            NULL,
   position     INT             NOT NULL DEFAULT 0,
   completed_at TIMESTAMP       NULL,
+  clickup_synced_at DATETIME    NULL,
   created_at   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
                                ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
+  UNIQUE KEY uq_tasks_clickup (clickup_task_id),
   KEY idx_tasks_project (project_id),
   KEY idx_tasks_milestone (milestone_id),
   KEY idx_tasks_status  (status),

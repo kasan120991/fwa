@@ -1,0 +1,154 @@
+import { config } from '../config/env.js'
+
+// ClickUp API v2 client. Empty CLICKUP_API_TOKEN (or space id) = disabled
+// (no-op), matching the DigitalOcean/Plausible pattern. Native fetch, and note
+// the auth header is the BARE token — not `Bearer <token>`. No DB access here;
+// callers (services/clickupProvision.js, services/clickupSync.js) gate and shape it.
+export const isConfigured = () => Boolean(config.clickup.apiToken && config.clickup.spaceId)
+
+async function cuFetch(path, { method = 'GET', body, query } = {}) {
+  const qs = query
+    ? '?' + new URLSearchParams(Object.entries(query).filter(([, v]) => v != null)).toString()
+    : ''
+  const res = await fetch(`${config.clickup.baseUrl}${path}${qs}`, {
+    method,
+    headers: {
+      Authorization: config.clickup.apiToken,
+      'Content-Type': 'application/json'
+    },
+    body: body != null ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(15_000)
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    // The message reaches the admin toast verbatim, so keep the real reason.
+    throw new Error(`ClickUp ${res.status}: ${text.slice(0, 200)}`)
+  }
+  if (res.status === 204) return null
+  const text = await res.text()
+  return text ? JSON.parse(text) : {}
+}
+
+/* ---------------------------------------------------------------- structure */
+
+/** Folders in the Clients space (one per client). */
+export async function listFolders() {
+  const json = await cuFetch(`/space/${config.clickup.spaceId}/folder`, { query: { archived: 'false' } })
+  return json.folders ?? []
+}
+
+/** Create a client's folder. */
+export async function createFolder(name) {
+  return cuFetch(`/space/${config.clickup.spaceId}/folder`, { method: 'POST', body: { name } })
+}
+
+export async function deleteFolder(folderId) {
+  return cuFetch(`/folder/${folderId}`, { method: 'DELETE' })
+}
+
+/** Lists inside a folder. */
+export async function listFolderLists(folderId) {
+  const json = await cuFetch(`/folder/${folderId}/list`, { query: { archived: 'false' } })
+  return json.lists ?? []
+}
+
+/** Create a list inside a folder ("Projects" / "Care Plan"). */
+export async function createList(folderId, name) {
+  return cuFetch(`/folder/${folderId}/list`, { method: 'POST', body: { name } })
+}
+
+/** One list, including its `statuses[]` — needed to map Ops status → ClickUp. */
+export async function getList(listId) {
+  return cuFetch(`/list/${listId}`)
+}
+
+/* -------------------------------------------------------------------- tasks */
+
+/**
+ * Every task in a list including subtasks and closed ones — the reconcile
+ * sweep's single call per client. ClickUp pages at 100; follow `last_page`.
+ */
+export async function listTasks(listId) {
+  const out = []
+  for (let page = 0; page < 50; page++) {
+    const json = await cuFetch(`/list/${listId}/task`, {
+      query: { subtasks: 'true', include_closed: 'true', archived: 'false', page: String(page) }
+    })
+    const batch = json.tasks ?? []
+    out.push(...batch)
+    if (json.last_page || batch.length === 0) break
+  }
+  return out
+}
+
+export async function getTask(taskId) {
+  return cuFetch(`/task/${taskId}`, { query: { include_subtasks: 'true' } })
+}
+
+/** Create a task, or a subtask when `parent` is a task id. */
+export async function createTask(listId, body) {
+  return cuFetch(`/list/${listId}/task`, { method: 'POST', body })
+}
+
+export async function updateTask(taskId, body) {
+  return cuFetch(`/task/${taskId}`, { method: 'PUT', body })
+}
+
+export async function deleteTask(taskId) {
+  return cuFetch(`/task/${taskId}`, { method: 'DELETE' })
+}
+
+/* ------------------------------------------------------------ custom fields */
+
+/** Space-level custom fields (where the Milestone dropdown lives). */
+export async function listSpaceFields() {
+  const json = await cuFetch(`/space/${config.clickup.spaceId}/field`)
+  return json.fields ?? []
+}
+
+/**
+ * Create a space-level custom field. Undocumented in the v2 reference but live
+ * and returning 200 — it's what lets Ops provision the Milestone dropdown
+ * instead of asking for a manual setup step.
+ */
+export async function createSpaceField({ name, type, type_config }) {
+  const json = await cuFetch(`/space/${config.clickup.spaceId}/field`, {
+    method: 'POST', body: { name, type, type_config }
+  })
+  return json.field ?? json
+}
+
+/** Set a task's custom field value (dropdown value = the option's UUID). */
+export async function setCustomField(taskId, fieldId, value) {
+  return cuFetch(`/task/${taskId}/field/${fieldId}`, { method: 'POST', body: { value } })
+}
+
+/** Clear a task's custom field value. */
+export async function clearCustomField(taskId, fieldId) {
+  return cuFetch(`/task/${taskId}/field/${fieldId}`, { method: 'DELETE' })
+}
+
+/** A list's custom fields — the per-list view of the space-level field. */
+export async function listFields(listId) {
+  const json = await cuFetch(`/list/${listId}/field`)
+  return json.fields ?? []
+}
+
+/* ----------------------------------------------------------------- webhooks */
+
+export async function listWebhooks() {
+  const json = await cuFetch(`/team/${config.clickup.teamId}/webhook`)
+  return json.webhooks ?? []
+}
+
+/** Register the delivery webhook; the response carries the signing `secret`. */
+export async function createWebhook(endpoint, events) {
+  const json = await cuFetch(`/team/${config.clickup.teamId}/webhook`, {
+    method: 'POST', body: { endpoint, events, space_id: Number(config.clickup.spaceId) }
+  })
+  return json.webhook ?? json
+}
+
+export async function deleteWebhook(webhookId) {
+  return cuFetch(`/webhook/${webhookId}`, { method: 'DELETE' })
+}

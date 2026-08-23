@@ -3,14 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Francis Web Agency — internal ops API (Express + MySQL, no ORM)",
+  "description": "Francis Web Agency \u2014 internal ops API (Express + MySQL, no ORM)",
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch --env-file-if-exists=.env src/index.js",
     "start": "node --env-file-if-exists=.env src/index.js",
     "migrate": "node --env-file-if-exists=.env src/db/migrate.js",
     "seed": "node --env-file-if-exists=.env src/db/seed.js",
-    "create-user": "node --env-file-if-exists=.env src/db/create-user.js"
+    "create-user": "node --env-file-if-exists=.env src/db/create-user.js",
+    "clickup:webhook": "node --env-file-if-exists=.env src/db/clickup-webhook.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

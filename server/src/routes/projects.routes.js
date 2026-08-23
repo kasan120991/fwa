@@ -16,7 +16,22 @@ import { createInvoice, updateInvoice } from '../repositories/invoices.repo.js'
 import { notify } from '../services/notifications.service.js'
 import { emitInvoiceChanged, emitContractChanged } from '../realtime/io.js'
 
+import { config } from '../config/env.js'
+import { ensureProjectTask, pushProjectTasks } from '../services/clickupSync.js'
+import * as clickupApi from '../services/clickup.js'
+
 export const projectsRouter = Router()
+
+// Provision the project's ClickUp task and push its template-seeded tasks up as
+// subtasks. Best-effort and fire-and-forget, mirroring syncStripeCustomer: a
+// ClickUp outage must never fail the create. ensureProjectTask heals upward, so
+// a client whose folder never provisioned gets one here.
+function provisionLater(projectId) {
+  if (!projectId) return
+  ensureProjectTask(projectId)
+    .then(link => (link.linked ? pushProjectTasks(projectId) : null))
+    .catch(err => console.error(`[clickup] provision project ${projectId}:`, err.message))
+}
 
 function badRequest(message, fields) {
   const err = new Error(message)
@@ -157,6 +172,7 @@ projectsRouter.post('/', async (req, res) => {
   }
   const project = await createProject({ ...data, client_id: clientId, project_type_id: type.id, template_id })
   res.status(201).json({ data: project })
+  provisionLater(project?.id)
 })
 
 // PATCH /api/projects/:id
@@ -323,7 +339,19 @@ projectsRouter.post('/:id/final-invoice', async (req, res) => {
 
 // DELETE /api/projects/:id
 projectsRouter.delete('/:id', async (req, res) => {
-  const ok = await deleteProject(parseId(req))
+  const id = parseId(req)
+  // Capture the remote id BEFORE deleting: tasks.project_id is ON DELETE
+  // CASCADE, so the local delete drops every task row and its clickup_task_id
+  // with it, leaving an unreachable orphan tree in ClickUp.
+  const existing = await getProject(id)
+  const remoteId = existing?.clickup_task_id ?? null
+  const ok = await deleteProject(id)
   if (!ok) return res.status(404).json({ error: { message: 'Project not found' } })
+  if (remoteId && config.clickup.allowRemoteDeletes) {
+    // Deleting the parent removes its subtasks server-side.
+    try { await clickupApi.deleteTask(remoteId) } catch (err) {
+      console.error(`[clickup] delete project task ${remoteId}:`, err.message)
+    }
+  }
   res.json({ ok: true })
 })

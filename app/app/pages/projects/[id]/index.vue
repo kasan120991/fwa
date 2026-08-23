@@ -42,6 +42,8 @@ interface ApiProject {
   bugfix_days: number
   task_total: number
   task_done: number
+  clickup_task_id: string | null
+  clickup_sync_error: string | null
   client_company: string | null
   client_name: string | null
   type_name: string | null
@@ -552,11 +554,42 @@ function onProvisioned({ website_id, monthly_price }: { website_id: number, mont
   })
 }
 
+// ---- ClickUp -------------------------------------------------------------
+// Delivery work happens in ClickUp; this is just the door to it. Linking is
+// normally automatic on project create, so the action here is a retry for when
+// ClickUp was down at the time (the reason is in clickup_sync_error).
+const clickupUrl = computed(() => project.value?.clickup_task_id
+  ? `https://app.clickup.com/t/${project.value.clickup_task_id}`
+  : null)
+async function linkClickup() {
+  try {
+    const { data } = await api<{ data: { linked: boolean, pushed?: number, error?: string, configured?: boolean } }>(
+      `/clickup/projects/${route.params.id}/link`, { method: 'POST' }
+    )
+    if (data.configured === false) {
+      toast.add({ title: 'ClickUp isn\'t connected', description: 'Add a ClickUp API token in the server environment.', color: 'neutral' })
+    } else if (data.linked) {
+      toast.add({ title: 'Linked to ClickUp', description: data.pushed ? `${data.pushed} task${data.pushed === 1 ? '' : 's'} pushed up.` : 'Already in sync.', color: 'success' })
+      await loadProject()
+    } else {
+      toast.add({ title: 'Link failed', description: data.error ?? 'Check the connection and try again.', color: 'error' })
+    }
+  } catch (err: unknown) {
+    // Surface the server's reason — a 401/404 from ClickUp reads as a generic
+    // connection problem otherwise.
+    const e = err as { data?: { error?: { message?: string } } }
+    toast.add({ title: 'Link failed', description: e?.data?.error?.message || 'Check the connection and try again.', color: 'error' })
+  }
+}
+
 const headerMenu = computed(() => [
   [
     { label: 'Edit Scope', icon: 'i-lucide-pencil', onSelect: openEdit },
     { label: 'Generate Contract', icon: 'i-lucide-file-signature', onSelect: openContractModal, disabled: !canGenerate.value },
-    { label: 'Provision Hosting', icon: 'i-lucide-server-cog', onSelect: () => { provisionOpen.value = true } }
+    { label: 'Provision Hosting', icon: 'i-lucide-server-cog', onSelect: () => { provisionOpen.value = true } },
+    clickupUrl.value
+      ? { label: 'Open in ClickUp', icon: 'i-lucide-external-link', to: clickupUrl.value, target: '_blank' }
+      : { label: 'Link to ClickUp', icon: 'i-lucide-link', onSelect: linkClickup }
   ],
   ...statusItems.value
 ])

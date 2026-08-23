@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { ensureClientSpace } from '../services/clickupSync.js'
 import {
   listClients, getClient, createClient, updateClient, deleteClient, getClientSummary
 } from '../repositories/clients.repo.js'
@@ -23,6 +24,16 @@ function stripeFieldsChanged(a, b) {
  *   - active client without a customer  → create the customer
  *   - already has a customer and a mirrored field changed → update it
  */
+// Provision the client's ClickUp Folder + its Projects and Care Plan lists.
+// Best-effort and fire-and-forget, exactly like syncStripeCustomer below: a
+// ClickUp outage must never fail the create. Failures land in
+// clients.clickup_sync_error, and any later project create heals it.
+function provisionClickupLater(client) {
+  if (!client?.id) return
+  ensureClientSpace(client)
+    .catch(err => console.error(`[clickup] provision client ${client.id}:`, err.message))
+}
+
 async function syncStripeCustomer(client, previous = null) {
   if (!client) return client
   if (client.status === 'active' && !client.stripe_customer_id) {
@@ -207,6 +218,7 @@ clientsRouter.post('/', async (req, res) => {
   const data = validateClient(req.body ?? {}, { partial: false })
   const client = await syncStripeCustomer(await createClient(data))
   res.status(201).json({ data: client })
+  provisionClickupLater(client)
 })
 
 // PATCH /api/clients/:id

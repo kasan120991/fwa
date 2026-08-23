@@ -55,16 +55,29 @@ const STATE_META: Record<MilestoneState, { label: string, chip: string }> = {
   complete: { label: 'Complete', chip: 'bg-success/10 text-success' }
 }
 
+// Delivery work happens in ClickUp, so a milestone bar can move while this page
+// is open. The server pushes project:updated / milestone:changed into the
+// client's own room; individual tasks are never sent, only the derived counts.
+const socket = useSocket()
+async function loadProject() {
+  const { data } = await api<{ data: { project: Project, milestones: Milestone[] } }>(`/portal/projects/${route.params.id}`)
+  project.value = data.project
+  milestones.value = data.milestones.map(m => ({ ...m, task_total: Number(m.task_total ?? 0), task_done: Number(m.task_done ?? 0) }))
+}
+const refresh = () => {
+  loadProject().catch(() => {})
+}
+
 onMounted(async () => {
   try {
-    const { data } = await api<{ data: { project: Project, milestones: Milestone[] } }>(`/portal/projects/${route.params.id}`)
-    project.value = data.project
-    milestones.value = data.milestones.map(m => ({ ...m, task_total: Number(m.task_total ?? 0), task_done: Number(m.task_done ?? 0) }))
+    await loadProject()
   } catch {
     notFound.value = true
   } finally {
     pending.value = false
   }
+  socket.on('milestone:changed', refresh)
+  socket.on('project:updated', refresh)
   // The files rail rides along quietly — a failure just hides the card.
   if (project.value) {
     try {
@@ -72,6 +85,10 @@ onMounted(async () => {
       files.value = data.filter(f => f.project_id === project.value!.id).slice(0, 5)
     } catch { /* non-fatal */ }
   }
+})
+onBeforeUnmount(() => {
+  socket.off('milestone:changed', refresh)
+  socket.off('project:updated', refresh)
 })
 
 function pct(m: Milestone) {

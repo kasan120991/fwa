@@ -216,3 +216,15 @@ export function emitClientFileChanged(clientId, id = null) {
 export function emitClientAgreementChanged(clientId, id = null) {
   if (clientId) io?.to(`client:${clientId}`).emit('agreement:changed', { id })
 }
+
+// Delivery. Until ClickUp started driving task state, the portal's project
+// pages only refreshed on navigation — every project:*/task:*/milestone:*
+// emitter above goes to role:admin alone. Ticking a task done now has to move
+// the client's milestone bar live, so the rollup change is pushed into the
+// client's room too. The portal never sees tasks, only the derived counts.
+export function emitClientProjectChanged(clientId, projectId = null) {
+  if (clientId) io?.to(`client:${clientId}`).emit('project:updated', { id: projectId })
+}
+export function emitClientMilestoneChanged(clientId, projectId = null) {
+  if (clientId) io?.to(`client:${clientId}`).emit('milestone:changed', { project_id: projectId })
+}

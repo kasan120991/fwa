@@ -84,10 +84,33 @@ portalRouter.get('/overview', async (req, res) => {
   })
 })
 
+// The project fields the portal is allowed to see. The repo's BASE_SELECT is
+// `SELECT p.*`, so returning a raw row would ship project_fee, hourly_rate,
+// deposit_pct, special_terms, third_party_costs and the policy constants to the
+// client's browser — unrendered, but present in the JSON. Allow-list instead.
+const PORTAL_PROJECT_FIELDS = [
+  'id', 'code', 'name', 'status', 'type_name', 'type_key',
+  'start_date', 'target_launch_date', 'task_total', 'task_done'
+]
+const portalProject = p => (p ? Object.fromEntries(
+  PORTAL_PROJECT_FIELDS.filter(f => f in p).map(f => [f, p[f]])
+) : p)
+
+// Milestones are the client-visible delivery layer; task_total/task_done are
+// the rollup the portal turns into a percentage. Individual tasks are never
+// exposed — there is no portal tasks route, by design.
+const PORTAL_MILESTONE_FIELDS = [
+  'id', 'project_id', 'title', 'description', 'state', 'position',
+  'target_date', 'completed_at', 'task_total', 'task_done'
+]
+const portalMilestone = m => Object.fromEntries(
+  PORTAL_MILESTONE_FIELDS.filter(f => f in m).map(f => [f, m[f]])
+)
+
 // GET /api/portal/projects — the client's own projects.
 portalRouter.get('/projects', async (req, res) => {
   const result = await listProjects({ client_id: req.clientId, limit: 200 })
-  res.json({ data: result.rows })
+  res.json({ data: result.rows.map(portalProject) })
 })
 
 // GET /api/portal/projects/:id — a project + its milestone timeline. 404 (not
@@ -98,7 +121,7 @@ portalRouter.get('/projects/:id', async (req, res) => {
     return res.status(404).json({ error: { message: 'Project not found' } })
   }
   const milestones = await listMilestones(project.id)
-  res.json({ data: { project, milestones } })
+  res.json({ data: { project: portalProject(project), milestones: milestones.map(portalMilestone) } })
 })
 
 // ---- invoices (draft + voided stay internal) ----

@@ -7,6 +7,7 @@ import { isConfigured as plausibleConfigured } from '../services/plausible.js'
 import { isConfigured as ga4Configured } from '../services/ga4.js'
 import { isConfigured as digitaloceanConfigured } from '../services/digitalocean.js'
 import { isConfigured as emailConfigured } from '../services/email.js'
+import { isConfigured as clickupConfigured } from '../services/clickup.js'
 import { listClientsWithPortalStatus } from '../repositories/clients.repo.js'
 
 export const settingsRouter = Router()
@@ -51,7 +52,11 @@ settingsRouter.get('/integrations', (req, res) => {
         id: 'vapi', name: 'Vapi', description: 'AI receptionist', connected: Boolean(config.vapi.webhookSecret),
         detail: config.vapi.phoneNumber || null
       },
-      { id: 'digitalocean', name: 'DigitalOcean', description: 'Uptime monitoring', connected: digitaloceanConfigured() }
+      { id: 'digitalocean', name: 'DigitalOcean', description: 'Uptime monitoring', connected: digitaloceanConfigured() },
+      {
+        id: 'clickup', name: 'ClickUp', description: 'Project delivery', connected: clickupConfigured(),
+        detail: clickupConfigured() ? `Space ${config.clickup.spaceId}` : null
+      }
     ]
   })
 })

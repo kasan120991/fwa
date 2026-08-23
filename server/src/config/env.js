@@ -123,6 +123,41 @@ export const config = {
     alertCpuPct: Number(process.env.DIGITALOCEAN_ALERT_CPU_PCT) || 90,
     alertDiskPct: Number(process.env.DIGITALOCEAN_ALERT_DISK_PCT) || 90
   },
+  clickup: {
+    // ClickUp — the delivery workspace. Ops mirrors the `tasks` table from
+    // ClickUp so milestone progress (and the client portal's bars) stay live.
+    // Personal API token from ClickUp → Settings → Apps. Either the token or
+    // the space id empty = the whole integration no-ops: nothing is
+    // provisioned, the sync job never starts, the webhook returns 503.
+    apiToken: process.env.CLICKUP_API_TOKEN || '',
+    baseUrl: process.env.CLICKUP_BASE_URL || 'https://api.clickup.com/api/v2',
+    // Workspace ("team") id — only needed to register the webhook.
+    teamId: process.env.CLICKUP_TEAM_ID || '',
+    // The Space that holds one Folder per client. Required.
+    spaceId: process.env.CLICKUP_SPACE_ID || '',
+    // Shared secret ClickUp returns when the webhook is created; it signs each
+    // delivery as HMAC-SHA256 hex in X-Signature. Empty = the webhook 503s.
+    webhookSecret: process.env.CLICKUP_WEBHOOK_SECRET || '',
+    // Name of the space-level dropdown custom field that tags a subtask with
+    // its Ops milestone. The v2 API can't create custom fields, so this field
+    // is made by hand once; Ops discovers its UUID and caches it.
+    milestoneFieldName: process.env.CLICKUP_MILESTONE_FIELD || 'Milestone',
+    // How often the reconcile sweep pulls each linked list (catches missed
+    // webhooks, and is the only sync path in local dev where ClickUp can't
+    // reach us). One request per client list, so this is cheap.
+    syncIntervalMs: Number(process.env.CLICKUP_SYNC_INTERVAL_MS) || 15 * 60_000,
+    // Deletes propagate both ways by design. Set to 'false' to make the
+    // webhook and sweep read-only — a ClickUp delete then leaves the Ops row
+    // alone. The kill switch if remote deletes ever misfire.
+    allowRemoteDeletes: process.env.CLICKUP_ALLOW_REMOTE_DELETES !== 'false',
+    // A sweep that would delete more than this many Ops tasks aborts instead:
+    // a partial or errored ClickUp response must never read as "all deleted".
+    maxSweepDeletes: Number(process.env.CLICKUP_MAX_SWEEP_DELETES) || 10,
+    // Workspace UTC offset in minutes, used only when reading a due date a
+    // human set in ClickUp. Ops pushes noon UTC so its own writes round-trip
+    // regardless; the mapper clamps this to ±11h so it can never roll a day.
+    tzOffsetMinutes: Number(process.env.CLICKUP_TZ_OFFSET_MINUTES) || 0
+  },
   websites: {
     // Live uptime checks hit each site's real URL, so they're off by default
     // (seeded domains are placeholders). Enable in production. Interval in ms.

@@ -4,6 +4,7 @@ import { checkAllWebsites } from '../services/websiteChecks.js'
 import { uptimeConfigured, syncAllUptime } from '../services/websiteUptime.js'
 import { alertsConfigured, pollInfraAlerts } from '../services/infraAlerts.js'
 import { checkSubscriptionRenewals } from '../services/expenseReminders.js'
+import { isConfigured as clickupConfigured, syncAllClickup } from '../services/clickupSync.js'
 
 let started = false
 
@@ -43,6 +44,16 @@ export function startScheduler() {
     run()
     setInterval(run, ms).unref()
     console.log(`[scheduler] infra alerts every ${Math.round(ms / 60000)}m`)
+  }
+
+  // ClickUp reconcile sweep — catches webhooks ClickUp never delivered, and is
+  // the ONLY sync path in local dev, where ClickUp can't reach us. One list read
+  // per linked client, so it's cheap. Not run at boot: a restart loop would
+  // otherwise hammer the API.
+  if (clickupConfigured()) {
+    const ms = config.clickup.syncIntervalMs
+    setInterval(() => { syncAllClickup().catch(e => console.error('[scheduler] clickup:', e.message)) }, ms).unref()
+    console.log(`[scheduler] ClickUp reconcile every ${Math.round(ms / 60000)}m`)
   }
 
   if (config.expenses.remindersEnabled) {
