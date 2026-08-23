@@ -23,10 +23,11 @@ import {
  * (state_manual = 1), and one with no tasks at all, which has nothing to derive
  * from and would otherwise be stuck at 'upcoming' forever.
  *
- * NOTE: 'started' here means at least one task DONE. A milestone whose tasks are
- * all in progress but none finished still reads 'upcoming' — and the portal
- * renders no bar for upcoming. To make any non-todo task count as started,
- * change `tr.done = 0` below to `tr.started = 0` and use the commented column.
+ * 'Started' means at least one task has moved off 'todo' — in progress, blocked,
+ * or done. Counting only DONE tasks would leave a milestone you're actively
+ * working stuck at 'upcoming', and the portal renders no bar, no description and
+ * no counter for an upcoming milestone: the client would see a bare title while
+ * the work is underway.
  */
 export async function syncMilestoneStates(projectId) {
   if (!projectId) return { changed: 0 }
@@ -40,7 +41,7 @@ export async function syncMilestoneStates(projectId) {
          FROM tasks WHERE milestone_id IS NOT NULL GROUP BY milestone_id
        ) tr ON tr.milestone_id = m.id
         SET m.state = CASE WHEN tr.done = tr.total THEN 'complete'
-                           WHEN tr.done = 0        THEN 'upcoming'
+                           WHEN tr.started = 0     THEN 'upcoming'
                            ELSE 'in_progress' END,
             m.completed_at = CASE WHEN tr.done = tr.total
                                   THEN COALESCE(m.completed_at, NOW()) ELSE NULL END
@@ -48,7 +49,7 @@ export async function syncMilestoneStates(projectId) {
         AND m.state_manual = 0
         AND tr.total > 0
         AND m.state <> CASE WHEN tr.done = tr.total THEN 'complete'
-                            WHEN tr.done = 0        THEN 'upcoming'
+                            WHEN tr.started = 0     THEN 'upcoming'
                             ELSE 'in_progress' END`,
     { projectId }
   )
