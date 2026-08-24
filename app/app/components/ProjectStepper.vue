@@ -33,7 +33,10 @@ function stateOf(i: number): 'done' | 'current' | 'future' {
 
 <template>
   <div class="relative">
-    <div class="flex items-start gap-0 overflow-x-auto pb-1">
+    <!-- pt-1.5: the active node's ring-offset draws 4px outside its layout box,
+         and overflow-x-auto clips vertically too, so without headroom the halo
+         gets sliced off at the top. -->
+    <div class="flex items-start gap-0 overflow-x-auto pb-1 pt-1.5">
       <template
         v-for="(step, i) in LIFECYCLE"
         :key="step.status"
