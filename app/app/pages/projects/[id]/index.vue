@@ -1031,7 +1031,7 @@ const scopeFields = computed(() => project.value
                         <UProgress
                           :model-value="board.milestone.task_done"
                           :max="Math.max(board.milestone.task_total, 1)"
-                          size="2xs"
+                          size="sm"
                           :color="board.milestone.state === 'complete' ? 'success' : 'primary'"
                           class="w-16"
                         />

@@ -162,7 +162,7 @@ function submitItem() {
             <UProgress
               :model-value="task.checklist_done"
               :max="task.checklist_total"
-              size="2xs"
+              size="sm"
               :color="complete ? 'success' : 'primary'"
               class="flex-1"
             />

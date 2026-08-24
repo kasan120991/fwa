@@ -359,7 +359,7 @@ async function addStandalone() {
                 <UProgress
                   :model-value="row.original.checklist_done"
                   :max="row.original.checklist_total"
-                  size="2xs"
+                  size="sm"
                   class="w-14"
                 />
                 <span class="tabular-nums">{{ row.original.checklist_done }}/{{ row.original.checklist_total }}</span>
