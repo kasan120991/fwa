@@ -859,6 +859,53 @@ CREATE TABLE IF NOT EXISTS task_checklist_items (
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
+-- ---------------------------------------------------------------------
+-- time_entries — logged work on a project. Every entry records time; the
+--   billable flag decides whether it can reach an invoice. invoice_id is
+--   stamped when it does, which is what stops the same hours being billed
+--   twice. task_id is a soft link (no FK) like tasks.milestone_id — the
+--   entry survives its task being deleted.
+--   Never client-visible: the portal sees the money, never the hours.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS time_entries (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  project_id  BIGINT UNSIGNED NOT NULL,
+  task_id     BIGINT UNSIGNED NULL,              -- soft link (no FK)
+  minutes     INT             NOT NULL,
+  note        VARCHAR(255)    NULL,
+  billable    TINYINT(1)      NOT NULL DEFAULT 1,
+  invoice_id  BIGINT UNSIGNED NULL,              -- soft link; set once billed
+  occurred_at DATE            NOT NULL,
+  created_at  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                              ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_time_project (project_id, occurred_at),
+  KEY idx_time_unbilled (project_id, billable, invoice_id),
+  CONSTRAINT fk_time_project
+    FOREIGN KEY (project_id) REFERENCES projects (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- project_notes — an internal scratchpad on a project. Decisions, gotchas,
+--   things the client said. Admin-only and deliberately not surfaced in the
+--   portal; client-facing messages go through tickets.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS project_notes (
+  id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  project_id BIGINT UNSIGNED NOT NULL,
+  body       TEXT            NOT NULL,
+  created_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                             ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_project_notes (project_id, created_at),
+  CONSTRAINT fk_project_notes_project
+    FOREIGN KEY (project_id) REFERENCES projects (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 -- =====================================================================
 -- BILLING — invoices & payments.
 --   Local source of truth for the Invoices/Payments pages, kept in sync

@@ -17,6 +17,13 @@ import { notify } from '../services/notifications.service.js'
 import { emitInvoiceChanged, emitContractChanged } from '../realtime/io.js'
 
 import { config } from '../config/env.js'
+import {
+  listTimeEntries, createTimeEntry, updateTimeEntry, deleteTimeEntry,
+  getTimeEntry, timeSummary, listUnbilledBillable, markBilled, unmarkBilled
+} from '../repositories/time.repo.js'
+import {
+  listNotes, createNote, updateNote, deleteNote, getNote
+} from '../repositories/projectNotes.repo.js'
 import { ensureProjectTask, pushProjectTasks, pushProject } from '../services/clickupSync.js'
 import * as clickupApi from '../services/clickup.js'
 
@@ -311,17 +318,47 @@ projectsRouter.post('/:id/final-invoice', async (req, res) => {
   const clientName = client.company || client.name
   const description = `Final payment (${finalPct}%) — ${project.name}`
 
+  // Billable time that hasn't been invoiced yet rides along as a second line
+  // item. The entries are stamped with this invoice's id further down, which is
+  // what stops the same hours reaching a second invoice.
+  const rate = Number(project.hourly_rate) || 0
+  const unbilled = rate > 0 ? await listUnbilledBillable(project.id) : []
+  const unbilledMinutes = unbilled.reduce((n, e) => n + e.minutes, 0)
+  const hours = Math.round((unbilledMinutes / 60) * 100) / 100
+  const timeAmount = Math.round(hours * rate * 100) / 100
+  const timeDescription = `Additional hours — ${hours} @ $${rate}/hr`
+
+  const items = [
+    { service_id: null, name_snapshot: description, description_snapshot: null, unit_price_snapshot: balance, qty: 1, billing_interval_snapshot: 'one_time', sort_order: 0 }
+  ]
+  if (timeAmount > 0) {
+    items.push({ service_id: null, name_snapshot: timeDescription, description_snapshot: null, unit_price_snapshot: rate, qty: hours, billing_interval_snapshot: 'one_time', sort_order: 1 })
+  }
+  const total = Math.round((balance + timeAmount) * 100) / 100
+
   let localInvoice = await createInvoice({
     client_id: client.id, project_id: project.id, kind: 'balance', description,
-    amount_due: balance, status: 'draft',
-    items: [{ service_id: null, name_snapshot: description, description_snapshot: null, unit_price_snapshot: balance, qty: 1, billing_interval_snapshot: 'one_time', sort_order: 0 }]
+    amount_due: total, status: 'draft', items
   })
 
-  const stripeInvoice = await sendDepositInvoice(client, {
-    amountCents: Math.round(balance * 100),
-    description,
-    metadata: { fwa_project_id: String(project.id), fwa_client_id: String(client.id), fwa_invoice_id: String(localInvoice.id), kind: 'balance' }
-  })
+  // Claim the hours as soon as the invoice row exists — before the Stripe call,
+  // so a Stripe failure can't leave hours billed on a document that never sent.
+  if (timeAmount > 0) await markBilled(unbilled.map(e => e.id), localInvoice.id)
+
+  let stripeInvoice
+  try {
+    stripeInvoice = await sendDepositInvoice(client, {
+      amountCents: Math.round(total * 100),
+      description,
+      metadata: { fwa_project_id: String(project.id), fwa_client_id: String(client.id), fwa_invoice_id: String(localInvoice.id), kind: 'balance' }
+    })
+  } catch (err) {
+    // Release the hours we just claimed. Without this they'd stay attached to a
+    // draft that never sent, and a retry would bill the balance alone while
+    // those hours silently disappeared.
+    if (timeAmount > 0) await unmarkBilled(localInvoice.id).catch(() => {})
+    throw err
+  }
   if (stripeInvoice) {
     localInvoice = await updateInvoice(localInvoice.id, {
       stripe_invoice_id: stripeInvoice.id, number: stripeInvoice.number,
@@ -335,7 +372,7 @@ projectsRouter.post('/:id/final-invoice', async (req, res) => {
     await notify({
       category: 'invoice', tone: 'info', icon: 'i-lucide-receipt-text',
       title: 'Final invoice sent',
-      body: `$${balance.toLocaleString('en-US')} final invoice sent to ${clientName}.`,
+      body: `$${total.toLocaleString('en-US')} final invoice sent to ${clientName}${timeAmount > 0 ? ` (incl. ${hours} hrs)` : ''}.`,
       link: `/projects/${project.id}`
     }, req.user.id)
   } catch (err) {
@@ -349,6 +386,150 @@ projectsRouter.post('/:id/final-invoice', async (req, res) => {
 })
 
 // DELETE /api/projects/:id
+// ---- time entries -----------------------------------------------------------
+// Every entry records time; `billable` decides whether it can reach an invoice.
+// Never exposed to the portal — the client sees the money, never the hours.
+
+function parseSubId(req, key) {
+  const n = Number(req.params[key])
+  if (!Number.isInteger(n) || n <= 0) throw badRequest('Invalid id')
+  return n
+}
+
+/** Accept "90", "90m", "1.5h", "1h30m" — a duration field people actually type. */
+function parseMinutes(input) {
+  const raw = String(input ?? '').trim().toLowerCase()
+  if (!raw) return null
+  const hm = raw.match(/^(\d+(?:\.\d+)?)\s*h(?:\s*(\d+)\s*m?)?$/)
+  if (hm) return Math.round(Number(hm[1]) * 60) + Number(hm[2] ?? 0)
+  const m = raw.match(/^(\d+(?:\.\d+)?)\s*m?$/)
+  if (m) return Math.round(Number(m[1]))
+  return null
+}
+
+function validateTime(body, { partial = false } = {}) {
+  const data = {}
+  const fields = {}
+  if (body.minutes !== undefined || !partial) {
+    const mins = parseMinutes(body.minutes)
+    if (mins == null || mins <= 0) fields.minutes = 'enter a duration like 90m or 1.5h'
+    else if (mins > 24 * 60) fields.minutes = 'a single entry can’t exceed 24 hours'
+    else data.minutes = mins
+  }
+  if (body.note !== undefined) {
+    const note = body.note == null ? null : String(body.note).trim().slice(0, 255)
+    data.note = note || null
+  }
+  if (body.billable !== undefined) data.billable = !!body.billable
+  if (body.task_id !== undefined) {
+    if (body.task_id == null || body.task_id === '') data.task_id = null
+    else {
+      const n = Number(body.task_id)
+      if (!Number.isInteger(n) || n <= 0) fields.task_id = 'must be a valid task'
+      else data.task_id = n
+    }
+  }
+  if (body.occurred_at !== undefined) {
+    if (!body.occurred_at) data.occurred_at = new Date().toISOString().slice(0, 10)
+    else if (Number.isNaN(Date.parse(body.occurred_at))) fields.occurred_at = 'must be a valid date'
+    else data.occurred_at = String(body.occurred_at).slice(0, 10)
+  }
+  if (Object.keys(fields).length) throw badRequest('Validation failed', fields)
+  return data
+}
+
+// GET /api/projects/:id/time — entries plus the totals the money card reads.
+projectsRouter.get('/:id/time', async (req, res) => {
+  const id = parseId(req)
+  if (!await getProject(id)) return res.status(404).json({ error: { message: 'Project not found' } })
+  res.json({ data: await listTimeEntries(id), summary: await timeSummary(id) })
+})
+
+// POST /api/projects/:id/time  { minutes, note?, billable?, task_id?, occurred_at? }
+projectsRouter.post('/:id/time', async (req, res) => {
+  const id = parseId(req)
+  if (!await getProject(id)) return res.status(404).json({ error: { message: 'Project not found' } })
+  const data = validateTime(req.body ?? {}, { partial: false })
+  const entry = await createTimeEntry({
+    project_id: id,
+    billable: data.billable ?? true,
+    occurred_at: data.occurred_at ?? new Date().toISOString().slice(0, 10),
+    ...data
+  })
+  res.status(201).json({ data: entry, summary: await timeSummary(id) })
+})
+
+// PATCH /api/projects/:id/time/:entryId — refused once the entry has been billed.
+projectsRouter.patch('/:id/time/:entryId', async (req, res) => {
+  const id = parseId(req)
+  const entryId = parseSubId(req, 'entryId')
+  const existing = await getTimeEntry(entryId)
+  if (!existing || Number(existing.project_id) !== id) {
+    return res.status(404).json({ error: { message: 'Time entry not found' } })
+  }
+  if (existing.billed) {
+    return res.status(409).json({ error: { message: 'This entry is already on an invoice and can’t be edited.' } })
+  }
+  const data = validateTime(req.body ?? {}, { partial: true })
+  res.json({ data: await updateTimeEntry(entryId, data), summary: await timeSummary(id) })
+})
+
+projectsRouter.delete('/:id/time/:entryId', async (req, res) => {
+  const id = parseId(req)
+  const entryId = parseSubId(req, 'entryId')
+  const existing = await getTimeEntry(entryId)
+  if (!existing || Number(existing.project_id) !== id) {
+    return res.status(404).json({ error: { message: 'Time entry not found' } })
+  }
+  if (existing.billed) {
+    return res.status(409).json({ error: { message: 'This entry is already on an invoice and can’t be deleted.' } })
+  }
+  await deleteTimeEntry(entryId)
+  res.json({ ok: true, summary: await timeSummary(id) })
+})
+
+// ---- notes ------------------------------------------------------------------
+// Internal scratchpad. No portal route reads project_notes.
+
+function validateNote(body) {
+  const value = String(body?.body ?? '').trim()
+  if (!value) throw badRequest('Validation failed', { body: 'write something first' })
+  return value
+}
+
+projectsRouter.get('/:id/notes', async (req, res) => {
+  const id = parseId(req)
+  if (!await getProject(id)) return res.status(404).json({ error: { message: 'Project not found' } })
+  res.json({ data: await listNotes(id) })
+})
+
+projectsRouter.post('/:id/notes', async (req, res) => {
+  const id = parseId(req)
+  if (!await getProject(id)) return res.status(404).json({ error: { message: 'Project not found' } })
+  res.status(201).json({ data: await createNote(id, validateNote(req.body)) })
+})
+
+projectsRouter.patch('/:id/notes/:noteId', async (req, res) => {
+  const id = parseId(req)
+  const noteId = parseSubId(req, 'noteId')
+  const existing = await getNote(noteId)
+  if (!existing || Number(existing.project_id) !== id) {
+    return res.status(404).json({ error: { message: 'Note not found' } })
+  }
+  res.json({ data: await updateNote(noteId, validateNote(req.body)) })
+})
+
+projectsRouter.delete('/:id/notes/:noteId', async (req, res) => {
+  const id = parseId(req)
+  const noteId = parseSubId(req, 'noteId')
+  const existing = await getNote(noteId)
+  if (!existing || Number(existing.project_id) !== id) {
+    return res.status(404).json({ error: { message: 'Note not found' } })
+  }
+  await deleteNote(noteId)
+  res.json({ ok: true })
+})
+
 projectsRouter.delete('/:id', async (req, res) => {
   const id = parseId(req)
   // Capture the remote id BEFORE deleting: tasks.project_id is ON DELETE
