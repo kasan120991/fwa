@@ -6,13 +6,21 @@ type ChipStatus = 'neutral' | 'info' | 'success' | 'warning' | 'error'
 interface ProjectInvoice { id: number, kind: 'deposit' | 'balance' | 'custom', status: InvStatus, number: string | null, amount_due: number, amount_paid: number, is_overdue: boolean }
 interface ProjectLike { project_fee: number | null, deposit_pct: number, hourly_rate: number | null }
 interface BillingAction { label: string, icon: string, loading: boolean }
+interface TimeSummary { total_minutes: number, billable_minutes: number, unbilled_minutes: number, unbilled_count: number }
 
 const props = defineProps<{
   project: ProjectLike
   invoices: ProjectInvoice[]
   billingAction: BillingAction | null
+  time?: TimeSummary | null
 }>()
 const emit = defineEmits<{ billing: [] }>()
+
+// Logged billable time that hasn't been invoiced yet. This is what the final
+// invoice picks up as a second line item, so showing it here is the only place
+// you can see it coming before it lands on a bill.
+const unbilledHours = computed(() => Math.round(((props.time?.unbilled_minutes ?? 0) / 60) * 100) / 100)
+const unbilledValue = computed(() => Math.round(unbilledHours.value * (Number(props.project.hourly_rate) || 0) * 100) / 100)
 
 const INV_STATUS: Record<InvStatus, { label: string, status: ChipStatus }> = {
   draft: { label: 'Draft', status: 'neutral' },
@@ -86,10 +94,28 @@ const collectedPct = computed(() => {
       </div>
       <div
         v-if="project.hourly_rate"
-        class="flex items-center justify-between gap-2"
+        class="flex flex-col gap-0.5"
       >
-        <span>Hourly (extra)</span>
-        <span class="font-semibold text-highlighted tabular-nums">{{ formatMoney(project.hourly_rate) }}</span>
+        <div class="flex items-center justify-between gap-2">
+          <span>Hourly (extra)</span>
+          <UBadge
+            v-if="time?.unbilled_count"
+            color="warning"
+            variant="soft"
+            size="sm"
+          >
+            {{ time.unbilled_count }} unbilled
+          </UBadge>
+          <span class="ms-auto font-semibold text-highlighted tabular-nums">
+            {{ unbilledValue ? formatMoney(unbilledValue) : formatMoney(project.hourly_rate) }}
+          </span>
+        </div>
+        <span
+          v-if="time?.total_minutes"
+          class="text-[11.5px] text-muted tabular-nums"
+        >
+          {{ formatMoney(project.hourly_rate) }}/hr · {{ Math.round((time.total_minutes / 60) * 100) / 100 }} hrs logged
+        </span>
       </div>
     </div>
 

@@ -33,7 +33,7 @@ function stateOf(i: number): 'done' | 'current' | 'future' {
 
 <template>
   <div class="relative">
-    <div class="flex min-w-max items-start gap-0 overflow-x-auto pb-1">
+    <div class="flex items-start gap-0 overflow-x-auto pb-1">
       <template
         v-for="(step, i) in LIFECYCLE"
         :key="step.status"
@@ -41,33 +41,29 @@ function stateOf(i: number): 'done' | 'current' | 'future' {
         <!-- connector (between steps) -->
         <div
           v-if="i > 0"
-          class="mt-[13px] h-0.5 w-6 flex-none rounded-full sm:w-10"
-          :class="!onHold && i <= currentIndex ? 'bg-primary' : 'bg-default'"
+          class="mt-[14px] h-px min-w-4 flex-1 rounded-full"
+          :class="!onHold && i <= currentIndex ? 'bg-primary/60' : 'bg-accented'"
         />
         <button
           type="button"
-          class="group flex flex-none flex-col items-center gap-1.5 transition-opacity hover:opacity-80"
+          class="group flex w-[72px] flex-none flex-col items-center gap-2 transition-opacity hover:opacity-80"
           :aria-label="`Set status to ${step.label}`"
           @click="emit('advance', step.status)"
         >
           <span
-            class="flex size-[26px] items-center justify-center rounded-full text-[11px] font-semibold transition-colors"
+            class="flex size-[28px] items-center justify-center rounded-full text-[11.5px] font-semibold transition-colors"
             :class="onHold
               ? 'bg-muted text-muted ring-1 ring-default'
               : stateOf(i) === 'done'
                 ? 'bg-primary text-inverted'
                 : stateOf(i) === 'current'
-                  ? 'bg-mist text-primary ring-2 ring-citrine'
+                  ? 'bg-elevated text-highlighted ring-2 ring-citrine ring-offset-2 ring-offset-default'
                   : 'bg-muted text-muted ring-1 ring-default'"
           >
             <UIcon
               v-if="!onHold && stateOf(i) === 'done'"
               name="i-lucide-check"
               class="size-3.5"
-            />
-            <span
-              v-else-if="!onHold && stateOf(i) === 'current'"
-              class="size-2 rounded-full bg-citrine"
             />
             <template v-else>{{ i + 1 }}</template>
           </span>

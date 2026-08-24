@@ -1,7 +1,8 @@
 <script setup lang="ts">
-// A single project task: check + title on line 1, a wrapping meta row of chips
-// (priority / due / checklist) below, and hover-revealed actions. All mutations
-// emit back to the page — this component makes no API calls of its own.
+// A single project task, on ONE line: check · title · priority · due · checklist
+// · actions. It used to stack a title over a wrapping meta row, which cost two
+// or three lines each and was most of what made the tasks tab feel bulky.
+// The right-hand cells carry fixed widths so they align down the column.
 //
 // Since delivery moved to ClickUp, a task that HAS a checklist no longer owns
 // its own status: finishing the checklist completes the task and un-ticking an
@@ -23,12 +24,14 @@ interface Task {
 interface ChecklistItem { id: number, task_id: number, title: string, done: boolean, position: number }
 interface MenuItem { label: string, icon?: string, color?: 'error', onSelect: () => void }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   task: Task
   expanded?: boolean
   checklistItems?: ChecklistItem[]
   menu: MenuItem[][]
-}>()
+  density?: 'comfortable' | 'compact'
+}>(), { density: 'comfortable' })
+
 const emit = defineEmits<{
   'toggle': []
   'set-due': [string | null]
@@ -38,9 +41,9 @@ const emit = defineEmits<{
   'remove-item': [ChecklistItem]
 }>()
 
-const PRIORITY_META: Record<'low' | 'high', { label: string, class: string }> = {
-  high: { label: 'High', class: 'bg-warning/10 text-warning' },
-  low: { label: 'Low', class: 'bg-muted text-muted' }
+const PRIORITY_META: Record<'low' | 'high', { label: string, color: 'warning' | 'neutral' }> = {
+  high: { label: 'High', color: 'warning' },
+  low: { label: 'Low', color: 'neutral' }
 }
 
 const done = computed(() => props.task.status === 'done')
@@ -50,9 +53,11 @@ const overdue = computed(() => {
 })
 // A checklist makes the task's status derived, not chosen.
 const governed = computed(() => props.task.checklist_total > 0)
+const complete = computed(() => governed.value && props.task.checklist_done === props.task.checklist_total)
 const clickupUrl = computed(() => (props.task.clickup_task_id
   ? `https://app.clickup.com/t/${props.task.clickup_task_id}`
   : null))
+const rowPad = computed(() => (props.density === 'compact' ? 'py-1.5' : 'py-2.5'))
 
 const newItem = ref('')
 function submitItem() {
@@ -65,7 +70,10 @@ function submitItem() {
 
 <template>
   <div class="border-b border-default last:border-b-0">
-    <div class="group flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted">
+    <div
+      class="group flex items-center gap-3 px-4 transition-colors hover:bg-muted"
+      :class="rowPad"
+    >
       <!-- done toggle — read-only while a checklist governs the status -->
       <UTooltip
         :disabled="!governed"
@@ -75,100 +83,103 @@ function submitItem() {
           :model-value="done"
           :disabled="governed"
           :aria-label="done ? 'Mark not done' : 'Mark done'"
-          class="mt-0.5"
-          :ui="{ base: 'rounded-full' }"
           @update:model-value="emit('toggle')"
         />
       </UTooltip>
 
-      <div class="min-w-0 flex-1">
-        <span
-          class="block text-[13.5px] leading-snug"
-          :class="done ? 'text-muted line-through' : 'text-highlighted'"
-        >{{ task.title }}</span>
+      <!-- title -->
+      <span
+        class="min-w-0 flex-1 truncate text-[13.5px]"
+        :class="done ? 'text-muted line-through' : 'text-highlighted'"
+      >{{ task.title }}</span>
 
-        <!-- checklist — leads the meta row, because it's what closes the task -->
-        <button
-          v-if="governed"
-          type="button"
-          class="mt-2 flex w-full max-w-[280px] items-center gap-2.5 text-left transition-opacity hover:opacity-80"
-          :aria-label="expanded ? 'Hide checklist' : 'Show checklist'"
-          @click="emit('toggle-expand')"
+      <!-- a push to ClickUp failed; the row is stale until it succeeds -->
+      <UTooltip
+        v-if="task.clickup_sync_error"
+        :text="task.clickup_sync_error"
+      >
+        <UIcon
+          name="i-lucide-triangle-alert"
+          class="size-3.5 flex-none text-error"
+        />
+      </UTooltip>
+
+      <!-- priority — only when it isn't the default -->
+      <span class="hidden w-12 flex-none justify-center sm:flex">
+        <UBadge
+          v-if="task.priority !== 'medium'"
+          :color="PRIORITY_META[task.priority].color"
+          variant="soft"
+          size="sm"
         >
-          <UProgress
-            :model-value="task.checklist_done"
-            :max="task.checklist_total"
-            size="2xs"
-            :color="task.checklist_done === task.checklist_total ? 'success' : 'primary'"
-            class="flex-1"
-          />
-          <span class="flex-none text-[11px] text-muted tabular-nums">
-            {{ task.checklist_done }}/{{ task.checklist_total }}
-          </span>
-        </button>
+          {{ PRIORITY_META[task.priority].label }}
+        </UBadge>
+      </span>
 
-        <!-- wrapping meta row -->
-        <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          <span
-            v-if="task.priority !== 'medium'"
-            class="rounded-chip px-2 py-0.5 text-[10.5px] font-semibold"
-            :class="PRIORITY_META[task.priority].class"
-          >{{ PRIORITY_META[task.priority].label }}</span>
-
-          <!-- due date — click to set/clear -->
-          <UPopover>
-            <button
-              type="button"
-              class="inline-flex items-center gap-1 whitespace-nowrap rounded-chip px-1.5 py-0.5 text-[12px] tabular-nums transition-colors"
-              :class="task.due_date ? (overdue ? 'font-semibold text-warning hover:bg-warning/10' : 'text-muted hover:bg-elevated') : 'text-muted opacity-0 group-hover:opacity-100 hover:text-highlighted'"
-            >
-              <UIcon
-                name="i-lucide-calendar"
-                class="size-3.5"
-              />
-              <span>{{ task.due_date ? shortDate(task.due_date) : 'Due' }}</span>
-            </button>
-            <template #content>
-              <div class="flex flex-col gap-2 p-3">
-                <UInput
-                  type="date"
-                  :model-value="task.due_date ? task.due_date.slice(0, 10) : ''"
-                  size="sm"
-                  @update:model-value="(v) => emit('set-due', (v as string) || null)"
-                />
-                <UButton
-                  v-if="task.due_date"
-                  color="neutral"
-                  variant="ghost"
-                  size="xs"
-                  icon="i-lucide-x"
-                  class="justify-center"
-                  @click="emit('set-due', null)"
-                >
-                  Clear due date
-                </UButton>
-              </div>
-            </template>
-          </UPopover>
-
-          <!-- a push to ClickUp failed; the row is stale until it succeeds -->
-          <UTooltip
-            v-if="task.clickup_sync_error"
-            :text="task.clickup_sync_error"
+      <!-- due date — click to set or clear -->
+      <span class="hidden w-[86px] flex-none justify-end sm:flex">
+        <UPopover>
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 whitespace-nowrap rounded-chip px-1.5 py-0.5 text-[12px] tabular-nums transition-colors"
+            :class="task.due_date ? (overdue ? 'font-semibold text-warning hover:bg-warning/10' : 'text-muted hover:bg-elevated') : 'text-muted opacity-0 group-hover:opacity-100 hover:text-highlighted'"
           >
-            <span class="inline-flex items-center gap-1 text-[11.5px] font-semibold text-error">
-              <UIcon
-                name="i-lucide-triangle-alert"
-                class="size-3.5"
+            <span>{{ task.due_date ? shortDate(task.due_date) : 'Set due' }}</span>
+          </button>
+          <template #content>
+            <div class="flex flex-col gap-2 p-3">
+              <UInput
+                type="date"
+                :model-value="task.due_date ? task.due_date.slice(0, 10) : ''"
+                size="sm"
+                @update:model-value="(v) => emit('set-due', (v as string) || null)"
               />
-              Not synced
+              <UButton
+                v-if="task.due_date"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                icon="i-lucide-x"
+                class="justify-center"
+                @click="emit('set-due', null)"
+              >
+                Clear due date
+              </UButton>
+            </div>
+          </template>
+        </UPopover>
+      </span>
+
+      <!-- checklist — a bar at rest, opens on click -->
+      <span class="flex w-[92px] flex-none items-center justify-end gap-2">
+        <template v-if="governed">
+          <button
+            type="button"
+            class="flex flex-1 items-center gap-2 transition-opacity hover:opacity-80"
+            :aria-label="expanded ? 'Hide checklist' : 'Show checklist'"
+            @click="emit('toggle-expand')"
+          >
+            <UProgress
+              :model-value="task.checklist_done"
+              :max="task.checklist_total"
+              size="2xs"
+              :color="complete ? 'success' : 'primary'"
+              class="flex-1"
+            />
+            <span class="flex-none text-[11px] text-muted tabular-nums">
+              {{ task.checklist_done }}/{{ task.checklist_total }}
             </span>
-          </UTooltip>
-        </div>
-      </div>
+          </button>
+        </template>
+        <UIcon
+          v-else-if="done"
+          name="i-lucide-circle-check"
+          class="size-4 text-success"
+        />
+      </span>
 
       <!-- actions -->
-      <div class="flex flex-none items-center gap-0.5">
+      <span class="flex flex-none items-center gap-0.5">
         <UTooltip
           v-if="clickupUrl"
           text="Open in ClickUp"
@@ -184,16 +195,6 @@ function submitItem() {
             aria-label="Open in ClickUp"
           />
         </UTooltip>
-        <UButton
-          v-if="governed"
-          :icon="expanded ? 'i-lucide-chevron-up' : 'i-lucide-list-checks'"
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          :class="expanded ? '' : 'opacity-0 transition-opacity group-hover:opacity-100'"
-          :aria-label="expanded ? 'Hide checklist' : 'Show checklist'"
-          @click="emit('toggle-expand')"
-        />
         <UDropdownMenu :items="menu">
           <UButton
             icon="i-lucide-ellipsis-vertical"
@@ -203,7 +204,7 @@ function submitItem() {
             :aria-label="`Actions for ${task.title}`"
           />
         </UDropdownMenu>
-      </div>
+      </span>
     </div>
 
     <!-- checklist panel -->

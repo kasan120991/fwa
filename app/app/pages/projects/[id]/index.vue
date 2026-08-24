@@ -143,6 +143,10 @@ async function loadProject() {
     pending.value = false
   }
 }
+async function loadProjectExtras() {
+  await Promise.all([loadTime(), loadNoteCount()])
+}
+
 async function loadTasks() {
   const { data } = await api<{ data: Task[] }>(`/projects/${route.params.id}/tasks`)
   tasks.value = data.map(t => ({ ...t, checklist_total: Number(t.checklist_total ?? 0), checklist_done: Number(t.checklist_done ?? 0) }))
@@ -196,7 +200,7 @@ function onInvoiceEvent() {
 onMounted(async () => {
   await loadProject()
   if (!notFound.value) {
-    await Promise.all([loadTasks(), loadMilestones(), loadDocs(), loadInvoices()])
+    await Promise.all([loadTasks(), loadMilestones(), loadDocs(), loadInvoices(), loadProjectExtras()])
   }
   socket.on('task:created', onTaskEvent)
   socket.on('task:updated', onTaskEvent)
@@ -455,6 +459,60 @@ function milestoneMenu(m: Milestone, index: number, total: number) {
     ],
     [{ label: 'Delete', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => removeMilestone(m) }]
   ]
+}
+
+// ---- time, notes, density -------------------------------------------------
+interface TimeSummary { total_minutes: number, billable_minutes: number, unbilled_minutes: number, unbilled_count: number }
+const timeSummary = ref<TimeSummary | null>(null)
+const noteCount = ref(0)
+const timeOpen = ref(false)
+const notesOpen = ref(false)
+
+async function loadTime() {
+  try {
+    const res = await api<{ summary: TimeSummary }>(`/projects/${route.params.id}/time`)
+    timeSummary.value = res.summary
+  } catch { /* the money card just falls back to the bare rate */ }
+}
+async function loadNoteCount() {
+  try {
+    const { data } = await api<{ data: unknown[] }>(`/projects/${route.params.id}/notes`)
+    noteCount.value = data.length
+  } catch { /* non-fatal */ }
+}
+
+const loggedHours = computed(() => (timeSummary.value
+  ? Math.round((timeSummary.value.total_minutes / 60) * 100) / 100
+  : 0))
+
+// Row density — a per-device preference, so localStorage rather than the server.
+type Density = 'comfortable' | 'compact'
+const DENSITY_KEY = 'fwa.tasks.density'
+const density = ref<Density>('comfortable')
+const densityItems = [
+  { label: 'Comfortable', value: 'comfortable' as const },
+  { label: 'Compact', value: 'compact' as const }
+]
+onMounted(() => {
+  try {
+    const saved = localStorage.getItem(DENSITY_KEY)
+    if (saved === 'comfortable' || saved === 'compact') density.value = saved
+  } catch { /* private mode — the default is fine */ }
+})
+watch(density, (v) => {
+  try {
+    localStorage.setItem(DENSITY_KEY, v)
+  } catch { /* ignore */ }
+})
+
+// Quick actions: two jump to where the thing already lives, two open a panel.
+function quickAddTask() {
+  activeTab.value = 'tasks'
+  const first = taskBoards.value[0]
+  if (first) addingTo.value = first.key
+}
+function quickUploadFile() {
+  activeTab.value = 'files'
 }
 
 // ---- edit ----
@@ -739,7 +797,7 @@ const scopeFields = computed(() => project.value
           <!-- title row -->
           <div class="mt-3 flex flex-wrap items-start justify-between gap-4">
             <div class="min-w-0">
-              <h1 class="font-display text-[28px] font-semibold leading-tight tracking-tight text-highlighted">
+              <h1 class="font-display text-[30px] font-semibold leading-[1.12] tracking-tight text-highlighted sm:text-[34px]">
                 {{ project.name }}
               </h1>
               <div class="mt-2 flex flex-wrap items-center gap-3.5">
@@ -853,6 +911,13 @@ const scopeFields = computed(() => project.value
                 >
                   Add milestone
                 </UButton>
+                <USelectMenu
+                  v-model="density"
+                  :items="densityItems"
+                  value-key="value"
+                  size="xs"
+                  class="w-[132px]"
+                />
               </div>
 
               <!-- due-soon / overdue focus strip (spans all milestones) -->
@@ -1016,6 +1081,7 @@ const scopeFields = computed(() => project.value
                     :expanded="!!expanded[t.id]"
                     :checklist-items="checklist[t.id] ?? []"
                     :menu="taskMenu(t)"
+                    :density="density"
                     @toggle="toggleTask(t)"
                     @set-due="(v) => setDue(t, v)"
                     @toggle-expand="toggleExpand(t)"
@@ -1192,12 +1258,21 @@ const scopeFields = computed(() => project.value
           <!-- RIGHT RAIL -->
           <div class="flex flex-col gap-4">
             <ProjectMoneyCard
+              :time="timeSummary"
               :project="project"
               :invoices="invoices"
               :billing-action="billingAction"
               @billing="billingAction?.run()"
             />
             <ProjectTimelineCard :project="project" />
+            <ProjectQuickActions
+              :time-hours="loggedHours"
+              :note-count="noteCount"
+              @add-task="quickAddTask"
+              @upload-file="quickUploadFile"
+              @log-time="timeOpen = true"
+              @note="notesOpen = true"
+            />
 
             <!-- contract mini -->
             <div class="rounded-card bg-default p-[18px] ring ring-default">
@@ -1282,5 +1357,18 @@ const scopeFields = computed(() => project.value
         @provisioned="onProvisioned"
       />
     </template>
+
+    <!-- Log Time / Notes — panels rather than more page -->
+    <TimeLogSlideover
+      v-model:open="timeOpen"
+      :project-id="Number(route.params.id)"
+      :hourly-rate="project?.hourly_rate ?? null"
+      @changed="(s) => (timeSummary = s)"
+    />
+    <ProjectNotesSlideover
+      v-model:open="notesOpen"
+      :project-id="Number(route.params.id)"
+      @changed="(n) => (noteCount = n)"
+    />
   </div>
 </template>
