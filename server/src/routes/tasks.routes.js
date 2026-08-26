@@ -4,7 +4,7 @@ import { createTask, updateTask, deleteTask, addChecklistItem, updateChecklistIt
 import { getProject } from '../repositories/projects.repo.js'
 import { pushTask, pushChecklistItem, deleteRemoteChecklistItem } from '../services/clickupSync.js'
 import { getSyncTask, getChecklistItemById } from '../repositories/clickup.repo.js'
-import { applyChecklistRule } from '../services/delivery.service.js'
+import { applyChecklistRule, deliveryChanged } from '../services/delivery.service.js'
 import * as clickup from '../services/clickup.js'
 import { config } from '../config/env.js'
 
@@ -27,10 +27,18 @@ function pushLater(taskId) {
  * A checklist edit can complete or reopen its parent task, which in turn moves
  * the milestone rollup and the client's portal bar. Run the rule first, then
  * push the item — and the task too when the rule acted.
+ *
+ * deliveryChanged() is what actually moves the milestone: without it, ticking
+ * the last item completes the task and leaves its phase sitting at in_progress
+ * with every task done, and the client's portal bar never moves (that event
+ * only goes out from there). The ClickUp pull path does this in
+ * afterRemoteTask; this is the Ops-side half of the same rule. It runs before
+ * the remote pushes so the UI updates at local speed, and it never throws.
  */
 function pushChecklistLater(itemId, taskId) {
   ;(async () => {
     const rule = await applyChecklistRule(taskId)
+    if (rule.changed) await deliveryChanged(rule.project_id)
     await pushChecklistItem(itemId)
     if (rule.changed) await pushTask(taskId)
   })().catch(err => console.error(`[clickup] push checklist item ${itemId}:`, err.message))
@@ -230,6 +238,9 @@ tasksRouter.delete('/:id/checklist/:itemId', async (req, res) => {
     }
     // Removing the last unticked item can complete the task.
     const rule = await applyChecklistRule(existing?.task_id)
-    if (rule.changed) await pushTask(existing.task_id)
+    if (rule.changed) {
+      await deliveryChanged(rule.project_id)
+      await pushTask(existing.task_id)
+    }
   })().catch(err => console.error(`[clickup] delete checklist item ${itemId}:`, err.message))
 })
