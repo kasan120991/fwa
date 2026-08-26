@@ -80,9 +80,10 @@ Keep the nav item in place; it's fleshed out later reusing the same components a
   changes), including **client-scoped rooms** for the portal.
 - **Database:** MySQL (via `mysql2`, no ORM — hand-written SQL).
 - **Integrations:** Stripe (customers, invoices, payments, Payment Element, webhooks), PandaDoc
-  (proposal/contract docs + embedded signing), Vapi (AI receptionist), Resend (transactional
-  email), Plausible + GA4 (website analytics), DigitalOcean (droplets, managed uptime checks,
-  provisioning, hosting costs). **Every integration is key-gated and no-ops when unset.**
+  (proposal/contract docs + embedded signing), **ClickUp (the delivery workspace — see *Delivery in
+  ClickUp* below)**, Vapi (AI receptionist), Resend (transactional email), Plausible + GA4 (website
+  analytics), DigitalOcean (droplets, managed uptime checks, provisioning, hosting costs).
+  **Every integration is key-gated and no-ops when unset.**
 - No CMS, no ORM — the schema and API are custom.
 
 ### Layout
@@ -181,19 +182,88 @@ append-only table. Links via **nullable `lead_id`** *or* **`client_id`** (`ON DE
   completed`, plus out-of-band `on_hold`. `advanceProject()` never moves backward and is driven by
   contract/invoice events, not by hand.
 - **`project_milestones` is the client-visible delivery layer, orthogonal to `projects.status`.**
-  Admin sets `state` (`upcoming`/`in_progress`/`complete`) + `target_date` + `position`, but
-  *progress is derived from child tasks* via a rollup subquery. `tasks.milestone_id` is a **soft
-  link with no FK** — the app nulls it when a milestone is deleted.
+  Both `state` (`upcoming`/`in_progress`/`complete`) and progress are **derived from the child-task
+  rollup** (`services/delivery.service.js`) — nobody flips state by hand now that the work lives in
+  ClickUp. Setting `state` through the API pins it (`state_manual = 1`) and auto-pilot skips it
+  until "Resume Auto"; a milestone with **no** tasks has nothing to derive from and stays manual.
+  "Started" means any task off `todo`, so a phase lights up as soon as work begins.
+  `tasks.milestone_id` is a **soft link with no FK** — the app nulls it when a milestone is deleted.
 - **`project_templates`** (+ `project_template_milestones` / `_tasks`) are named, reusable delivery
   plans managed in Settings. They're applied **inside the project-create transaction**. Resolution:
   an explicit `template_id` wins; explicit `null` seeds nothing; **omitting the field falls back to
   the project type's default template**.
 - **`project_types`** is an extensible lookup supplying the project **code prefix** (`WEB-0007`),
   pinning **which contract template** the project generates from, and grouping project templates.
-- **`tasks`** own `task_checklist_items` — a flat ordered checklist driving a per-task progress bar
-  independent of the task's own `done` flag. Tasks with `project_id = NULL` are standalone.
+- **`tasks`** own `task_checklist_items` — a flat ordered checklist mirrored from ClickUp. A
+  **fully-ticked checklist completes its task**, and un-ticking reopens it, so a task with a
+  checklist no longer owns its own status (the UI disables the toggle and says so). A task with
+  *no* checklist items is never touched by that rule. Tasks with `project_id = NULL` are standalone
+  and are the one kind ClickUp never originates.
 - **`milestone_templates` is dead** — superseded by `project_templates`, kept defined only so
   existing DBs don't error. Don't build on it.
+
+### Delivery in ClickUp
+
+Day-to-day delivery work happens in **ClickUp**; Ops stays the system of record for milestones and
+the client-facing rollup. The whole feature rests on one existing fact: milestone progress is a SQL
+rollup over `tasks.milestone_id`, so keeping `tasks` an accurate mirror makes the milestone bars,
+the admin boards and the portal update themselves. **The rollup SQL is untouched.**
+
+**The tree.** A `Clients` space holds one **Folder per client**, with a `Projects` list Ops syncs and
+a `Care Plan` list it provisions and deliberately leaves alone. Inside `Projects`:
+
+```
+project task            ← projects.clickup_task_id
+  milestone task        ← project_milestones.clickup_task_id
+    work item           ← tasks.clickup_task_id  (tasks.milestone_id = that milestone)
+  work item             ← a direct child of the project task = the "General" bucket
+```
+
+Membership is **structural** — the ClickUp parent *is* the milestone link. (An earlier design used a
+space-level "Milestone" dropdown; it's gone, because ClickUp can create a custom field via API but
+not update one.) Requires the **Nested Subtasks ClickApp** (all plans; ClickUp allows 4 levels, we
+use 3). Anything nested under a work item is reported as `tooDeep` and ignored.
+
+**Milestone tasks are named `1. Discovery`, `2. Design`, …** — and that numbering is the *only* way
+order survives. ClickUp can't be reordered: `orderindex` is server-assigned from creation time and
+the API accepts then silently ignores any attempt to set it (their FAQ: tasks "no longer use the
+order_index"), and subtasks can't be dragged inside a task card either. So rank rides in the name,
+padded to two digits past nine phases, ranked by array index rather than the `position` value
+(positions have gaps — a delete doesn't renumber). A reorder in Ops renames the phases whose rank
+moved; anything that slips through is corrected by the sweep's drift check. Don't "tidy" the prefix
+away — it's load-bearing, and safe only because milestones are one-way.
+
+**Two directions, three contracts.**
+
+| | direction | mechanism |
+|---|---|---|
+| Work items | **two-way** | shadow + `clickup_version` CAS; ClickUp wins on conflict |
+| Milestone tasks | **one-way**, Ops → ClickUp | no shadow; the sweep re-asserts drift |
+| Project task | **one-way**, Ops → ClickUp | SOW fields Ops owns |
+
+- **Ops owns milestone existence.** A direct child of a project task is a milestone *only* if Ops
+  knows it by stored id; an unrecognized one is adopted as a milestone-less task. **ClickUp can
+  never create a phase** — and deleting a milestone task there doesn't delete the phase, it gets
+  re-created (its work items are unlinked and re-pushed, losing ClickUp-only comments/attachments).
+  Remove a phase in Ops, not in ClickUp.
+- **Derived state is pushed down.** `deliveryChanged()` pushes each moved milestone's state onto its
+  ClickUp task — the one deliberate service-layer push, safe because milestones have no pull path.
+- **Deleting a milestone in Ops re-parents its ClickUp children up to the project task** before
+  deleting the milestone task, which lands them in "General" — exactly what Ops just did to them.
+- **Echo suppression** is a stored shadow of the last agreed state, held in **Ops** values, so a
+  ClickUp edit mapping to the same Ops value is invisible. Pushes send only changed fields, and the
+  shadow is set from the API **response**, never from what we meant to send.
+- **Deletes have teeth.** Absence from a list read is confirmed individually (a moved or archived
+  task looks exactly like a deleted one); a cascade is unlinked rather than deleted; a sweep that
+  would delete more than `CLICKUP_MAX_SWEEP_DELETES` (10) aborts; `CLICKUP_ALLOW_REMOTE_DELETES=false`
+  turns the path off entirely.
+- **Webhook** `POST /api/webhooks/clickup`, HMAC-SHA256 in `X-Signature`. It **acks logic errors with
+  200** — ClickUp disables a webhook after sustained non-2xx, and the sweep is the backstop. Register
+  it with `npm run clickup:webhook -- register <base-url>`; the signing secret is shown **once**.
+- **Layering**: `services/clickup.js` (HTTP) → `clickupMap.js` (pure mapping + the shadow) →
+  `clickupProvision.js` (the `ensure*` chain + milestone push) → `clickupSync.js` (the two-way
+  engine) → `repositories/clickup.repo.js` (all SQL). Task pushes are fired from the **route** layer,
+  never the service, so the pull path can't echo.
 
 ### Websites & infrastructure
 
@@ -259,7 +329,7 @@ More than analytics — this is an infra console.
 
 ### Background jobs (`server/src/jobs/scheduler.js`)
 
-Plain `setInterval`, all `.unref()`'d, each independently gated. Five jobs:
+Plain `setInterval`, all `.unref()`'d, each independently gated. Six jobs:
 
 | Job | Gate | Default interval |
 |---|---|---|
@@ -268,6 +338,10 @@ Plain `setInterval`, all `.unref()`'d, each independently gated. Five jobs:
 | DO managed-uptime sync | `DIGITALOCEAN_API_TOKEN` set (independent of the above) | 10m |
 | Infra alerts poll | DO token **and** `DIGITALOCEAN_ALERTS_ENABLED !== 'false'` | 10m + at boot |
 | Subscription renewal reminders | `EXPENSE_REMINDERS_ENABLED !== 'false'` (**on** by default) | 24h + at boot |
+| ClickUp reconcile sweep | `CLICKUP_API_TOKEN` + `CLICKUP_SPACE_ID` set | 15m |
+
+The ClickUp sweep catches webhooks that were never delivered and is the **only pull path in local
+dev** (ClickUp can't reach localhost) — force it with `POST /api/clickup/sync` rather than waiting.
 
 ## Pages & navigation
 
@@ -328,7 +402,9 @@ Both products co-deploy on one box.
 
 `.env.production` groups: domains (`OPS_DOMAIN`, `PORTAL_DOMAIN`, `DEMO_DOMAIN`), `DB_ROOT_PASSWORD`,
 Stripe (secret/webhook/publishable), PandaDoc (key, webhook key, role names),
-`CONTACT_FORM_WEBHOOK_SECRET` (the marketing site's contact form), Resend, Plausible, GA4
+`CONTACT_FORM_WEBHOOK_SECRET` (the marketing site's contact form), **ClickUp
+(`CLICKUP_API_TOKEN`, `CLICKUP_TEAM_ID`, `CLICKUP_SPACE_ID`, `CLICKUP_WEBHOOK_SECRET`, plus the
+`CLICKUP_ALLOW_REMOTE_DELETES` / `CLICKUP_MAX_SWEEP_DELETES` safety pair)**, Resend, Plausible, GA4
 (`GA4_CLIENT_EMAIL` / `GA4_PRIVATE_KEY_BASE64`), DigitalOcean, Vapi, the demo user vars, and the
 job toggles (`WEBSITE_CHECKS_ENABLED`, `EXPENSE_REMINDERS_ENABLED`, `DIGITALOCEAN_ALERTS_ENABLED`).
 
@@ -456,6 +532,14 @@ Full build rules (design conversion, motion, content voice) live in **`website/C
 - Keep the project → contract direction: projects are the SOW hub that originate contracts.
 - **Keep `projects.status` (commercial, forward-only, event-driven) separate from
   `project_milestones` (client-visible delivery, task-derived).** They are deliberately orthogonal.
+- **ClickUp: work items are two-way, milestones and the project task are one-way.** Ops owns
+  milestone existence — ClickUp can never create a phase, and an unrecognized direct child of a
+  project task is adopted as a milestone-less task, never as a milestone.
+- **A milestone task must never be mirrored into `tasks`.** Every progress bar in both apps is
+  `task_done / task_total`, so one phantom row per milestone silently skews all of them. The guard
+  lives at the top of `applyRemoteTask`, which is the only path to the three writes that could do it.
+- **Never destroy Ops work on a remote absence.** A task missing from a ClickUp read is confirmed
+  individually first, and a cascade (its milestone task was deleted) unlinks rather than deletes.
 - **Every portal query scopes to `req.clientId`, never to a URL param.** Foreign ids 404 rather
   than 403. Never trust a client-supplied id, and never trust the Vapi model's args for identity —
   resolve the client server-side from the caller's number.
