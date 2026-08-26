@@ -1,15 +1,20 @@
-import { config } from '../config/env.js'
 import * as cu from './clickup.js'
-import { normTitle, dateToClickUp } from './clickupMap.js'
+import { buildStatusMap, dateToClickUp, milestoneStateToOps } from './clickupMap.js'
 import { getClient } from '../repositories/clients.repo.js'
 import { getProject } from '../repositories/projects.repo.js'
 import * as repo from '../repositories/clickup.repo.js'
-import { query } from '../db/pool.js'
 
-// Provisions the ClickUp side of the tree and keeps the Milestone dropdown in
-// step. Every function is an `ensure` — idempotent, short-circuiting on stored
-// ids — which is what makes the lazy-heal path free: any entry point can call
-// the chain from the top and it costs one DB read when everything already exists.
+// Provisions the ClickUp side of the tree: a Folder per client, a task per
+// project, and a subtask per milestone. Every function is an `ensure` —
+// idempotent, short-circuiting on stored ids — which is what makes the
+// lazy-heal path free: any entry point can call the chain from the top and it
+// costs one DB read when everything already exists.
+//
+// Milestone tasks live here rather than in clickupSync.js for two reasons. They
+// are one-way (Ops -> ClickUp) with no shadow and no CAS, so they have nothing
+// in common with that file's two-way engine — and delivery.service.js has to
+// push a derived milestone state, which would be an import cycle if it went
+// through clickupSync (that file already imports deliveryChanged).
 //
 // Shaped results, never thrown, per the websiteSync.js convention.
 
@@ -18,87 +23,25 @@ export const isConfigured = cu.isConfigured
 const PROJECTS_LIST = 'Projects'
 const CAREPLAN_LIST = 'Care Plan'
 
-/* --------------------------------------------------- Milestone custom field */
+/* ------------------------------------------------------------- status maps */
 
-// Space-level, so it's global — cache in memory with a TTL rather than adding a
-// table. A process restart just re-fetches; the cost is one request.
-let fieldCache = { at: 0, field: null }
-const FIELD_TTL_MS = 6 * 60 * 60_000
+// A List's statuses are user-defined, so Ops' four-value enum has to be
+// resolved against whatever this list actually has. Cached per list: PUT /task
+// with a status the list doesn't define is a 400, and the set rarely moves.
+const statusCache = new Map() // listId -> { map, lossy, at }
+const STATUS_TTL_MS = 60 * 60_000
 
-/**
- * The "Milestone" dropdown, created if absent. Returns { field_id, options }
- * or { field_id: null } — never throws, because a transient failure here must
- * NOT be allowed to null out existing milestone links (see clickupSync).
- */
-export async function ensureMilestoneField({ force = false } = {}) {
-  if (!force && fieldCache.field && Date.now() - fieldCache.at < FIELD_TTL_MS) return fieldCache.field
-  try {
-    const wanted = normTitle(config.clickup.milestoneFieldName)
-    const found = (await cu.listSpaceFields())
-      .find(f => normTitle(f.name) === wanted && f.type === 'drop_down')
-    if (found) {
-      const field = {
-        field_id: found.id,
-        options: (found.type_config?.options ?? []).map(o => ({ id: o.id, name: o.name, orderindex: o.orderindex }))
-      }
-      fieldCache = { at: Date.now(), field }
-      return field
-    }
-    // Not there — create it from the milestone vocabulary Ops actually uses.
-    const titles = await distinctMilestoneTitles()
-    const created = await cu.createSpaceField({
-      name: config.clickup.milestoneFieldName,
-      type: 'drop_down',
-      type_config: { options: titles.map((name, i) => ({ name, orderindex: i })) }
-    })
-    const field = {
-      field_id: created.id,
-      options: (created.type_config?.options ?? []).map(o => ({ id: o.id, name: o.name, orderindex: o.orderindex }))
-    }
-    fieldCache = { at: Date.now(), field }
-    console.log(`[clickup] created "${config.clickup.milestoneFieldName}" field with ${field.options.length} options`)
-    return field
-  } catch (err) {
-    console.error('[clickup] milestone field:', err.message)
-    // A null field pauses milestone sync only; title/status/due keep flowing.
-    return { field_id: null, options: [], error: err.message }
+export async function statusMapFor(listId) {
+  const hit = statusCache.get(listId)
+  if (hit && Date.now() - hit.at < STATUS_TTL_MS) return hit
+  const list = await cu.getList(listId)
+  const built = buildStatusMap(list?.statuses ?? [])
+  const entry = { ...built, at: Date.now() }
+  statusCache.set(listId, entry)
+  if (built.lossy.length) {
+    console.warn(`[clickup] list ${listId}: no ClickUp status for ${built.lossy.join(', ')}`)
   }
-}
-
-/** The union of milestone titles Ops uses — templates first, then live projects. */
-async function distinctMilestoneTitles() {
-  const rows = await query(
-    `SELECT title FROM project_template_milestones
-     UNION SELECT title FROM project_milestones`
-  )
-  const seen = new Map()
-  for (const r of rows) if (!seen.has(normTitle(r.title))) seen.set(normTitle(r.title), r.title)
-  return [...seen.values()]
-}
-
-/**
- * Resolve a milestone title to its dropdown option.
- *
- * ClickUp can CREATE a custom field via the API but not UPDATE one (PUT
- * /field/{id} is a hard 405), so the option set is fixed when the field is
- * first created. ensureMilestoneField seeds it with every milestone title Ops
- * knows; a title added afterwards has no option and simply isn't tagged — the
- * task still syncs its title/status/due date. Drift is reported by
- * missingMilestoneOptions() so the UI can say which option to add by hand.
- */
-export async function ensureMilestoneOption(title) {
-  if (!title) return null
-  const field = await ensureMilestoneField()
-  if (!field.field_id) return null
-  return field.options.find(o => normTitle(o.name) === normTitle(title)) ?? null
-}
-
-/** Milestone titles Ops uses that the ClickUp dropdown has no option for. */
-export async function missingMilestoneOptions() {
-  const field = await ensureMilestoneField()
-  if (!field.field_id) return []
-  const have = new Set(field.options.map(o => normTitle(o.name)))
-  return (await distinctMilestoneTitles()).filter(t => !have.has(normTitle(t)))
+  return entry
 }
 
 /* ------------------------------------------------------------ client folder */
@@ -196,4 +139,128 @@ export async function ensureProjectTask(projectOrId) {
     console.error(`[clickup] ensure project ${project.id}:`, err.message)
     return { linked: false, error: err.message }
   }
+}
+
+/* ----------------------------------------------------------- milestone task */
+
+/**
+ * The milestone task's name, numbered by its rank among its siblings.
+ *
+ * ClickUp has no way to order subtasks: `orderindex` is server-assigned from
+ * creation time, the API accepts and silently ignores it (ClickUp's own FAQ
+ * says tasks "no longer use the order_index"), and dragging subtasks inside a
+ * task card isn't supported either. So a phase's position can only be carried
+ * in its name — which also makes a List view sortable into the right order.
+ *
+ * Ranked by ARRAY INDEX, not the `position` value: positions can have gaps (a
+ * delete doesn't renumber) and templates copy them verbatim. Padded to two
+ * digits only past nine phases, so "10." can't sort above "2." while a normal
+ * four-phase project stays clean.
+ *
+ * Safe because milestones are one-way: the prefix never round-trips into an
+ * Ops title.
+ */
+export function milestoneTaskName(milestone, siblings = []) {
+  const title = String(milestone.title ?? '').trim()
+  const i = siblings.findIndex(m => Number(m.id) === Number(milestone.id))
+  if (i === -1) return title
+  const width = siblings.length > 9 ? 2 : 1
+  return `${String(i + 1).padStart(width, '0')}. ${title}`
+}
+
+/** The milestone's fields as ClickUp wants them. Status is Ops' derived state. */
+function milestoneBody(milestone, siblings, statusMap, { clearEmpty = false } = {}) {
+  const status = statusMap?.map?.[milestoneStateToOps(milestone.state)]
+  const due = dateToClickUp(milestone.target_date)
+  return {
+    name: milestoneTaskName(milestone, siblings),
+    // '' clears it; undefined leaves whatever is there. Matches pushProject.
+    description: clearEmpty ? (milestone.description || '') : (milestone.description || undefined),
+    ...(status ? { status } : {}),
+    // Noon UTC and date-only, exactly as task and project dates go up, so
+    // neither side's timezone normalization can shift the day.
+    ...(due ? { due_date: due, due_date_time: false } : (clearEmpty ? { due_date: null } : {}))
+  }
+}
+
+/**
+ * The ClickUp task standing for a milestone: a subtask of the project's task,
+ * and the parent of that milestone's work items. Heals upward through
+ * ensureProjectTask, so a milestone can be provisioned before its project was.
+ *
+ * `parent` and the list id go on the same POST — legal, because the parent task
+ * lives in that list.
+ */
+export async function ensureMilestoneTask(milestoneOrId, { siblings } = {}) {
+  if (!isConfigured()) return { linked: false, configured: false }
+  const milestone = typeof milestoneOrId === 'object'
+    ? milestoneOrId
+    : await repo.getMilestoneForSync(milestoneOrId)
+  if (!milestone) return { linked: false, notFound: true }
+
+  const link = await ensureProjectTask(milestone.project_id)
+  if (!link.linked) return { linked: false, reason: 'project task not provisioned', ...link }
+  // Needed for the name's number; the caller passes it when it already has the
+  // list (pushProjectMilestones), so a bulk push is still one read.
+  const peers = siblings ?? await repo.listMilestonesForSync(milestone.project_id)
+  if (milestone.clickup_task_id) {
+    return { linked: true, listId: link.listId, clickup_task_id: milestone.clickup_task_id, milestone, siblings: peers }
+  }
+  try {
+    const statusMap = await statusMapFor(link.listId)
+    const remote = await cu.createTask(link.listId, {
+      ...milestoneBody(milestone, peers, statusMap),
+      parent: link.clickup_task_id
+    })
+    await repo.setMilestoneClickup(milestone.id, { clickup_task_id: remote.id })
+    return { linked: true, listId: link.listId, clickup_task_id: remote.id, created: true, milestone, siblings: peers }
+  } catch (err) {
+    await repo.setMilestoneSyncError(milestone.id, err.message)
+    console.error(`[clickup] ensure milestone ${milestone.id}:`, err.message)
+    return { linked: false, error: err.message }
+  }
+}
+
+/**
+ * Push a milestone's fields onto its ClickUp task. One-way by design: these are
+ * the phases the client sees in the portal, and the state is derived from the
+ * task rollup, so Ops owns them and the webhook ignores milestone tasks
+ * entirely. There is no shadow to clear on failure — there isn't one.
+ */
+export async function pushMilestone(milestoneId, { siblings } = {}) {
+  if (!isConfigured()) return { pushed: false, configured: false }
+  const link = await ensureMilestoneTask(milestoneId, { siblings })
+  if (!link.linked) return { pushed: false, ...link }
+  if (link.created) return { pushed: true, created: true } // everything rode the create
+  try {
+    const statusMap = await statusMapFor(link.listId)
+    await cu.updateTask(link.clickup_task_id, milestoneBody(link.milestone, link.siblings, statusMap, { clearEmpty: true }))
+    return { pushed: true, clickup_task_id: link.clickup_task_id }
+  } catch (err) {
+    await repo.setMilestoneSyncError(link.milestone.id, err.message)
+    console.error(`[clickup] push milestone ${link.milestone.id}:`, err.message)
+    return { pushed: false, error: err.message }
+  }
+}
+
+/**
+ * Provision every not-yet-linked milestone on a project, in `position, id`
+ * order so the phases land in ClickUp in the order Ops shows them.
+ *
+ * The unlinked-only filter is what makes this free to call from the sweep every
+ * 15 minutes: zero HTTP when everything is already linked. It's also the only
+ * path that reaches a milestone with NO tasks, which pushTask never would.
+ */
+export async function pushProjectMilestones(projectId) {
+  if (!isConfigured()) return { pushed: 0, total: 0, configured: false }
+  const milestones = await repo.listMilestonesForSync(projectId)
+  let pushed = 0
+  for (const m of milestones) {
+    if (m.clickup_task_id) continue
+    // Sequential on purpose: parallel creates blow the rate limit and produce
+    // a nondeterministic orderindex.
+    const res = await ensureMilestoneTask(m, { siblings: milestones })
+    if (res.linked) pushed++
+  }
+  return { pushed, total: milestones.length }
 }

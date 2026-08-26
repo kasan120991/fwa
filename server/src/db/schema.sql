@@ -767,9 +767,15 @@ CREATE TABLE IF NOT EXISTS project_milestones (
   id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   project_id   BIGINT UNSIGNED NOT NULL,
   title        VARCHAR(160)    NOT NULL,
-  -- UUID of the matching option in ClickUp's "Milestone" dropdown. Resolved by
-  -- title on first sync, then pinned here so renaming the milestone in Ops
-  -- doesn't break the link.
+  -- The ClickUp task standing for this milestone: a subtask of the project's
+  -- task, and the parent of that milestone's work items. Membership is
+  -- structural now, so this id IS the link — one-way (Ops -> ClickUp), which is
+  -- why there's no shadow or version column here the way tasks have.
+  clickup_task_id   VARCHAR(100) NULL,
+  clickup_sync_error VARCHAR(255) NULL,  -- last push failure; cleared on success
+  -- SUPERSEDED: milestone membership used to be a space-level "Milestone"
+  -- dropdown, and this pinned the option UUID. Left defined so existing DBs
+  -- don't error; no longer read or written.
   clickup_option_id VARCHAR(100) NULL,
   description  TEXT            NULL,
   state        ENUM('upcoming', 'in_progress', 'complete') NOT NULL DEFAULT 'upcoming',
@@ -784,6 +790,7 @@ CREATE TABLE IF NOT EXISTS project_milestones (
   updated_at   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
                                ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
+  UNIQUE KEY uq_milestones_clickup (clickup_task_id),
   KEY idx_project_milestones_project (project_id, position),
   CONSTRAINT fk_project_milestones_project
     FOREIGN KEY (project_id) REFERENCES projects (id)

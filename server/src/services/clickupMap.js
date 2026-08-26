@@ -90,6 +90,18 @@ export function buildStatusMap(statuses = []) {
   return { map, lossy }
 }
 
+/**
+ * A milestone's derived state as a task status Ops can push.
+ *
+ * Milestone state is derived from the task rollup and flows one way, so this
+ * only ever goes Ops -> ClickUp; nothing reads a milestone task's status back.
+ * `blocked` has no milestone equivalent, which is why the sweep's drift check
+ * folds a remote 'blocked' into 'in_progress' before comparing.
+ */
+export function milestoneStateToOps(state) {
+  return state === 'complete' ? 'done' : state === 'in_progress' ? 'in_progress' : 'todo'
+}
+
 /* ---------------------------------------------------------------- priority */
 
 // ClickUp: null | {priority: 'urgent'|'high'|'normal'|'low'}. Ops has no "none",
@@ -139,7 +151,13 @@ export function dateToOps(ms, offsetMinutes = 0) {
 // purpose (ClickUp's orderindex is a per-view float that doesn't round-trip)
 // and so is completed_at (tasks.repo derives it from status). Syncing either
 // would produce permanent churn.
-export const SYNCED_FIELDS = ['title', 'description', 'status', 'priority', 'due_date', 'milestone_title']
+//
+// `milestone_id` is the Ops integer, and a change to it is pushed as a
+// re-parent (the milestone's ClickUp task is the work item's parent), not as a
+// field write. It used to be the milestone's TITLE, which meant renaming a
+// milestone in Ops registered as a change on every one of its tasks and pushed
+// a dropdown write plus a re-read for each — 26 calls to move nothing.
+export const SYNCED_FIELDS = ['title', 'description', 'status', 'priority', 'due_date', 'milestone_id']
 
 export function shadowOf(x) {
   return {
@@ -148,7 +166,10 @@ export function shadowOf(x) {
     status: x?.status ?? 'todo',
     priority: x?.priority ?? 'medium',
     due_date: x?.due_date ? String(x.due_date).slice(0, 10) : null,
-    milestone_title: x?.milestone_title ? normTitle(x.milestone_title) : null
+    // Number() is load-bearing: the shadow round-trips through a JSON column,
+    // and a string "7" from one path against a number 7 from another would
+    // make shadowEq's === report a diff forever and push on every pass.
+    milestone_id: x?.milestone_id == null ? null : Number(x.milestone_id)
   }
 }
 

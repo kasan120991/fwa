@@ -210,17 +210,101 @@ export async function unlinkTask(id, reason) {
 
 /* --------------------------------------------------------------- milestone */
 
-/** Pin a milestone to its dropdown option so an Ops rename can't detach tasks. */
-export async function setMilestoneClickupOption(id, optionId) {
-  await query('UPDATE project_milestones SET clickup_option_id = :optionId WHERE id = :id',
-    { id, optionId })
-}
+// A milestone's ClickUp task is a subtask of the project's task and the parent
+// of that milestone's work items, so membership is structural. The link is
+// one-way (Ops -> ClickUp): there's no shadow and no version here, because
+// nothing is ever pulled back out of a milestone task.
 
+const MILESTONE_COLS = `id, project_id, title, description, state, target_date, position,
+  clickup_task_id, clickup_sync_error`
+
+/**
+ * Every milestone on a project, in the order they're created in ClickUp.
+ * The `position, id` ordering is load-bearing — it's what makes the initial
+ * push land the phases in the right order remotely.
+ */
 export async function listMilestonesForSync(projectId) {
   return query(
-    `SELECT id, title, clickup_option_id, position FROM project_milestones
+    `SELECT ${MILESTONE_COLS} FROM project_milestones
       WHERE project_id = :projectId ORDER BY position, id`,
     { projectId })
+}
+
+export async function getMilestoneForSync(id) {
+  const rows = await query(`SELECT ${MILESTONE_COLS} FROM project_milestones WHERE id = :id LIMIT 1`,
+    { id })
+  return rows[0] ?? null
+}
+
+/** The milestone whose ClickUp task is `clickupTaskId` — the classifier's lookup. */
+export async function getMilestoneByClickupTaskId(clickupTaskId) {
+  if (!clickupTaskId) return null
+  const rows = await query(
+    `SELECT ${MILESTONE_COLS} FROM project_milestones WHERE clickup_task_id = :clickupTaskId LIMIT 1`,
+    { clickupTaskId })
+  return rows[0] ?? null
+}
+
+export async function setMilestoneClickup(id, { clickup_task_id }) {
+  await query(
+    `UPDATE project_milestones SET clickup_task_id = :clickup_task_id, clickup_sync_error = NULL
+      WHERE id = :id`,
+    { id, clickup_task_id })
+}
+
+export async function setMilestoneSyncError(id, message) {
+  await query('UPDATE project_milestones SET clickup_sync_error = :message WHERE id = :id',
+    { id, message: message ? String(message).slice(0, 255) : null })
+}
+
+/** Unlink without deleting — Ops owns milestone existence, so this is never a delete. */
+export async function unlinkMilestone(id, reason) {
+  await query(
+    'UPDATE project_milestones SET clickup_task_id = NULL, clickup_sync_error = :reason WHERE id = :id',
+    { id, reason: reason ? String(reason).slice(0, 255) : null })
+}
+
+/**
+ * Unlink every task on a milestone, in ONE statement.
+ *
+ * Deleting a milestone task in ClickUp cascades to its subtasks, and ClickUp
+ * fires a taskDeleted per child in no particular order. This runs first so
+ * those handlers find nothing linked and no-op — a per-row loop would let a
+ * racing child webhook slip in between and delete real Ops work.
+ */
+export async function unlinkTasksForMilestone(milestoneId, reason) {
+  // Checklist items FIRST. Their remote counterparts died with the parent too,
+  // and a stale clickup_item_id is worse than none: pushTask skips an item that
+  // already has one, so it never goes back up, and the next pull sees a linked
+  // local item missing from the (new, empty) remote checklist and DELETES the
+  // row. That silently destroys every checklist under a milestone deleted in
+  // ClickUp. Nulling the id makes them unlinked, so pushTask carries them up.
+  await query(
+    `UPDATE task_checklist_items SET clickup_item_id = NULL
+      WHERE task_id IN (SELECT id FROM tasks WHERE milestone_id = :milestoneId)`,
+    { milestoneId })
+  const res = await query(
+    `UPDATE tasks SET clickup_task_id = NULL, clickup_shadow = NULL, clickup_version = NULL,
+       clickup_checklist_id = NULL, clickup_sync_error = :reason
+     WHERE milestone_id = :milestoneId AND clickup_task_id IS NOT NULL`,
+    { milestoneId, reason: reason ? String(reason).slice(0, 255) : null })
+  return res.affectedRows ?? 0
+}
+
+/**
+ * Unlink ONE task whose remote counterpart is confirmed gone (a cascade).
+ *
+ * Distinct from unlinkTask(), which is for a task that still exists remotely
+ * but has moved out of scope — there the remote checklist is intact, and
+ * clearing the item ids would re-push every item as a duplicate.
+ */
+export async function unlinkCascadedTask(id, reason) {
+  await query('UPDATE task_checklist_items SET clickup_item_id = NULL WHERE task_id = :id', { id })
+  await query(
+    `UPDATE tasks SET clickup_task_id = NULL, clickup_shadow = NULL, clickup_version = NULL,
+       clickup_checklist_id = NULL, clickup_sync_error = :reason
+     WHERE id = :id`,
+    { id, reason: reason ? String(reason).slice(0, 255) : null })
 }
 
 /* --------------------------------------------------------------- checklists */

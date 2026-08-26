@@ -124,8 +124,10 @@ export const config = {
     alertDiskPct: Number(process.env.DIGITALOCEAN_ALERT_DISK_PCT) || 90
   },
   clickup: {
-    // ClickUp — the delivery workspace. Ops mirrors the `tasks` table from
-    // ClickUp so milestone progress (and the client portal's bars) stay live.
+    // ClickUp — the delivery workspace. The tree is a task per project, a
+    // subtask per milestone, and its work items nested under that: Ops mirrors
+    // the work items into `tasks` so milestone progress (and the client
+    // portal's bars) stay live, and pushes milestones down one-way.
     // Personal API token from ClickUp → Settings → Apps. Either the token or
     // the space id empty = the whole integration no-ops: nothing is
     // provisioned, the sync job never starts, the webhook returns 503.
@@ -138,10 +140,6 @@ export const config = {
     // Shared secret ClickUp returns when the webhook is created; it signs each
     // delivery as HMAC-SHA256 hex in X-Signature. Empty = the webhook 503s.
     webhookSecret: process.env.CLICKUP_WEBHOOK_SECRET || '',
-    // Name of the space-level dropdown custom field that tags a subtask with
-    // its Ops milestone. The v2 API can't create custom fields, so this field
-    // is made by hand once; Ops discovers its UUID and caches it.
-    milestoneFieldName: process.env.CLICKUP_MILESTONE_FIELD || 'Milestone',
     // How often the reconcile sweep pulls each linked list (catches missed
     // webhooks, and is the only sync path in local dev where ClickUp can't
     // reach us). One request per client list, so this is cheap.

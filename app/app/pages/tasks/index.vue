@@ -69,11 +69,17 @@ onMounted(() => {
   socket.on('task:created', load)
   socket.on('task:updated', load)
   socket.on('task:deleted', load)
+  // The rows carry milestone_title, so a rename or a deleted phase changes
+  // this table without any task itself changing.
+  socket.on('milestone:updated', load)
+  socket.on('milestone:deleted', load)
 })
 onBeforeUnmount(() => {
   socket.off('task:created', load)
   socket.off('task:updated', load)
   socket.off('task:deleted', load)
+  socket.off('milestone:updated', load)
+  socket.off('milestone:deleted', load)
 })
 
 // ---- scope ----

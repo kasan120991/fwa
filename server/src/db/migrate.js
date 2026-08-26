@@ -38,10 +38,14 @@ const ADDITIVE_COLUMNS = {
     ['clickup_task_id', 'VARCHAR(100) NULL AFTER code'],
     ['clickup_sync_error', 'VARCHAR(255) NULL AFTER clickup_task_id']
   ],
-  // Pins a milestone to its ClickUp dropdown option, so renaming the milestone
-  // in Ops doesn't detach every subtask that carries the old option.
+  // The ClickUp task standing for this milestone — a subtask of the project's
+  // task, and the parent of that milestone's work items. clickup_option_id is
+  // SUPERSEDED (it pinned the old "Milestone" dropdown option); kept because
+  // this file is additive-only and has no DROP path.
   project_milestones: [
     ['clickup_option_id', 'VARCHAR(100) NULL AFTER title'],
+    ['clickup_task_id', 'VARCHAR(100) NULL AFTER title'],
+    ['clickup_sync_error', 'VARCHAR(255) NULL AFTER clickup_task_id'],
     ['state_manual', 'TINYINT(1) NOT NULL DEFAULT 0 AFTER state']
   ],
   websites: [
@@ -125,6 +129,9 @@ const ADDITIVE_INDEXES = {
   ],
   projects: [
     ['uq_projects_clickup', 'ADD UNIQUE KEY uq_projects_clickup (clickup_task_id)']
+  ],
+  project_milestones: [
+    ['uq_milestones_clickup', 'ADD UNIQUE KEY uq_milestones_clickup (clickup_task_id)']
   ],
   task_checklist_items: [
     ['uq_tci_clickup', 'ADD UNIQUE KEY uq_tci_clickup (clickup_item_id)']

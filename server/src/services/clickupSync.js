@@ -2,8 +2,8 @@ import { config } from '../config/env.js'
 import * as cu from './clickup.js'
 import * as map from './clickupMap.js'
 import {
-  ensureMilestoneField, ensureMilestoneOption, ensureClientSpace, ensureProjectTask,
-  projectDates, isConfigured
+  ensureClientSpace, ensureProjectTask, ensureMilestoneTask, pushMilestone,
+  pushProjectMilestones, milestoneTaskName, projectDates, statusMapFor, isConfigured
 } from './clickupProvision.js'
 import * as repo from '../repositories/clickup.repo.js'
 import * as tasksService from './tasks.service.js'
@@ -36,55 +36,55 @@ function withTaskLock(key, fn) {
   return next
 }
 
-/* ------------------------------------------------------------- status cache */
+/* -------------------------------------------------------------- classifying */
 
-const statusCache = new Map() // listId -> { map, lossy, at }
-const STATUS_TTL_MS = 60 * 60_000
+/**
+ * What a remote task IS, decided only from ids Ops has stored.
+ *
+ * The tree is three deep — project task -> milestone task -> work item — and
+ * every tier is an ordinary ClickUp task, so depth has to be resolved rather
+ * than guessed. This is a WHITELIST: `too-deep` is the fallthrough, because a
+ * depth-3 item's parent is itself a legitimate `tasks.clickup_task_id` and any
+ * blacklist-shaped check would let it through as a work item.
+ *
+ * `top_level_parent` is the project task's id for BOTH lower tiers (it comes
+ * back null on a top-level task, not its own id), so it resolves the project in
+ * one lookup and `parent` alone separates a milestone from a work item.
+ */
+export async function classifyRemote(remote) {
+  if (!remote?.parent) return { kind: 'project-or-orphan' }
 
-async function statusMapFor(listId) {
-  const hit = statusCache.get(listId)
-  if (hit && Date.now() - hit.at < STATUS_TTL_MS) return hit
-  const list = await cu.getList(listId)
-  const built = map.buildStatusMap(list?.statuses ?? [])
-  const entry = { ...built, at: Date.now() }
-  statusCache.set(listId, entry)
-  if (built.lossy.length) {
-    console.warn(`[clickupSync] list ${listId}: no ClickUp status for ${built.lossy.join(', ')}`)
+  const own = await repo.getMilestoneByClickupTaskId(remote.id)
+  if (own) return { kind: 'milestone', milestone: own }
+
+  const project = await repo.getProjectByClickupTaskId(remote.top_level_parent ?? remote.parent)
+  if (!project) return { kind: 'foreign' }
+
+  if (String(remote.parent) === String(project.clickup_task_id)) {
+    return { kind: 'work-item', project, milestone_id: null }
   }
-  return entry
+  const ms = await repo.getMilestoneByClickupTaskId(remote.parent)
+  if (ms && Number(ms.project_id) === Number(project.id)) {
+    return { kind: 'work-item', project, milestone_id: ms.id }
+  }
+  return { kind: 'too-deep', project, parent: remote.parent }
 }
 
 /* ------------------------------------------------------------ remote -> Ops */
 
-/** Resolve a remote task's Milestone dropdown value to an Ops milestone row. */
-async function resolveMilestone(projectId, remote, field) {
-  if (!field?.field_id) return { skip: true }
-  const raw = remote.custom_fields?.find(f => f.id === field.field_id)
-  if (!raw || raw.value == null || raw.value === '') return { milestone_id: null, title: null }
+/** Index a project's milestones by their ClickUp task id. */
+const byMilestoneTask = milestones =>
+  new Map((milestones ?? []).filter(m => m.clickup_task_id).map(m => [String(m.clickup_task_id), m]))
 
-  // ClickUp returns a dropdown value as the option UUID in some payloads and as
-  // an orderindex integer in others. Accept both.
-  const optionId = typeof raw.value === 'number'
-    ? (raw.type_config?.options ?? field.options).find(o => o.orderindex === raw.value)?.id
-    : String(raw.value)
-  const option = field.options.find(o => o.id === optionId)
-  if (!option) return { milestone_id: null, title: null, warn: `Unknown milestone option ${optionId}` }
-
-  const milestones = await repo.listMilestonesForSync(projectId)
-  // UUID first — that's what survives a rename of the milestone in Ops.
-  let ms = milestones.find(m => m.clickup_option_id === option.id)
-  if (!ms) {
-    ms = milestones.find(m => map.normTitle(m.title) === map.normTitle(option.name))
-    // Bind durably on the first title match, so later renames are harmless.
-    if (ms) await repo.setMilestoneClickupOption(ms.id, option.id)
-  }
-  if (!ms) return { milestone_id: null, title: option.name, warn: `Milestone "${option.name}" has no match on this project` }
-  return { milestone_id: ms.id, title: option.name }
-}
-
-/** A remote task expressed in Ops terms. */
-async function toOpsTask(projectId, remote, field) {
-  const ms = await resolveMilestone(projectId, remote, field)
+/**
+ * A remote task expressed in Ops terms.
+ *
+ * `milestone_id` comes from the task's PARENT — the ClickUp tree is the source
+ * of truth for membership now, so it's always present in `fields` and every
+ * pull re-asserts it. A direct child of the project task is milestone-less,
+ * which is exactly what Ops means by the "General" bucket.
+ */
+function toOpsTask(project, remote, milestoneByCuId) {
   return {
     fields: {
       title: String(remote.name ?? '').trim(),
@@ -92,11 +92,11 @@ async function toOpsTask(projectId, remote, field) {
       status: map.statusToOps(remote.status),
       priority: map.priorityToOps(remote.priority),
       due_date: map.dateToOps(remote.due_date, config.clickup.tzOffsetMinutes),
-      ...(ms.skip ? {} : { milestone_id: ms.milestone_id })
+      milestone_id: String(remote.parent) === String(project.clickup_task_id)
+        ? null
+        : milestoneByCuId.get(String(remote.parent))?.id ?? null
     },
-    milestone_title: ms.skip ? undefined : ms.title,
-    clickup_status: remote.status?.status ?? null,
-    warn: ms.warn
+    clickup_status: remote.status?.status ?? null
   }
 }
 
@@ -198,17 +198,40 @@ async function afterRemoteTask(taskId, remote, projectId) {
  *   stale   — a newer remote state already landed (CAS rejected it)
  *   updated — genuine remote change, applied wholesale
  */
-export async function applyRemoteTask(project, remote, local, field, { position = 0 } = {}) {
+export async function applyRemoteTask(project, remote, local, milestones, { position = 0 } = {}) {
+  const milestoneByCuId = byMilestoneTask(milestones)
+
+  // A milestone task is NOT work — it's the parent of work. This function is
+  // the only path to createLinkedTask/linkTask/applyRemote, so guarding here
+  // makes a phantom `tasks` row impossible rather than merely unlikely. It
+  // matters because every progress bar in both apps is task_done/task_total:
+  // one phantom row per milestone skews all of them, silently.
+  if (milestoneByCuId.has(String(remote.id))) return { skipped: 'milestone task' }
+
+  // A drag into another project's subtree. applyRemote doesn't write
+  // project_id, so writing here would leave the two sides permanently
+  // disagreeing about who owns the task. Unlink and let the sweep re-adopt it
+  // under the project it actually lives in now.
+  if (local && Number(local.project_id) !== Number(project.id)) {
+    await repo.unlinkTask(local.id, 'Moved to another project in ClickUp')
+    return { warn: `Task ${local.id} moved to another project in ClickUp — unlinked` }
+  }
+
   const version = Number(remote.date_updated) || Date.now()
-  const mapped = await toOpsTask(project.id, remote, field)
-  const shadow = map.shadowOf({ ...mapped.fields, milestone_title: mapped.milestone_title })
+  const mapped = toOpsTask(project, remote, milestoneByCuId)
+  const shadow = map.shadowOf(mapped.fields)
 
   if (!local) {
     // Adopt an unlinked local task with the same title before creating a new
     // one. Without this, un-archiving a task in ClickUp (which unlinks it, see
     // confirmRemote) would come back as a duplicate rather than the original.
-    const adopt = (await repo.listSyncTasksForProject(project.id))
-      .find(t => !t.clickup_task_id && map.normTitle(t.title) === map.normTitle(mapped.fields.title))
+    // Prefer a candidate on the SAME milestone: a template seeds the same title
+    // under different phases often enough ("Client review & revisions"), and a
+    // project-wide match would adopt the wrong one and then move it.
+    const unlinked = (await repo.listSyncTasksForProject(project.id))
+      .filter(t => !t.clickup_task_id && map.normTitle(t.title) === map.normTitle(mapped.fields.title))
+    const adopt = unlinked.find(t => Number(t.milestone_id) === Number(mapped.fields.milestone_id))
+      ?? unlinked[0]
     if (adopt) {
       await repo.linkTask(adopt.id, remote.id, shadow, version)
       await repo.applyRemote(adopt.id, {
@@ -217,7 +240,7 @@ export async function applyRemoteTask(project, remote, local, field, { position 
       const fresh = await getTask(adopt.id)
       if (fresh) emitTaskUpdated(fresh)
       await deliveryChanged(project.id)
-      return { updated: true, id: adopt.id, adopted: true, warn: mapped.warn }
+      return { updated: true, id: adopt.id, adopted: true }
     }
     // Insert already-linked, in one statement. ClickUp fires taskCreated and
     // taskUpdated concurrently for one new task, so a create-then-link would
@@ -242,13 +265,13 @@ export async function applyRemoteTask(project, remote, local, field, { position 
       // normal converge path rather than creating anything.
       const winner = await repo.getTaskByClickupId(remote.id)
       if (!winner) throw err
-      return applyRemoteTask(project, remote, winner, field, { position })
+      return applyRemoteTask(project, remote, winner, milestones, { position })
     }
     const created = await getTask(newId)
     if (created) emitTaskCreated(created)
     await afterRemoteTask(newId, remote, project.id)
     await deliveryChanged(project.id)
-    return { created: true, id: newId, warn: mapped.warn }
+    return { created: true, id: newId }
   }
 
   // Reconcile the checklist BEFORE the shadow comparison: ticking an item
@@ -257,20 +280,14 @@ export async function applyRemoteTask(project, remote, local, field, { position 
   const post = await afterRemoteTask(local.id, remote, project.id)
 
   if (map.shadowEq(shadow, local.clickup_shadow)) {
-    return { echo: !post.checklistChanged, updated: post.checklistChanged, id: local.id, warn: mapped.warn }
+    return { echo: !post.checklistChanged, updated: post.checklistChanged, id: local.id }
   }
 
   // Whether the LOCAL row had also drifted from the shadow, i.e. there is an
-  // unpushed Ops edit about to be discarded. Resolve the milestone title the
-  // same way the shadow stores it — comparing the bare row would report a
-  // divergence on every milestone-tagged task, since the row has no title on it.
-  const localMilestones = await repo.listMilestonesForSync(project.id)
-  const localShadow = map.shadowOf({
-    ...local,
-    milestone_title: local.milestone_id
-      ? localMilestones.find(m => Number(m.id) === Number(local.milestone_id))?.title ?? null
-      : null
-  })
+  // unpushed Ops edit about to be discarded. The row carries milestone_id
+  // directly, so this is a straight shadowOf() now — it used to need a title
+  // lookup, which reported a false divergence on every milestone-tagged task.
+  const localShadow = map.shadowOf(local)
   const localDrifted = local.clickup_shadow && !map.shadowEq(localShadow, local.clickup_shadow)
 
   const applied = await repo.applyRemote(local.id, {
@@ -286,7 +303,7 @@ export async function applyRemoteTask(project, remote, local, field, { position 
   const fresh = await getTask(local.id)
   if (fresh) emitTaskUpdated(fresh)
   await deliveryChanged(project.id)
-  return { updated: true, id: local.id, warn: mapped.warn }
+  return { updated: true, id: local.id }
 }
 
 /**
@@ -295,8 +312,8 @@ export async function applyRemoteTask(project, remote, local, field, { position 
  * recursive call inside applyRemoteTask stays unlocked on purpose — re-entering
  * here would deadlock.
  */
-export function syncRemoteTask(project, remote, local, field, opts) {
-  return withTaskLock(remote.id, () => applyRemoteTask(project, remote, local, field, opts))
+export function syncRemoteTask(project, remote, local, milestones, opts) {
+  return withTaskLock(remote.id, () => applyRemoteTask(project, remote, local, milestones, opts))
 }
 
 /* ------------------------------------------------------------ Ops -> remote */
@@ -321,26 +338,43 @@ export async function pushTask(taskId) {
   const link = await ensureProjectTask(local.project_id)
   if (!link.linked) return { pushed: false, ...link }
 
-  const milestones = await repo.listMilestonesForSync(local.project_id)
-  const msTitle = local.milestone_id
-    ? milestones.find(m => Number(m.id) === Number(local.milestone_id))?.title ?? null
-    : null
-  const now = map.shadowOf({ ...local, milestone_title: msTitle })
+  const now = map.shadowOf(local)
   const changed = map.changedFields(now, local.clickup_shadow)
   if (local.clickup_task_id && !changed.length) return { pushed: false, noop: true }
 
+  // The ClickUp parent IS the milestone link, so resolve it before anything
+  // else. Both aborts below deliberately omit `clearShadow`: no remote write
+  // was issued, so the stored shadow is still true. Clearing it would make the
+  // next pull apply unconditionally, which for a failed milestone MOVE means
+  // silently reverting the task to the milestone it came from.
+  let parentId = link.clickup_task_id
+  if (local.milestone_id) {
+    const ms = await repo.getMilestoneForSync(local.milestone_id)
+    // Nothing validates that a task's milestone belongs to its project (see
+    // tasks.routes.validateTask), and under nesting that would re-parent the
+    // task into another project's subtree — which succeeds outright when both
+    // projects belong to the same client.
+    if (!ms || Number(ms.project_id) !== Number(local.project_id)) {
+      await repo.setTaskSyncError(local.id, 'Milestone does not belong to this project')
+      return { pushed: false, error: 'milestone/project mismatch' }
+    }
+    const msLink = await ensureMilestoneTask(ms)
+    if (!msLink.linked) {
+      await repo.setTaskSyncError(local.id, `Milestone task not provisioned: ${msLink.error ?? msLink.reason ?? ''}`.trim())
+      return { pushed: false, reason: 'milestone task not provisioned' }
+    }
+    parentId = msLink.clickup_task_id
+  }
+
   try {
     const statusMap = await statusMapFor(link.listId)
-    const field = await ensureMilestoneField()
-    const option = msTitle ? await ensureMilestoneOption(msTitle) : null
+    const milestones = await repo.listMilestonesForSync(local.project_id)
     let remote
 
     if (!local.clickup_task_id) {
-      // Create carries the custom field inline, so a new task costs one call.
       remote = await cu.createTask(link.listId, {
         ...toClickUpBody(now, statusMap),
-        parent: link.clickup_task_id,
-        ...(option && field.field_id ? { custom_fields: [{ id: field.field_id, value: option.id }] } : {})
+        parent: parentId
       })
       try {
         await repo.linkTask(local.id, remote.id, null, null)
@@ -352,23 +386,28 @@ export async function pushTask(taskId) {
         throw err
       }
     } else {
-      const body = toClickUpBody(Object.fromEntries(changed.filter(f => f !== 'milestone_title').map(f => [f, now[f]])), statusMap)
-      if (Object.keys(body).length) remote = await cu.updateTask(local.clickup_task_id, body)
-      if (changed.includes('milestone_title')) {
-        if (option && field.field_id) await cu.setCustomField(local.clickup_task_id, field.field_id, option.id)
-        else if (field.field_id && !msTitle) await cu.clearCustomField(local.clickup_task_id, field.field_id).catch(() => {})
-        remote = await cu.getTask(local.clickup_task_id) // re-read for a truthful shadow
-      }
-      if (!remote) remote = await cu.getTask(local.clickup_task_id)
+      // A milestone move is a re-parent, and it rides the SAME PUT as any other
+      // changed field — where the dropdown write used to cost an extra call
+      // plus a re-read, moving a task between phases is now free.
+      const body = toClickUpBody(Object.fromEntries(changed.filter(f => f !== 'milestone_id').map(f => [f, now[f]])), statusMap)
+      if (changed.includes('milestone_id')) body.parent = parentId
+      if (Object.keys(body).length) await cu.updateTask(local.clickup_task_id, body)
+      // Always re-read: ClickUp's PUT response isn't reliably authoritative
+      // about `parent`, and the shadow has to reflect what ClickUp holds.
+      remote = await cu.getTask(local.clickup_task_id)
     }
 
     // Shadow from the RESPONSE, never from what we meant to send: if ClickUp
     // normalizes the value we adopt its version immediately, so the next
     // comparison is against what ClickUp actually holds.
-    const confirmed = await toOpsTask(local.project_id, remote, field)
+    const confirmed = toOpsTask(
+      { id: local.project_id, clickup_task_id: link.clickup_task_id },
+      remote,
+      byMilestoneTask(milestones)
+    )
     await repo.setShadow(
       local.id,
-      map.shadowOf({ ...confirmed.fields, milestone_title: confirmed.milestone_title }),
+      map.shadowOf(confirmed.fields),
       Number(remote.date_updated) || Date.now(),
       confirmed.clickup_status
     )
@@ -497,7 +536,7 @@ export async function pushProjectTasks(projectId) {
  * Deleting on a move would mean a drag-and-drop in ClickUp destroys Ops data,
  * so every delete candidate is confirmed individually first.
  */
-async function confirmRemote(taskId, expectedListId) {
+export async function confirmRemote(taskId, expectedListId) {
   try {
     const t = await cu.getTask(taskId)
     if (t.archived) return { gone: false, reason: 'archived' }
@@ -519,16 +558,28 @@ export async function reconcileClient(client) {
     return { skipped: 'projects list id equals care plan list id' }
   }
   const sweepStart = Date.now()
-  const field = await ensureMilestoneField()
   const remote = await cu.listTasks(client.clickup_list_id)
   const byId = new Map(remote.map(t => [t.id, t]))
-  const subs = remote.filter(t => t.parent)
+  // One read covers all three levels, so index children once by parent id.
+  const childrenOf = new Map()
+  for (const t of remote) {
+    if (!t.parent) continue
+    const key = String(t.parent)
+    if (!childrenOf.has(key)) childrenOf.set(key, [])
+    childrenOf.get(key).push(t)
+  }
+  const kids = id => [...(childrenOf.get(String(id)) ?? [])]
+    .sort((a, b) => Number(a.orderindex ?? 0) - Number(b.orderindex ?? 0))
 
   const projects = await repo.listProjectsForClient(client.id)
   const linked = projects.filter(p => p.clickup_task_id)
   const byRemote = new Map(linked.map(p => [p.clickup_task_id, p]))
 
-  const out = { created: 0, updated: 0, echo: 0, deleted: 0, pushed: 0, warnings: [], orphans: [] }
+  const out = {
+    created: 0, updated: 0, echo: 0, deleted: 0, pushed: 0,
+    milestones: 0, milestonesFixed: 0,
+    warnings: [], orphans: [], tooDeep: []
+  }
 
   // A ClickUp task in the Projects list with no Ops project. NEVER auto-create:
   // an Ops project carries commercial data (client, type, fee, contract) that a
@@ -548,19 +599,90 @@ export async function reconcileClient(client) {
   }
 
   const deleteCandidates = []
+  // Milestones whose ClickUp task was genuinely deleted. Deleting a task in
+  // ClickUp cascades to its subtasks, so their work items go missing in the
+  // same sweep — they must be unlinked, never deleted.
+  const cascaded = new Set()
+
   for (const p of linked.filter(p => byId.has(p.clickup_task_id))) {
-    const rSubs = subs.filter(s => s.parent === p.clickup_task_id) // direct children only
-    const rIds = new Set(rSubs.map(s => s.id))
+    // One read for both milestone passes below.
+    const projectMilestones = await repo.listMilestonesForSync(p.id)
+
+    /* --- milestones: absent ------------------------------------------------ */
+    // Unlink ONLY on a genuine 404. ensureMilestoneTask has no match-by-name
+    // path and milestones have no equivalent of the tasks' grace window below,
+    // so unlinking one that was merely archived, moved, or created a moment
+    // after the snapshot would heal into a SECOND milestone task.
+    for (const m of projectMilestones) {
+      if (!m.clickup_task_id || byId.has(m.clickup_task_id)) continue
+      const state = await confirmRemote(m.clickup_task_id, client.clickup_list_id)
+      if (!state.gone) {
+        out.warnings.push(`Milestone "${m.title}": ClickUp task ${state.reason} — link kept`)
+        continue
+      }
+      cascaded.add(Number(m.id))
+      // Unlink its work items NOW, in the same statement shape the webhook
+      // uses. Their remote tasks died with the parent, and leaving the dead ids
+      // on them is not survivable: the tasks' 60s grace window can push them
+      // past this sweep's delete pass, and by the NEXT sweep the milestone has
+      // been re-created, `cascaded` is empty, and a 404 on a work item is
+      // indistinguishable from someone deleting that one task on purpose — so
+      // they'd be destroyed. Unlinked here, the lazy heal re-pushes them below.
+      const n = await repo.unlinkTasksForMilestone(m.id, 'Milestone task deleted in ClickUp — unlinked, not deleted')
+      await repo.unlinkMilestone(m.id, 'Milestone task deleted in ClickUp')
+      out.warnings.push(`Milestone "${m.title}" was deleted in ClickUp — Ops owns phases, so it and its ${n} task(s) will be re-created`)
+    }
+
+    /* --- milestones: drift ------------------------------------------------- */
+    // The one-way channel has no shadow, so "ignore what ClickUp says" only
+    // holds if Ops re-asserts. The milestone tasks are already in the snapshot,
+    // so this costs no extra read.
+    for (const m of projectMilestones) {
+      const r = m.clickup_task_id && byId.get(m.clickup_task_id)
+      if (!r) continue
+      // 'blocked' has no milestone equivalent; treat it as work in flight.
+      const remoteState = map.statusToOps(r.status) === 'blocked' ? 'in_progress' : map.statusToOps(r.status)
+      // Compare the NUMBERED name — that's what Ops sends. This is also what
+      // re-numbers a phase whose rank moved by some path that didn't push
+      // (a mid-list insert), so the numbering self-heals within one sweep.
+      const drifted = remoteState !== map.milestoneStateToOps(m.state)
+        || String(r.name ?? '').trim() !== milestoneTaskName(m, projectMilestones)
+        || map.dateToOps(r.due_date, config.clickup.tzOffsetMinutes) !== (m.target_date ? String(m.target_date).slice(0, 10) : null)
+      if (drifted) { await pushMilestone(m.id, { siblings: projectMilestones }); out.milestonesFixed++ }
+    }
+
+    /* --- milestones: provision --------------------------------------------- */
+    // Also the only path that reaches a milestone with NO tasks, which pushTask
+    // would never provision.
+    out.milestones += (await pushProjectMilestones(p.id)).pushed
+
+    /* --- work items -------------------------------------------------------- */
+    // Re-read: the two passes above may have unlinked or provisioned tasks.
+    const milestones = await repo.listMilestonesForSync(p.id)
+    const msTaskIds = new Set(milestones.filter(m => m.clickup_task_id).map(m => String(m.clickup_task_id)))
+    // Direct children of the project task that aren't milestones are the
+    // "General" bucket; then each milestone's own children, in phase order.
+    const work = [
+      ...kids(p.clickup_task_id).filter(t => !msTaskIds.has(String(t.id))),
+      ...milestones.filter(m => m.clickup_task_id).flatMap(m => kids(m.clickup_task_id))
+    ]
+    const rIds = new Set(work.map(s => s.id))
+
     const local = await repo.listSyncTasksForProject(p.id)
     const byCu = new Map(local.filter(t => t.clickup_task_id).map(t => [t.clickup_task_id, t]))
 
-    const ranked = [...rSubs].sort((a, b) => Number(a.orderindex ?? 0) - Number(b.orderindex ?? 0))
-    for (const [i, s] of ranked.entries()) {
-      const res = await syncRemoteTask(p, s, byCu.get(s.id) ?? null, field, { position: i })
+    for (const [i, s] of work.entries()) {
+      // position only matters on create (applyRemote excludes it), so
+      // re-ranking every sweep costs nothing.
+      const res = await syncRemoteTask(p, s, byCu.get(s.id) ?? null, milestones, { position: i })
       if (res.created) out.created++
       else if (res.updated) out.updated++
       else if (res.echo) out.echo++
       if (res.warn) out.warnings.push(res.warn)
+
+      // Anything under a work item is a level deeper than Ops models. Report
+      // and ignore — a human can nest four deep in ClickUp.
+      for (const deep of kids(s.id)) out.tooDeep.push({ id: deep.id, name: deep.name, url: deep.url, parent: s.id })
     }
 
     for (const t of local) {
@@ -577,15 +699,31 @@ export async function reconcileClient(client) {
     }
   }
 
-  // Safety fuse. A wrong list id, a dropped include_closed, or an API blip
-  // returning an empty page would otherwise nominate every task for deletion.
-  if (deleteCandidates.length > config.clickup.maxSweepDeletes) {
-    const msg = `Delete threshold exceeded (${deleteCandidates.length}) — deletes skipped this sweep`
+  // Split the cascade out BEFORE counting. One deleted milestone takes its
+  // whole subtree with it, so a 13-task phase would blow a threshold of 10 —
+  // and tripping the fuse would skip the unlinks too, stranding every one of
+  // those rows against a dead ClickUp id where they'd fail to push forever.
+  const cascadedDeletes = deleteCandidates.filter(c => c.task.milestone_id && cascaded.has(Number(c.task.milestone_id)))
+  const realDeletes = deleteCandidates.filter(c => !cascadedDeletes.includes(c))
+
+  for (const { task } of cascadedDeletes) {
+    // Cascade-aware: also clears its checklist items' remote ids, which died
+    // with the parent and would otherwise be deleted locally on the next pull.
+    await repo.unlinkCascadedTask(task.id, 'Milestone task deleted in ClickUp — unlinked, not deleted')
+  }
+  if (cascadedDeletes.length) {
+    out.warnings.push(`${cascadedDeletes.length} task(s) unlinked after a milestone was deleted in ClickUp — they will be re-pushed`)
+  }
+
+  // Safety fuse, still guarding what it was written for: a wrong list id, a
+  // dropped include_closed, or an API blip returning an empty page.
+  if (realDeletes.length > config.clickup.maxSweepDeletes) {
+    const msg = `Delete threshold exceeded (${realDeletes.length}) — deletes skipped this sweep`
     await repo.setClientSyncError(client.id, msg)
     console.error(`[clickupSync] client ${client.id}: ${msg}`)
     out.warnings.push(msg)
   } else if (config.clickup.allowRemoteDeletes) {
-    for (const { task, listId } of deleteCandidates) {
+    for (const { task, listId } of realDeletes) {
       const state = await confirmRemote(task.clickup_task_id, listId)
       if (state.gone) { await tasksService.deleteTask(task.id); out.deleted++ }
       else { await repo.unlinkTask(task.id, `Task ${state.reason} — no longer synced`) }
@@ -602,15 +740,20 @@ export async function reconcileClient(client) {
 export async function syncAllClickup() {
   if (!isConfigured()) return { synced: false, configured: false }
   const clients = await repo.listSyncableClients()
-  const totals = { clients: 0, created: 0, updated: 0, echo: 0, deleted: 0, pushed: 0, warnings: [], orphans: [] }
+  const totals = {
+    clients: 0, created: 0, updated: 0, echo: 0, deleted: 0, pushed: 0,
+    milestones: 0, milestonesFixed: 0,
+    warnings: [], orphans: [], tooDeep: []
+  }
   for (const c of clients) {
     try {
       const res = await reconcileClient(c)
       if (res.skipped) continue
       totals.clients++
-      for (const k of ['created', 'updated', 'echo', 'deleted', 'pushed']) totals[k] += res[k] ?? 0
+      for (const k of ['created', 'updated', 'echo', 'deleted', 'pushed', 'milestones', 'milestonesFixed']) totals[k] += res[k] ?? 0
       totals.warnings.push(...(res.warnings ?? []))
       totals.orphans.push(...(res.orphans ?? []))
+      totals.tooDeep.push(...(res.tooDeep ?? []))
     } catch (err) {
       console.error(`[clickupSync] client ${c.id} failed:`, err.message)
       totals.warnings.push(`Client ${c.company || c.name}: ${err.message}`)
@@ -619,4 +762,7 @@ export async function syncAllClickup() {
   return { synced: true, total: clients.length, ...totals }
 }
 
-export { ensureClientSpace, ensureProjectTask, isConfigured }
+export {
+  ensureClientSpace, ensureProjectTask, ensureMilestoneTask,
+  pushMilestone, pushProjectMilestones, isConfigured
+}

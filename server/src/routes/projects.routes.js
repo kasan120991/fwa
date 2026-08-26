@@ -24,19 +24,28 @@ import {
 import {
   listNotes, createNote, updateNote, deleteNote, getNote
 } from '../repositories/projectNotes.repo.js'
-import { ensureProjectTask, pushProjectTasks, pushProject } from '../services/clickupSync.js'
+import {
+  ensureProjectTask, pushProjectMilestones, pushProjectTasks, pushProject
+} from '../services/clickupSync.js'
 import * as clickupApi from '../services/clickup.js'
 
 export const projectsRouter = Router()
 
-// Provision the project's ClickUp task and push its template-seeded tasks up as
-// subtasks. Best-effort and fire-and-forget, mirroring syncStripeCustomer: a
-// ClickUp outage must never fail the create. ensureProjectTask heals upward, so
-// a client whose folder never provisioned gets one here.
+// Provision the project's ClickUp task, then a subtask per template-seeded
+// milestone, then its tasks nested under those. Best-effort and
+// fire-and-forget, mirroring syncStripeCustomer: a ClickUp outage must never
+// fail the create. ensureProjectTask heals upward, so a client whose folder
+// never provisioned gets one here.
+//
+// The milestone step is an ordering nicety, not a correctness requirement —
+// pushTask provisions a missing milestone task itself. What it buys is
+// creation order in ClickUp, and milestones with NO tasks, which pushTask
+// would never reach.
 function provisionLater(projectId) {
   if (!projectId) return
   ensureProjectTask(projectId)
-    .then(link => (link.linked ? pushProjectTasks(projectId) : null))
+    .then(link => (link.linked ? pushProjectMilestones(projectId) : null))
+    .then(res => (res ? pushProjectTasks(projectId) : null))
     .catch(err => console.error(`[clickup] provision project ${projectId}:`, err.message))
 }
 

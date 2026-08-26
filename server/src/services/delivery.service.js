@@ -3,6 +3,7 @@ import { getProject } from '../repositories/projects.repo.js'
 import { listMilestones } from '../repositories/milestones.repo.js'
 import { getTask, updateTask } from '../repositories/tasks.repo.js'
 import { checklistCounts } from '../repositories/clickup.repo.js'
+import { pushMilestone } from './clickupProvision.js'
 import {
   emitMilestoneUpdated, emitTaskUpdated, emitClientProjectChanged, emitClientMilestoneChanged
 } from '../realtime/io.js'
@@ -32,7 +33,14 @@ import {
  * the work is underway.
  */
 export async function syncMilestoneStates(projectId) {
-  if (!projectId) return { changed: 0 }
+  if (!projectId) return { changed: 0, movedIds: [] }
+  // Snapshot before the bulk UPDATE so we can name the milestones that moved.
+  // The UPDATE is a set-based JOIN with no per-row hook, and the callers need
+  // the ids: ClickUp has to be told which phase changed (see deliveryChanged).
+  const before = new Map(
+    (await query('SELECT id, state FROM project_milestones WHERE project_id = :projectId', { projectId }))
+      .map(m => [Number(m.id), m.state])
+  )
   const res = await query(
     `UPDATE project_milestones m
        JOIN (
@@ -55,7 +63,10 @@ export async function syncMilestoneStates(projectId) {
                             ELSE 'in_progress' END`,
     { projectId }
   )
-  return { changed: res.affectedRows ?? 0 }
+  const changed = res.affectedRows ?? 0
+  if (!changed) return { changed: 0, movedIds: [] }
+  const after = await query('SELECT id, state FROM project_milestones WHERE project_id = :projectId', { projectId })
+  return { changed, movedIds: after.filter(m => before.get(Number(m.id)) !== m.state).map(m => Number(m.id)) }
 }
 
 /**
@@ -68,13 +79,24 @@ export async function syncMilestoneStates(projectId) {
 export async function deliveryChanged(projectId) {
   if (!projectId) return
   try {
-    const { changed } = await syncMilestoneStates(projectId)
+    const { changed, movedIds } = await syncMilestoneStates(projectId)
     const project = await getProject(projectId)
     if (!project) return
 
     if (changed) {
       // Milestone rows carry their own rollup, so re-read once and push the lot.
       for (const m of await listMilestones(projectId)) emitMilestoneUpdated(m)
+      // And tell ClickUp, because this is the ONLY place the derived state
+      // moves — finishing a milestone's last task in ClickUp would otherwise
+      // turn the phase green in Ops and leave its ClickUp task in To Do.
+      //
+      // A service-layer push looks like it breaks the "pushes live in routes"
+      // rule. It doesn't: that rule exists to stop the two-way TASK loop
+      // echoing, and milestone tasks have no pull path, so no echo is possible.
+      // Never awaited — a ClickUp 429 must not stall a sweep mid-project.
+      for (const id of movedIds) {
+        pushMilestone(id).catch(err => console.error(`[delivery] push milestone ${id}:`, err.message))
+      }
     }
     if (project.client_id) {
       emitClientProjectChanged(project.client_id, project.id)

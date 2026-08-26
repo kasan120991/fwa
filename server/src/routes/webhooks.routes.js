@@ -19,10 +19,10 @@ import { logClientActivity } from '../services/clientActivity.service.js'
 import { getProject } from '../repositories/projects.repo.js'
 import { issueDeposit } from '../services/projectBilling.js'
 import * as clickup from '../services/clickup.js'
-import { syncRemoteTask } from '../services/clickupSync.js'
-import { ensureMilestoneField } from '../services/clickupProvision.js'
+import { syncRemoteTask, classifyRemote, confirmRemote } from '../services/clickupSync.js'
 import {
-  getTaskByClickupId, getProjectByClickupTaskId
+  getTaskByClickupId, listMilestonesForSync, getMilestoneForSync,
+  getMilestoneByClickupTaskId, unlinkMilestone, unlinkTasksForMilestone, unlinkCascadedTask
 } from '../repositories/clickup.repo.js'
 import { deleteTask as deleteTaskService } from '../services/tasks.service.js'
 import { getProposalByDocumentId, updateProposal } from '../repositories/proposals.repo.js'
@@ -978,29 +978,66 @@ webhooksRouter.post('/clickup', async (req, res) => {
       // The remote task is already gone, so there is nothing to re-fetch —
       // act on the local link alone. An explicit delete event is unambiguous
       // intent, unlike absence from a list read (see clickupSync.confirmRemote).
+
+      // A MILESTONE task. Ops owns milestone existence, so this is never a
+      // delete: unlink and let the lazy heal re-create it. Its work items are
+      // unlinked FIRST, in one statement — ClickUp's cascade fires a taskDeleted
+      // per child in no order, and those handlers have to find nothing.
+      const ms = await getMilestoneByClickupTaskId(taskId)
+      if (ms) {
+        const n = await unlinkTasksForMilestone(ms.id, 'Milestone task deleted in ClickUp — unlinked, not deleted')
+        await unlinkMilestone(ms.id, 'Milestone task deleted in ClickUp')
+        console.warn(`[clickup] milestone ${ms.id} deleted in ClickUp — unlinked it and ${n} task(s); it will be re-created`)
+        return res.json({ received: true })
+      }
+
       const local = await getTaskByClickupId(taskId)
-      if (local && config.clickup.allowRemoteDeletes) await deleteTaskService(local.id)
-      else if (local) console.log(`[clickup] delete of task ${local.id} ignored (remote deletes off)`)
+      if (!local) return res.json({ received: true })
+      if (!config.clickup.allowRemoteDeletes) {
+        console.log(`[clickup] delete of task ${local.id} ignored (remote deletes off)`)
+        return res.json({ received: true })
+      }
+
+      // Cascade guard, in the spirit of confirmRemote: a child delete that is
+      // really its parent's delete must never destroy Ops work. It can only
+      // ever downgrade a delete to an unlink, never the reverse.
+      if (local.milestone_id) {
+        const parent = await getMilestoneForSync(local.milestone_id)
+        if (!parent?.clickup_task_id || (await confirmRemote(parent.clickup_task_id)).gone) {
+          await unlinkCascadedTask(local.id, 'Milestone task deleted in ClickUp — unlinked, not deleted')
+          return res.json({ received: true })
+        }
+      }
+      await deleteTaskService(local.id)
       return res.json({ received: true })
     }
 
     if (!CLICKUP_TASK_EVENTS.has(event)) return res.json({ received: true })
 
     const remote = await clickup.getTask(taskId)
-    if (!remote?.parent) {
-      // A top-level task in a Projects list. Never auto-create an Ops project:
-      // a project carries commercial data (client, type, fee, contract) a
-      // ClickUp task cannot supply, and projects are the SOW hub that
-      // originate contracts. The sweep reports these as orphans.
+    // A top-level task in a Projects list. Never auto-create an Ops project:
+    // a project carries commercial data (client, type, fee, contract) a
+    // ClickUp task cannot supply, and projects are the SOW hub that originate
+    // contracts. The sweep reports these as orphans.
+    if (!remote?.parent) return res.json({ received: true })
+
+    const c = await classifyRemote(remote)
+    // Milestone tasks are one-way (Ops -> ClickUp), so an edit to one is
+    // ignored here and corrected by the sweep's drift check. Ignoring it is
+    // also the second half of the phantom-row guard: without it, renaming a
+    // phase in ClickUp would mirror the milestone into `tasks` and skew every
+    // progress bar in both apps.
+    if (c.kind !== 'work-item') {
+      if (c.kind === 'too-deep') {
+        console.warn(`[clickup] ignoring task ${remote.id} — nested under work item ${c.parent}, deeper than Ops models`)
+      }
       return res.json({ received: true })
     }
-    const project = await getProjectByClickupTaskId(remote.parent)
-    if (!project) return res.json({ received: true })
 
     // Look up by remote id first — the uq_calls_vapi / upsertFromStripe
     // convention, and what makes a taskCreated racing our own create safe.
     const local = await getTaskByClickupId(remote.id)
-    await syncRemoteTask(project, remote, local, await ensureMilestoneField())
+    await syncRemoteTask(c.project, remote, local, await listMilestonesForSync(c.project.id))
     return res.json({ received: true })
   } catch (err) {
     // DELIBERATE DEVIATION from this file's "500 so the sender retries" rule.

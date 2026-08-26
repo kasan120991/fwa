@@ -6,27 +6,48 @@ import { config } from '../config/env.js'
 // callers (services/clickupProvision.js, services/clickupSync.js) gate and shape it.
 export const isConfigured = () => Boolean(config.clickup.apiToken && config.clickup.spaceId)
 
+// ClickUp allows ~100 requests/minute per token, and provisioning a project is
+// bursty by nature: a task plus its checklist is half a dozen calls, so a
+// template with a few phases clears the limit on its own. A 429 is a "wait",
+// not a failure — retrying it here keeps every caller from having to know, and
+// stops a backfill from leaving a half-built tree behind.
+const RATE_LIMIT_RETRIES = 3
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+
 async function cuFetch(path, { method = 'GET', body, query } = {}) {
   const qs = query
     ? '?' + new URLSearchParams(Object.entries(query).filter(([, v]) => v != null)).toString()
     : ''
-  const res = await fetch(`${config.clickup.baseUrl}${path}${qs}`, {
-    method,
-    headers: {
-      Authorization: config.clickup.apiToken,
-      'Content-Type': 'application/json'
-    },
-    body: body != null ? JSON.stringify(body) : undefined,
-    signal: AbortSignal.timeout(15_000)
-  })
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    // The message reaches the admin toast verbatim, so keep the real reason.
-    throw new Error(`ClickUp ${res.status}: ${text.slice(0, 200)}`)
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`${config.clickup.baseUrl}${path}${qs}`, {
+      method,
+      headers: {
+        Authorization: config.clickup.apiToken,
+        'Content-Type': 'application/json'
+      },
+      body: body != null ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(15_000)
+    })
+    if (res.status === 429 && attempt < RATE_LIMIT_RETRIES) {
+      // Prefer what ClickUp tells us; its window is per-minute, so fall back to
+      // waiting out the rest of one rather than a token-bucket-sized sleep.
+      const retryAfter = Number(res.headers.get('retry-after'))
+      const waitMs = Number.isFinite(retryAfter) && retryAfter > 0
+        ? Math.min(retryAfter, 60) * 1000
+        : (attempt + 1) * 20_000
+      console.warn(`[clickup] rate limited on ${method} ${path} — retrying in ${Math.round(waitMs / 1000)}s`)
+      await sleep(waitMs)
+      continue
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      // The message reaches the admin toast verbatim, so keep the real reason.
+      throw new Error(`ClickUp ${res.status}: ${text.slice(0, 200)}`)
+    }
+    if (res.status === 204) return null
+    const text = await res.text()
+    return text ? JSON.parse(text) : {}
   }
-  if (res.status === 204) return null
-  const text = await res.text()
-  return text ? JSON.parse(text) : {}
 }
 
 /* ---------------------------------------------------------------- structure */
@@ -96,42 +117,6 @@ export async function updateTask(taskId, body) {
 
 export async function deleteTask(taskId) {
   return cuFetch(`/task/${taskId}`, { method: 'DELETE' })
-}
-
-/* ------------------------------------------------------------ custom fields */
-
-/** Space-level custom fields (where the Milestone dropdown lives). */
-export async function listSpaceFields() {
-  const json = await cuFetch(`/space/${config.clickup.spaceId}/field`)
-  return json.fields ?? []
-}
-
-/**
- * Create a space-level custom field. Undocumented in the v2 reference but live
- * and returning 200 — it's what lets Ops provision the Milestone dropdown
- * instead of asking for a manual setup step.
- */
-export async function createSpaceField({ name, type, type_config }) {
-  const json = await cuFetch(`/space/${config.clickup.spaceId}/field`, {
-    method: 'POST', body: { name, type, type_config }
-  })
-  return json.field ?? json
-}
-
-/** Set a task's custom field value (dropdown value = the option's UUID). */
-export async function setCustomField(taskId, fieldId, value) {
-  return cuFetch(`/task/${taskId}/field/${fieldId}`, { method: 'POST', body: { value } })
-}
-
-/** Clear a task's custom field value. */
-export async function clearCustomField(taskId, fieldId) {
-  return cuFetch(`/task/${taskId}/field/${fieldId}`, { method: 'DELETE' })
-}
-
-/** A list's custom fields — the per-list view of the space-level field. */
-export async function listFields(listId) {
-  const json = await cuFetch(`/list/${listId}/field`)
-  return json.fields ?? []
 }
 
 /* --------------------------------------------------------------- checklists */

@@ -2,9 +2,9 @@ import { Router } from 'express'
 import { config } from '../config/env.js'
 import {
   isConfigured, syncAllClickup, reconcileClient, ensureClientSpace,
-  pushProjectTasks, pushProject
+  pushProjectTasks, pushProjectMilestones, pushProject
 } from '../services/clickupSync.js'
-import { ensureMilestoneField, missingMilestoneOptions } from '../services/clickupProvision.js'
+
 import { getClient } from '../repositories/clients.repo.js'
 import { getProject } from '../repositories/projects.repo.js'
 import { listSyncableClients, listUnlinkedClients } from '../repositories/clickup.repo.js'
@@ -23,10 +23,14 @@ function parseId(req) {
 // GET /api/clickup/status — connection + drift, for the Settings panel.
 clickupRouter.get('/status', async (req, res) => {
   if (!isConfigured()) return res.json({ data: { configured: false } })
-  const field = await ensureMilestoneField()
   const [linked, unlinked] = await Promise.all([listSyncableClients(), listUnlinkedClients(100)])
   const [[{ unlinkedProjects }]] = [await query(
     "SELECT COUNT(*) AS unlinkedProjects FROM projects WHERE clickup_task_id IS NULL AND status <> 'completed'"
+  )]
+  const [[milestones]] = [await query(
+    `SELECT COUNT(*) AS total, COALESCE(SUM(m.clickup_task_id IS NULL), 0) AS unlinked
+       FROM project_milestones m JOIN projects p ON p.id = m.project_id
+      WHERE p.status <> 'completed'`
   )]
   res.json({
     data: {
@@ -35,18 +39,14 @@ clickupRouter.get('/status', async (req, res) => {
       teamId: config.clickup.teamId,
       webhook: Boolean(config.clickup.webhookSecret),
       remoteDeletes: config.clickup.allowRemoteDeletes,
-      milestoneField: {
-        name: config.clickup.milestoneFieldName,
-        found: Boolean(field.field_id),
-        options: field.options.map(o => o.name),
-        // Custom fields can be created via the API but not updated (PUT is a
-        // hard 405), so a milestone added after the field was created has to
-        // be added to the dropdown by hand in ClickUp.
-        missing: await missingMilestoneOptions()
-      },
       linkedClients: linked.length,
       unlinkedClients: unlinked.length,
-      unlinkedProjects: Number(unlinkedProjects)
+      unlinkedProjects: Number(unlinkedProjects),
+      // Milestones are ClickUp tasks now — a subtask of the project's task and
+      // the parent of that phase's work items — so an unlinked one means a
+      // phase whose work has nowhere to hang.
+      milestones: Number(milestones.total),
+      unlinkedMilestones: Number(milestones.unlinked)
     }
   })
 })
@@ -83,7 +83,11 @@ clickupRouter.post('/projects/:id/link', async (req, res) => {
   // an existing one would never receive its schedule.
   const link = await pushProject(id)
   if (!link.pushed) return res.json({ data: link })
-  res.json({ data: { ...link, ...(await pushProjectTasks(id)) } })
+  // Milestones first: a work item pushed before its phase exists would
+  // provision it itself, but out of order — and a milestone with no tasks
+  // would never be created at all.
+  const milestones = await pushProjectMilestones(id)
+  res.json({ data: { ...link, milestones: milestones.pushed, ...(await pushProjectTasks(id)) } })
 })
 
 // POST /api/clickup/backfill — push every active client and its projects up.
@@ -94,7 +98,7 @@ clickupRouter.post('/backfill', async (req, res) => {
   const clients = await query(
     "SELECT id, name, company FROM clients WHERE status = 'active' ORDER BY id"
   )
-  const out = { clients: 0, projects: 0, tasks: 0, errors: [] }
+  const out = { clients: 0, projects: 0, milestones: 0, tasks: 0, errors: [] }
   for (const c of clients) {
     const space = await ensureClientSpace(c.id)
     if (!space.linked) { out.errors.push(`${c.company || c.name}: ${space.error ?? space.reason ?? 'not linked'}`); continue }
@@ -104,6 +108,7 @@ clickupRouter.post('/backfill', async (req, res) => {
       const link = await pushProject(p.id)
       if (!link.pushed) { out.errors.push(`Project ${p.id}: ${link.error ?? link.reason}`); continue }
       out.projects++
+      out.milestones += (await pushProjectMilestones(p.id)).pushed
       out.tasks += (await pushProjectTasks(p.id)).pushed
     }
   }

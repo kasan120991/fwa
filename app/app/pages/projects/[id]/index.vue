@@ -79,6 +79,10 @@ interface Milestone {
   target_date: string | null
   task_total: number
   task_done: number
+  // A milestone is a ClickUp task now — a subtask of the project's task, and
+  // the parent of its work items.
+  clickup_task_id: string | null
+  clickup_sync_error: string | null
 }
 interface Doc { id: number, title: string, status: string, total: number | null, created_at: string, sent_at: string | null, signed_at: string | null }
 type InvStatus = 'draft' | 'open' | 'paid' | 'uncollectible' | 'void'
@@ -996,6 +1000,16 @@ const scopeFields = computed(() => project.value
                         {{ MILESTONE_STATE_META[board.milestone.state].label }}
                       </StatusChip>
                       <span class="font-display text-[15px] font-semibold text-highlighted">{{ board.milestone.title }}</span>
+                      <!-- a push to ClickUp failed; the phase is stale there until it succeeds -->
+                      <UTooltip
+                        v-if="board.milestone.clickup_sync_error"
+                        :text="board.milestone.clickup_sync_error"
+                      >
+                        <UIcon
+                          name="i-lucide-triangle-alert"
+                          class="size-3.5 flex-none text-error"
+                        />
+                      </UTooltip>
                       <!-- State is derived from the task rollup. Pinned means it
                            was set by hand and has stopped following the tasks —
                            worth showing, or auto-pilot just looks broken. -->
@@ -1053,6 +1067,20 @@ const scopeFields = computed(() => project.value
                         />
                         {{ shortDate(board.milestone.target_date) }}
                       </span>
+                      <UTooltip
+                        v-if="board.milestone?.clickup_task_id"
+                        text="Open in ClickUp"
+                      >
+                        <UButton
+                          :to="`https://app.clickup.com/t/${board.milestone.clickup_task_id}`"
+                          target="_blank"
+                          icon="i-lucide-external-link"
+                          color="neutral"
+                          variant="ghost"
+                          size="xs"
+                          aria-label="Open in ClickUp"
+                        />
+                      </UTooltip>
                       <UDropdownMenu
                         v-if="board.milestone"
                         :items="milestoneMenu(board.milestone, bi, milestones.length)"
