@@ -2,7 +2,13 @@ import { query } from '../db/pool.js'
 
 // Presentation + semantics are producer-chosen (see schema). Kept here so the
 // routes can validate any future write path.
-const CATEGORIES = new Set(['lead', 'call', 'proposal', 'contract', 'invoice', 'payment', 'task', 'ticket', 'system'])
+// Keep in step with the notifications.category ENUM in schema.sql — this had
+// drifted (it was missing expense and website), which is harmless while nothing
+// validates against it and a trap the moment something does.
+const CATEGORIES = new Set([
+  'lead', 'call', 'proposal', 'contract', 'invoice', 'payment', 'project',
+  'task', 'ticket', 'expense', 'website', 'system'
+])
 const TONES = new Set(['brand', 'success', 'warning', 'info', 'error'])
 
 // A notification is visible to a user if it's targeted to them or broadcast

@@ -5,9 +5,13 @@ export const INVOICE_KINDS = new Set(['deposit', 'balance', 'custom'])
 
 // Columns a status/sync update may touch (business columns + line items are set
 // at creation). Mirrors the contracts repo's UPDATABLE pattern.
+// project_id and contract_id are updatable because a deposit invoice is raised
+// BEFORE its project exists — the project is back-linked here once the payment
+// creates it.
 const UPDATABLE = [
   'status', 'number', 'stripe_invoice_id', 'hosted_invoice_url', 'invoice_pdf',
-  'amount_due', 'amount_paid', 'due_date', 'finalized_at', 'paid_at', 'voided_at'
+  'amount_due', 'amount_paid', 'due_date', 'finalized_at', 'paid_at', 'voided_at',
+  'project_id', 'contract_id'
 ]
 
 const num = v => (v == null ? null : Number(v))
@@ -52,18 +56,38 @@ async function insertItems(q, invoiceId, items) {
   }
 }
 
-export async function createInvoice({ client_id, project_id = null, kind = 'custom', currency = 'USD', description = null, amount_due = 0, due_date = null, status = 'draft', stripe_invoice_id = null, items = [] }) {
+export async function createInvoice({ client_id, project_id = null, contract_id = null, kind = 'custom', currency = 'USD', description = null, amount_due = 0, due_date = null, status = 'draft', stripe_invoice_id = null, items = [] }) {
   const id = await withTransaction(async (q) => {
     const rows = await q(
-      `INSERT INTO invoices (client_id, project_id, kind, currency, description, amount_due, due_date, status, stripe_invoice_id)
-       VALUES (:client_id, :project_id, :kind, :currency, :description, :amount_due, :due_date, :status, :stripe_invoice_id)`,
-      { client_id, project_id, kind, currency, description, amount_due, due_date, status, stripe_invoice_id }
+      `INSERT INTO invoices (client_id, project_id, contract_id, kind, currency, description, amount_due, due_date, status, stripe_invoice_id)
+       VALUES (:client_id, :project_id, :contract_id, :kind, :currency, :description, :amount_due, :due_date, :status, :stripe_invoice_id)`,
+      { client_id, project_id, contract_id, kind, currency, description, amount_due, due_date, status, stripe_invoice_id }
     )
     const invoiceId = rows.insertId
     if (items.length) await insertItems(q, invoiceId, items)
     return invoiceId
   })
   return getInvoice(id)
+}
+
+/**
+ * The live deposit invoice for a contract, if there is one.
+ *
+ * A named query rather than a listInvoices() filter on purpose: that builder
+ * only adds a WHERE for truthy opts, so `listInvoices({ contract_id: undefined })`
+ * silently returns the 50 most recent invoices SYSTEM-WIDE — an idempotency
+ * check built on it would match a different client's deposit and quietly decide
+ * there was nothing to do. This throws instead of degrading.
+ */
+export async function getDepositInvoiceForContract(contractId) {
+  if (!contractId) throw new Error('getDepositInvoiceForContract: contractId is required')
+  const rows = await query(
+    `SELECT * FROM invoices
+      WHERE contract_id = :contractId AND kind = 'deposit' AND status <> 'void'
+      ORDER BY id ASC LIMIT 1`,
+    { contractId }
+  )
+  return mapInvoice(rows[0] ?? null)
 }
 
 export async function getInvoice(id) {

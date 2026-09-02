@@ -2,7 +2,7 @@ import crypto from 'node:crypto'
 import { Router } from 'express'
 import { config } from '../config/env.js'
 import { constructWebhookEvent, createStripeCustomer, mapStripeInvoice, getInvoicePaymentIntentId } from '../services/stripe.js'
-import { verifyWebhookSignature, pandadocEnabled, createDocumentFromTemplate, sendDocument, hasViewedDocument } from '../services/pandadoc.js'
+import { verifyWebhookSignature, hasViewedDocument } from '../services/pandadoc.js'
 import { getClient, getClientByStripeCustomerId, getClientByPhone, updateClient } from '../repositories/clients.repo.js'
 import { createLead, getRecentWebsiteLeadByEmail } from '../repositories/leads.repo.js'
 import { getInvoice, getInvoiceByStripeId, updateInvoice, upsertFromStripe, listInvoices } from '../repositories/invoices.repo.js'
@@ -16,8 +16,6 @@ import {
 } from '../realtime/io.js'
 import { advanceProject } from '../services/projects.service.js'
 import { logClientActivity } from '../services/clientActivity.service.js'
-import { getProject } from '../repositories/projects.repo.js'
-import { issueDeposit } from '../services/projectBilling.js'
 import * as clickup from '../services/clickup.js'
 import { syncRemoteTask, classifyRemote, confirmRemote } from '../services/clickupSync.js'
 import {
@@ -27,9 +25,12 @@ import {
 import { deleteTask as deleteTaskService } from '../services/tasks.service.js'
 import { getProposalByDocumentId, updateProposal } from '../repositories/proposals.repo.js'
 import {
-  getContractByDocumentId, getContractByProposalId, generateContractFromProposal, updateContract
+  getContractByDocumentId, getContract, updateContract
 } from '../repositories/contracts.repo.js'
-import { getActiveTemplate } from '../repositories/documentTemplates.repo.js'
+import { ensureProjectForContract } from '../services/contractToProject.js'
+import { ensureContractForProposal } from '../services/proposalContract.js'
+import { issueDepositForContract } from '../services/projectBilling.js'
+import { acceptProposal } from '../services/proposalAcceptance.js'
 import { notify, clientNotify } from '../services/notifications.service.js'
 import { sendTemplateEmail, alertTimestamp, TEMPLATES } from '../services/email.js'
 
@@ -255,8 +256,17 @@ webhooksRouter.post('/stripe', async (req, res) => {
             console.error('client invoice.paid notify failed:', err.message)
           }
         }
-        // Advance the project lifecycle: deposit paid -> in progress; final paid -> completed.
-        if (local?.project_id) {
+        // A paid deposit on a signed contract is what CREATES the project —
+        // work exists once it's been bought, not before. Resolved from
+        // invoices.contract_id rather than Stripe metadata: metadata is absent
+        // on out-of-band and dashboard-born invoices, and it's editable by
+        // anyone with Stripe access, which would let a typo build a project
+        // against someone else's contract.
+        if (local?.kind === 'deposit' && local.contract_id && !local.project_id) {
+          const contract = await getContract(local.contract_id)
+          await ensureProjectForContract(contract, { invoice: local })
+        } else if (local?.project_id) {
+          // Legacy projects that predate the proposal flow still advance.
           if (local.kind === 'deposit') await advanceProject(local.project_id, 'in_progress')
           else if (local.kind === 'balance') await advanceProject(local.project_id, 'completed')
         }
@@ -373,43 +383,17 @@ async function clientDidView(doc) {
   }
 }
 
-// Generate the project contract from an accepted proposal (Model B). Idempotent:
-// if a contract already exists for the proposal, returns it untouched. The
-// PandaDoc document creation/send is best-effort and never blocks the DB write.
-async function generateProjectContract(proposal) {
-  const existing = await getContractByProposalId(proposal.id)
-  if (existing) return existing
-  let contract = await generateContractFromProposal(proposal, { type: 'project' })
-  console.log(`Proposal ${proposal.id} accepted -> generated project contract ${contract.id}`)
-
-  if (pandadocEnabled()) {
-    try {
-      const client = await getClient(proposal.client_id)
-      const template = await getActiveTemplate('project_contract')
-      if (client && template) {
-        const doc = await createDocumentFromTemplate({
-          templateUuid: template.template_uuid,
-          name: `${contract.title} — ${client.company || client.name}`,
-          client,
-          items: contract.items,
-          metadata: { fwa_client_id: String(client.id), fwa_contract_id: String(contract.id), type: 'contract' }
-        })
-        if (doc) {
-          contract = await updateContract(contract.id, { pandadoc_document_id: doc.id, pandadoc_template_id: template.template_uuid, pandadoc_status: doc.status })
-          await sendDocument(doc.id)
-          contract = await updateContract(contract.id, { status: 'sent', sent_at: new Date() })
-        }
-      }
-    } catch (err) {
-      console.error(`PandaDoc contract dispatch failed for proposal ${proposal.id}:`, err.message)
-    }
-  }
-  return contract
-}
+// NOTE: the inline contract generator that used to live here is gone. It was
+// broken in two ways — it pushed a pricing table at a template that PandaDoc
+// 400s on, and passed no tokens at all, so the agreement body rendered with
+// every bracketed placeholder empty. Acceptance now runs through
+// services/proposalAcceptance.js, the same path the public page and the admin
+// button use.
 
 // A signed project contract is the "won" event: confirm the client active and
 // stamp client_since. Idempotent — an already-active client is left as-is.
-// (The project already exists — it's the SOW hub that originated this contract.)
+// (No project exists yet — one is created when the deposit is PAID. See
+// services/contractToProject.js.)
 async function markClientWon(contract) {
   const client = await getClient(contract.client_id)
   if (!client) return null
@@ -454,18 +438,18 @@ async function handleDocumentEvent(doc) {
       // never observable (PandaDoc only reports the document's first open).
       if (internal === 'accepted' && !proposal.viewed_at) patch.viewed_at = new Date()
     }
+    // Legacy path: proposals are no longer PandaDoc documents (they're accepted
+    // on our own public page), so this only fires for ones created before that
+    // change. Mirror the raw status, but delegate the ACCEPTANCE itself rather
+    // than repeating it — a second implementation of "accepted" drifts.
+    if (internal === 'accepted') {
+      delete patch.status
+      delete patch.accepted_at
+    }
     await updateProposal(proposal.id, patch)
     emitProposalChanged(proposal.id)
     emitClientAgreementChanged(proposal.client_id, proposal.id)
-    if (internal === 'accepted') {
-      try {
-        await clientNotify(proposal.client_id, {
-          category: 'proposal', tone: 'success', icon: 'i-lucide-file-check-2',
-          title: 'Proposal accepted', body: proposal.title, link: '/agreements'
-        })
-      } catch (err) { console.error('client proposal notify failed:', err.message) }
-      await generateProjectContract(proposal)
-    }
+    if (internal === 'accepted') await acceptProposal(proposal, { source: 'client' })
     return
   }
 
@@ -516,21 +500,20 @@ async function handleDocumentEvent(doc) {
     // Drive the project lifecycle off the contract's signature state.
     if (contract.type === 'project') {
       if (internal === 'sent' && contract.project_id) {
+        // Legacy only: a contract generated from a project that already exists.
         await advanceProject(contract.project_id, 'awaiting_signature')
       } else if (internal === 'signed') {
         const client = await markClientWon(contract)
-        if (contract.project_id) {
-          // Auto-issue the deposit invoice, then advance to "awaiting deposit".
-          const project = await getProject(contract.project_id)
-          if (project && client) {
-            try {
-              await issueDeposit(project, client, { actorUserId: null })
-            } catch (err) {
-              console.error(`Auto deposit-invoice failed for project ${project.id}:`, err.message)
-            }
+        // The deposit is raised against the CONTRACT, because there is no
+        // project yet — paying this invoice is what creates one.
+        if (client) {
+          try {
+            await issueDepositForContract(contract, client, { actorUserId: null })
+          } catch (err) {
+            console.error(`Auto deposit-invoice failed for contract ${contract.id}:`, err.message)
           }
-          await advanceProject(contract.project_id, 'awaiting_deposit')
         }
+        if (contract.project_id) await advanceProject(contract.project_id, 'awaiting_deposit')
       }
     }
     return

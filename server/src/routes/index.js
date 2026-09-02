@@ -14,6 +14,7 @@ import { milestonesRouter } from './milestones.routes.js'
 import { projectTypesRouter } from './projectTypes.routes.js'
 import { projectTemplatesRouter } from './projectTemplates.routes.js'
 import { clickupRouter } from './clickup.routes.js'
+import { publicRouter } from './public.routes.js'
 import { invoicesRouter } from './invoices.routes.js'
 import { paymentsRouter } from './payments.routes.js'
 import { expensesRouter } from './expenses.routes.js'
@@ -36,6 +37,10 @@ apiRouter.use('/health', healthRouter)
 apiRouter.use('/auth', authRouter)
 // Stripe webhooks — verified by signature, not the session cookie (ungated).
 apiRouter.use('/webhooks', webhooksRouter)
+// Public, unauthenticated, and state-mutating: the proposal accept/decline
+// page. Mounted HERE with the other ungated routers rather than below, so it
+// reads as deliberate and nobody moves it behind requireAdmin by tidying.
+apiRouter.use('/public', publicRouter)
 
 // Admin-only resource routers.
 apiRouter.use('/leads', requireAdmin, leadsRouter) // Leads (top of funnel)

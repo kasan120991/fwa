@@ -18,7 +18,11 @@ export const TEMPLATES = {
   supportTicket: 'support-ticket',
   // Internal alert: an invoice was paid (Stripe webhook). Variables:
   // { client, amount, invoice_number, method, paid_at, invoice_url }.
-  invoicePaid: 'invoice-paid'
+  invoicePaid: 'invoice-paid',
+  // Client-facing: the proposal is ready to review, with its public
+  // accept/decline link. Variables:
+  // { name, proposal_title, proposal_code, total, proposal_url }.
+  proposalSent: 'proposal-sent'
 }
 
 export const isConfigured = () => !!config.resend.apiKey

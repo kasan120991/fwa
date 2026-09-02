@@ -2,18 +2,38 @@ import { query, withTransaction } from '../db/pool.js'
 
 export const PROPOSAL_STATUSES = new Set(['draft', 'sent', 'viewed', 'accepted', 'declined', 'expired', 'voided'])
 
-// Columns a status/sync write may touch (used by send + the webhook). The
-// business columns (client_id, title, currency) and line items are set only at
-// creation.
+// Columns an update may touch. The Statement of Work is editable while the
+// proposal is still in flight — it IS the product here — but client_id stays
+// fixed at creation, and `status` is deliberately absent: a status move is a
+// claim, not an update (see claimProposalStatus).
+const SOW_FIELDS = [
+  'goals', 'pages_included', 'key_features', 'design_deliverables', 'content_provided_by',
+  'revision_rounds', 'third_party_costs', 'project_fee', 'deposit_pct', 'hourly_rate',
+  'content_deadline', 'start_date', 'target_launch_date', 'special_terms',
+  'inactivity_days', 'feedback_days', 'late_fee_days', 'bugfix_days'
+]
+export { SOW_FIELDS }
+
 const UPDATABLE = [
-  'status', 'total', 'pandadoc_document_id', 'pandadoc_template_id', 'pandadoc_status',
-  'last_webhook_at', 'sent_at', 'viewed_at', 'accepted_at', 'declined_at', 'expires_at'
+  'title', 'project_id', 'project_type_id', 'currency', 'total', ...SOW_FIELDS,
+  'status', 'pandadoc_document_id', 'pandadoc_template_id', 'pandadoc_status',
+  'last_webhook_at', 'sent_at', 'viewed_at', 'accepted_at', 'declined_at', 'expires_at',
+  'accept_source', 'accepted_by'
 ]
 
 const num = v => (v == null ? null : Number(v))
 function mapProposal(row) {
   if (!row) return row
-  return { ...row, total: num(row.total) }
+  // Cast the money out of MySQL's DECIMAL strings, the same way mapProject did
+  // when these columns lived on the project — the UI and the deposit maths both
+  // assume numbers.
+  return {
+    ...row,
+    total: num(row.total),
+    project_fee: num(row.project_fee),
+    deposit_pct: num(row.deposit_pct),
+    hourly_rate: num(row.hourly_rate)
+  }
 }
 function mapItem(row) {
   return {
@@ -49,18 +69,60 @@ async function insertItems(q, proposalId, items) {
 
 /** Create a proposal and its snapshotted line items atomically. `items` are
  *  ready-to-insert snapshot rows; `total` is the caller-computed sum. */
-export async function createProposal({ client_id, project_id = null, title, currency = 'USD', total = 0, items = [] }) {
+export async function createProposal({
+  client_id, project_id = null, project_type_id = null, title,
+  currency = 'USD', total = 0, items = [], sow = {}
+}) {
+  const sowCols = SOW_FIELDS.filter(f => sow[f] !== undefined)
   const id = await withTransaction(async (q) => {
     const rows = await q(
-      `INSERT INTO proposals (client_id, project_id, title, currency, total, status)
-       VALUES (:client_id, :project_id, :title, :currency, :total, 'draft')`,
-      { client_id, project_id, title, currency, total }
+      `INSERT INTO proposals (client_id, project_id, project_type_id, title, currency, total, status
+         ${sowCols.length ? ', ' + sowCols.join(', ') : ''})
+       VALUES (:client_id, :project_id, :project_type_id, :title, :currency, :total, 'draft'
+         ${sowCols.length ? ', ' + sowCols.map(c => ':' + c).join(', ') : ''})`,
+      {
+        client_id, project_id, project_type_id, title, currency, total,
+        ...Object.fromEntries(sowCols.map(c => [c, sow[c]]))
+      }
     )
     const proposalId = rows.insertId
+    // The code needs the auto-increment id, so it's a second statement in the
+    // same transaction — the same shape projects.repo uses for WEB-0007.
+    await q(
+      "UPDATE proposals SET code = CONCAT('PROP-', LPAD(:proposalId, 4, '0')) WHERE id = :proposalId",
+      { proposalId }
+    )
     await insertItems(q, proposalId, items)
     return proposalId
   })
   return getProposal(id)
+}
+
+/**
+ * Move a proposal's status, but only from a state that allows it.
+ *
+ * This is a CLAIM, not an update, and that's why it isn't expressible through
+ * UPDATABLE: `updateProposal` issues an unconditional SET, which would let two
+ * concurrent accepts both win. A hundred POSTs on one valid link all read
+ * status='sent'; this conditional UPDATE serializes them to exactly one, and
+ * everything expensive downstream (contract generation, PandaDoc) hangs off the
+ * winner. Returns true only for the caller that actually moved it.
+ *
+ * Sibling of contracts.repo's claimContractForProject — same pattern, same reason.
+ */
+export async function claimProposalStatus(id, toStatus, fromStatuses, extra = {}) {
+  const stamp = { accepted: 'accepted_at', declined: 'declined_at' }[toStatus]
+  const cols = Object.keys(extra)
+  const res = await query(
+    `UPDATE proposals SET status = :toStatus${stamp ? `, ${stamp} = NOW()` : ''}
+       ${cols.length ? ', ' + cols.map(c => `${c} = :${c}`).join(', ') : ''}
+     WHERE id = :id AND status IN (${fromStatuses.map((_, i) => `:from${i}`).join(', ')})`,
+    {
+      id, toStatus, ...extra,
+      ...Object.fromEntries(fromStatuses.map((v, i) => [`from${i}`, v]))
+    }
+  )
+  return (res.affectedRows ?? 0) === 1
 }
 
 export async function getProposal(id) {
@@ -81,15 +143,24 @@ export async function listProposals(opts = {}) {
   const offset = Math.max(Number(opts.offset) || 0, 0)
   const where = []
   const params = {}
-  if (opts.client_id) { where.push('client_id = :client_id'); params.client_id = opts.client_id }
-  if (opts.project_id) { where.push('project_id = :project_id'); params.project_id = opts.project_id }
+  if (opts.client_id) { where.push('p.client_id = :client_id'); params.client_id = opts.client_id }
+  if (opts.project_id) { where.push('p.project_id = :project_id'); params.project_id = opts.project_id }
   if (opts.statuses?.length) {
-    where.push(`status IN (${opts.statuses.map((_, i) => `:s${i}`).join(', ')})`)
+    where.push(`p.status IN (${opts.statuses.map((_, i) => `:s${i}`).join(', ')})`)
     opts.statuses.forEach((s, i) => { params[`s${i}`] = s })
   }
   const whereSql = where.length ? ` WHERE ${where.join(' AND ')}` : ''
-  const rows = await query(`SELECT * FROM proposals${whereSql} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`, params)
-  const [{ total }] = await query(`SELECT COUNT(*) AS total FROM proposals${whereSql}`, params)
+  // The list is client-facing work, so it carries who each proposal is for.
+  const rows = await query(
+    `SELECT p.*, c.name AS client_name, c.company AS client_company
+       FROM proposals p JOIN clients c ON c.id = p.client_id
+       ${whereSql} ORDER BY p.created_at DESC LIMIT ${limit} OFFSET ${offset}`,
+    params
+  )
+  const [{ total }] = await query(
+    `SELECT COUNT(*) AS total FROM proposals p JOIN clients c ON c.id = p.client_id${whereSql}`,
+    params
+  )
   return { rows: rows.map(mapProposal), total, limit, offset }
 }
 

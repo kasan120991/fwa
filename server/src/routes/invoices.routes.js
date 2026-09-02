@@ -10,6 +10,8 @@ import {
 } from '../services/stripe.js'
 import { notify } from '../services/notifications.service.js'
 import { logClientActivity } from '../services/clientActivity.service.js'
+import { getContract } from '../repositories/contracts.repo.js'
+import { ensureProjectForContract } from '../services/contractToProject.js'
 import { emitInvoiceChanged, emitPaymentCreated } from '../realtime/io.js'
 
 export const invoicesRouter = Router()
@@ -181,4 +183,13 @@ invoicesRouter.post('/:id/pay', async (req, res) => {
   emitInvoiceChanged(id)
   emitPaymentCreated(payment.id)
   res.json({ data: updated })
+
+  // A deposit settled by cash, cheque or bank transfer starts a project exactly
+  // as a Stripe payment does. Wiring only the webhook would mean out-of-band
+  // deposits silently never produce one.
+  if (invoice.kind === 'deposit' && invoice.contract_id && !invoice.project_id) {
+    const contract = await getContract(invoice.contract_id)
+    await ensureProjectForContract(contract, { invoice, actorUserId: req.user.id })
+      .catch(err => console.error(`Project creation failed for contract ${invoice.contract_id}:`, err.message))
+  }
 })

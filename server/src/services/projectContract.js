@@ -4,11 +4,15 @@ import { pandadocEnabled, createDocumentFromTemplate } from './pandadoc.js'
 import { resolveLineItems } from './lineItems.js'
 import { config } from '../config/env.js'
 
-// Generate a project's contract from its Statement of Work. The project is the
-// hub (see project-is-sow-hub): its SOW fields map to the agreement's PandaDoc
-// tokens — filling both Exhibit A and every bracketed placeholder in the body.
-// The local contract row is always created; the PandaDoc document is best-effort
-// (no-ops when disabled, never throws to the caller).
+// Turn a Statement of Work into a contract. The SOW now lives on the PROPOSAL
+// (services/proposalContract.js is the live path); this file keeps the token
+// builder and template resolution, which are the same either way, plus the
+// legacy project-driven generator for projects that predate the proposal flow.
+//
+// The SOW's fields map to the agreement's PandaDoc tokens — filling both
+// Exhibit A and every bracketed placeholder in the body. The local contract row
+// is always created; the PandaDoc document is best-effort (no-ops when
+// disabled, never throws to the caller).
 
 const str = v => (v == null ? '' : String(v))
 const money = v => (v == null ? '' : `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
@@ -27,9 +31,17 @@ function clientAddress(c) {
     .filter(Boolean).join(', ')
 }
 
-// The token contract the project_contract template must expose. Keep names in
-// sync with the plan (§5) and whatever fields the PandaDoc template declares.
-function buildTokens(project, client) {
+/**
+ * The token contract the project_contract template must expose. Keep names in
+ * sync with whatever fields the PandaDoc template declares.
+ *
+ * `sow` is anything carrying the Statement of Work columns — a proposal row
+ * today, a legacy project row for pre-migration work. The column names are
+ * identical on both, which is exactly why moving the SOW needed no renaming
+ * here. Only the display name differs: proposals call it `title`.
+ */
+export function buildTokens(sow, client) {
+  const project = sow
   const fee = project.project_fee
   const pct = project.deposit_pct ?? 50
   const deposit = fee == null ? null : Math.round((fee * pct / 100) * 100) / 100
@@ -42,7 +54,7 @@ function buildTokens(project, client) {
     'Client.Address': clientAddress(client),
     'Client.Email': client.billing_email || client.email || '',
     'Client.Title': client.title || '',
-    'Project.Name': project.name,
+    'Project.Name': project.name || project.title || '',
     'Project.Goals': project.goals,
     'Project.Pages': project.pages_included,
     'Project.Features': project.key_features,
@@ -68,11 +80,17 @@ function buildTokens(project, client) {
   return Object.entries(pairs).map(([name, value]) => ({ name, value: str(value) }))
 }
 
-/** Resolve the template for a project: its type's pinned template, else the
- *  generic active project_contract template. Returns a document_templates row or null. */
-async function resolveTemplate(project) {
-  if (project.type_contract_template_id) {
-    const t = await getTemplate(project.type_contract_template_id)
+/**
+ * Resolve the contract template: the project type's pinned template, else the
+ * generic active project_contract one.
+ *
+ * Takes the pinned id rather than a row so the proposal and project paths share
+ * it — there used to be two resolvers and only one of them honoured the type
+ * pinning, so a proposal-born contract silently used the generic template.
+ */
+export async function resolveContractTemplate(pinnedTemplateId) {
+  if (pinnedTemplateId) {
+    const t = await getTemplate(pinnedTemplateId)
     if (t) return t
   }
   return getActiveTemplate('project_contract')
@@ -135,7 +153,7 @@ export async function generateProjectContract(project, client, overrides = {}) {
   })
 
   if (!pandadocEnabled()) return contract
-  const template = await resolveTemplate(project)
+  const template = await resolveContractTemplate(project.type_contract_template_id)
   if (!template) return contract
 
   // Merge overrides into the project so tokens reflect any modal edits.

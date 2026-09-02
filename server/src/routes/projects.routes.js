@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import {
-  getProject, listProjects, PROJECT_STATUSES, CONTENT_BY
+  getProject, listProjects, PROJECT_STATUSES
 } from '../repositories/projects.repo.js'
 import { createProject, updateProject, deleteProject, advanceProject } from '../services/projects.service.js'
 import { listTasks } from '../repositories/tasks.repo.js'
@@ -68,13 +68,10 @@ function parseId(req) {
   return id
 }
 
-const TEXT_FIELDS = ['goals', 'pages_included', 'key_features', 'design_deliverables', 'third_party_costs', 'special_terms']
-const DATE_FIELDS = ['content_deadline', 'start_date', 'target_launch_date']
-const INT_FIELDS = ['revision_rounds', 'inactivity_days', 'feedback_days', 'late_fee_days', 'bugfix_days']
-const MONEY_FIELDS = ['project_fee', 'hourly_rate']
-
-// Validate + normalize a project body. On create, name is required; client_id
-// and project_type_id are resolved in the handler. partial=true for PATCH.
+// A project is delivery. Its scope, money and dates live on the proposal it was
+// born from and are edited there — see routes/proposals.routes.js. This
+// validator is deliberately small now: anything it doesn't name can't be
+// written, and projects.repo's UPDATABLE is the second half of that guard.
 function validateProject(body, { partial = false } = {}) {
   const data = {}
   const fields = {}
@@ -90,40 +87,6 @@ function validateProject(body, { partial = false } = {}) {
   if (body.status !== undefined) {
     if (!PROJECT_STATUSES.has(body.status)) fields.status = `must be one of ${[...PROJECT_STATUSES].join(', ')}`
     else data.status = body.status
-  }
-  if (body.content_provided_by !== undefined && body.content_provided_by !== null) {
-    if (!CONTENT_BY.has(body.content_provided_by)) fields.content_provided_by = `must be one of ${[...CONTENT_BY].join(', ')}`
-    else data.content_provided_by = body.content_provided_by
-  } else if (body.content_provided_by === null) {
-    data.content_provided_by = null
-  }
-
-  for (const f of TEXT_FIELDS) {
-    if (body[f] !== undefined) data[f] = body[f] == null ? null : String(body[f])
-  }
-  for (const f of INT_FIELDS) {
-    if (body[f] === undefined) continue
-    const n = Number(body[f])
-    if (!Number.isInteger(n) || n < 0) fields[f] = 'must be a non-negative integer'
-    else data[f] = n
-  }
-  for (const f of MONEY_FIELDS) {
-    if (body[f] === undefined) continue
-    if (body[f] === null) { data[f] = null; continue }
-    const n = Number(body[f])
-    if (!Number.isFinite(n) || n < 0) fields[f] = 'must be a number >= 0'
-    else data[f] = n
-  }
-  if (body.deposit_pct !== undefined) {
-    const n = Number(body.deposit_pct)
-    if (!Number.isFinite(n) || n <= 0 || n > 100) fields.deposit_pct = 'must be a number in (0, 100]'
-    else data.deposit_pct = n
-  }
-  for (const f of DATE_FIELDS) {
-    if (body[f] === undefined) continue
-    if (body[f] === null || body[f] === '') { data[f] = null; continue }
-    if (typeof body[f] !== 'string' || Number.isNaN(Date.parse(body[f]))) fields[f] = 'must be a valid date'
-    else data[f] = body[f].slice(0, 10)
   }
 
   if (Object.keys(fields).length) throw badRequest('Validation failed', fields)

@@ -3,8 +3,11 @@ import { query, withTransaction } from '../db/pool.js'
 export const CONTRACT_STATUSES = new Set(['draft', 'sent', 'viewed', 'signed', 'declined', 'expired', 'voided'])
 export const CONTRACT_TYPES = new Set(['project', 'care_plan'])
 
+// NB: project_id is deliberately absent. Attaching a project to a contract is a
+// CLAIM (see claimContractForProject) — an unconditional SET would both let two
+// concurrent payments each birth a project and expose the field to PATCH.
 const UPDATABLE = [
-  'status', 'total', 'billing_interval', 'start_date', 'pandadoc_document_id',
+  'status', 'total', 'billing_interval', 'deposit_pct', 'start_date', 'pandadoc_document_id',
   'pandadoc_template_id', 'pandadoc_status', 'last_webhook_at',
   'sent_at', 'viewed_at', 'signed_at', 'declined_at', 'expires_at'
 ]
@@ -69,8 +72,8 @@ export async function createContract({ client_id, proposal_id = null, project_id
 export async function generateContractFromProposal(proposal, { type = 'project', billing_interval = 'one_time', start_date = null } = {}) {
   const id = await withTransaction(async (q) => {
     const rows = await q(
-      `INSERT INTO contracts (client_id, proposal_id, type, title, currency, total, billing_interval, start_date, status)
-       VALUES (:client_id, :proposal_id, :type, :title, :currency, :total, :billing_interval, :start_date, 'draft')`,
+      `INSERT INTO contracts (client_id, proposal_id, type, title, currency, total, billing_interval, deposit_pct, start_date, status)
+       VALUES (:client_id, :proposal_id, :type, :title, :currency, :total, :billing_interval, :deposit_pct, :start_date, 'draft')`,
       {
         client_id: proposal.client_id,
         proposal_id: proposal.id,
@@ -79,7 +82,12 @@ export async function generateContractFromProposal(proposal, { type = 'project',
         currency: proposal.currency || 'USD',
         total: proposal.total ?? 0,
         billing_interval,
-        start_date
+        // Carried across so the deposit's amount and its percentage come from
+        // one snapshot — editing the proposal later can't move the goalposts on
+        // a signed contract.
+        deposit_pct: proposal.deposit_pct ?? null,
+        // The SOW's start date is the contract's unless the caller overrides.
+        start_date: start_date ?? proposal.start_date ?? null
       }
     )
     const contractId = rows.insertId
@@ -144,6 +152,26 @@ export async function getContractByDocumentId(documentId) {
 export async function getContractByProposalId(proposalId) {
   const rows = await query('SELECT * FROM contracts WHERE proposal_id = :p LIMIT 1', { p: proposalId })
   return mapContract(rows[0] ?? null)
+}
+
+/**
+ * Attach a project to a contract, but only if it doesn't have one yet.
+ *
+ * This single statement is what makes project birth idempotent. Stripe retries
+ * `invoice.paid`, and the handler 500s on error so retries are guaranteed — two
+ * deliveries can therefore race to create a project for the same contract.
+ * Whoever loses this UPDATE throws inside createProjectForContract's
+ * transaction, which rolls their half-built project away.
+ *
+ * Takes `q` so it can run on a transaction connection. Sibling of
+ * proposals.repo's claimProposalStatus — same pattern, same reason.
+ */
+export async function claimContractForProject(q, contractId, projectId) {
+  const res = await q(
+    'UPDATE contracts SET project_id = :projectId WHERE id = :contractId AND project_id IS NULL',
+    { projectId, contractId }
+  )
+  return (res.affectedRows ?? 0) === 1
 }
 
 export async function updateContract(id, data) {
