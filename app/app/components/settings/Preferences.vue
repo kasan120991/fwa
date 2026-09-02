@@ -13,6 +13,7 @@ const NOTIF: { key: string, label: string, desc: string }[] = [
   { key: 'ticket', label: 'Support Tickets', desc: 'A client opens or replies to a ticket.' },
   { key: 'proposal', label: 'Proposals', desc: 'A proposal is viewed, accepted, or declined.' },
   { key: 'contract', label: 'Contracts', desc: 'A contract is signed or declined.' },
+  { key: 'project', label: 'Projects', desc: 'A paid deposit starts a project.' },
   { key: 'call', label: 'Receptionist Calls', desc: 'The AI receptionist logs a call.' },
   { key: 'expense', label: 'Subscription Renewals', desc: 'A recurring cost is about to renew.' },
   { key: 'website', label: 'Website & Uptime', desc: 'A site goes down or recovers.' }

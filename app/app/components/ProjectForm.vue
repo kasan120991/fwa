@@ -56,36 +56,18 @@ const STATUS_ITEMS = [
   { label: 'On Hold', value: 'on_hold' },
   { label: 'Completed', value: 'completed' }
 ]
-const CONTENT_BY_ITEMS = [
-  { label: 'Client Provides Content', value: 'client' },
-  { label: 'Developer Provides Content', value: 'developer' },
-  { label: 'Mix of Both', value: 'mix' }
-]
 
+// Delivery only. The Statement of Work moved to the proposal — sales owns what
+// was sold, delivery owns the work — so scope, money and dates are edited there
+// and read back here through the project's link. Leaving them editable on the
+// project would be worse than useless: the read path prefers the proposal's
+// values, so an edit here would silently appear to do nothing.
 interface FormState {
   client_id: number | undefined
   project_type_id: number | undefined
   template_id: number | null
   name: string
   status: string
-  goals: string
-  pages_included: string
-  key_features: string
-  design_deliverables: string
-  content_provided_by: string | undefined
-  revision_rounds: number
-  third_party_costs: string
-  project_fee: number | null
-  deposit_pct: number
-  hourly_rate: number | null
-  content_deadline: string
-  start_date: string
-  target_launch_date: string
-  special_terms: string
-  inactivity_days: number
-  feedback_days: number
-  late_fee_days: number
-  bugfix_days: number
 }
 
 function blank(): FormState {
@@ -93,10 +75,8 @@ function blank(): FormState {
     client_id: props.contactId ?? undefined,
     project_type_id: undefined,
     template_id: null,
-    name: '', status: 'planning', goals: '', pages_included: '', key_features: '',
-    design_deliverables: '', content_provided_by: undefined, revision_rounds: 2, third_party_costs: '',
-    project_fee: null, deposit_pct: 50, hourly_rate: null, content_deadline: '', start_date: '', target_launch_date: '',
-    special_terms: '', inactivity_days: 30, feedback_days: 5, late_fee_days: 7, bugfix_days: 30
+    name: '',
+    status: 'planning'
   }
 }
 
@@ -107,7 +87,6 @@ const types = ref<ProjectType[]>([])
 const templates = ref<ProjectTemplate[]>([])
 const contacts = ref<{ label: string, value: number }[]>([])
 const saving = ref(false)
-const showPolicy = ref(false)
 const errors = ref<Record<string, string>>({})
 
 const typeItems = computed(() => types.value.map(t => ({ label: t.name, value: t.id })))
@@ -121,31 +100,18 @@ const templateItems = computed(() => {
 function defaultTemplateId() {
   return templates.value.find(t => t.project_type_id === form.project_type_id && t.is_default)?.id ?? null
 }
-const deposit = computed(() => (form.project_fee == null ? null : Math.round((form.project_fee * (form.deposit_pct || 0) / 100) * 100) / 100))
-const balance = computed(() => (form.project_fee == null || deposit.value == null ? null : Math.round((form.project_fee - deposit.value) * 100) / 100))
 
 function fillFrom(p: ProjectRow) {
   Object.assign(form, {
     client_id: p.client_id,
     project_type_id: p.project_type_id,
     name: p.name || '',
-    status: p.status,
-    goals: p.goals || '', pages_included: p.pages_included || '', key_features: p.key_features || '',
-    design_deliverables: p.design_deliverables || '', content_provided_by: p.content_provided_by ?? undefined,
-    revision_rounds: p.revision_rounds ?? 2, third_party_costs: p.third_party_costs || '',
-    project_fee: p.project_fee, deposit_pct: p.deposit_pct ?? 50, hourly_rate: p.hourly_rate,
-    content_deadline: p.content_deadline ? String(p.content_deadline).slice(0, 10) : '',
-    start_date: p.start_date ? String(p.start_date).slice(0, 10) : '',
-    target_launch_date: p.target_launch_date ? String(p.target_launch_date).slice(0, 10) : '',
-    special_terms: p.special_terms || '',
-    inactivity_days: p.inactivity_days ?? 30, feedback_days: p.feedback_days ?? 5,
-    late_fee_days: p.late_fee_days ?? 7, bugfix_days: p.bugfix_days ?? 30
+    status: p.status
   })
 }
 
 async function init() {
   errors.value = {}
-  showPolicy.value = false
   try {
     if (!types.value.length) {
       const { data } = await api<{ data: ProjectType[] }>('/project-types')
@@ -184,34 +150,12 @@ watch(() => form.project_type_id, () => {
   if (props.mode === 'create') form.template_id = defaultTemplateId()
 })
 
-function nn(v: string) {
-  const t = v.trim()
-  return t === '' ? null : t
-}
 function payload() {
   return {
     client_id: form.client_id,
     project_type_id: form.project_type_id,
     name: form.name.trim(),
-    status: form.status,
-    goals: nn(form.goals),
-    pages_included: nn(form.pages_included),
-    key_features: nn(form.key_features),
-    design_deliverables: nn(form.design_deliverables),
-    content_provided_by: form.content_provided_by ?? null,
-    revision_rounds: form.revision_rounds,
-    third_party_costs: nn(form.third_party_costs),
-    project_fee: form.project_fee,
-    deposit_pct: form.deposit_pct,
-    hourly_rate: form.hourly_rate,
-    content_deadline: form.content_deadline || null,
-    start_date: form.start_date || null,
-    target_launch_date: form.target_launch_date || null,
-    special_terms: nn(form.special_terms),
-    inactivity_days: form.inactivity_days,
-    feedback_days: form.feedback_days,
-    late_fee_days: form.late_fee_days,
-    bugfix_days: form.bugfix_days
+    status: form.status
   }
 }
 
@@ -250,7 +194,6 @@ async function save() {
   }
 }
 
-const money = (n: number | null) => (n == null ? '—' : `$${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`)
 const lockedContactLabel = computed(() => props.contactLabel || props.project?.client_company || props.project?.client_name || 'Selected client')
 </script>
 
@@ -348,16 +291,6 @@ const lockedContactLabel = computed(() => props.contactLabel || props.project?.c
               </UFormField>
             </div>
 
-            <UFormField label="Project Goals / Description">
-              <UTextarea
-                v-model="form.goals"
-                :rows="2"
-                autoresize
-                placeholder="What is the site for? Primary objective."
-                class="w-full"
-              />
-            </UFormField>
-
             <!-- Template seeds milestones + tasks on create; not editable after. -->
             <UFormField
               v-if="mode === 'create'"
@@ -372,204 +305,9 @@ const lockedContactLabel = computed(() => props.contactLabel || props.project?.c
               />
             </UFormField>
 
-            <!-- Full Statement of Work — filled in after creation, so edit-only. -->
-            <template v-if="mode === 'edit'">
-              <!-- Scope -->
-              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <UFormField label="Pages Included">
-                  <UTextarea
-                    v-model="form.pages_included"
-                    :rows="2"
-                    autoresize
-                    placeholder="Home, About, Services, Contact"
-                    class="w-full"
-                  />
-                </UFormField>
-                <UFormField label="Key Features">
-                  <UTextarea
-                    v-model="form.key_features"
-                    :rows="2"
-                    autoresize
-                    placeholder="Contact form, gallery, booking, blog"
-                    class="w-full"
-                  />
-                </UFormField>
-                <UFormField label="Design Deliverables">
-                  <UTextarea
-                    v-model="form.design_deliverables"
-                    :rows="2"
-                    autoresize
-                    placeholder="Custom design, mobile-responsive, brand colors"
-                    class="w-full"
-                  />
-                </UFormField>
-                <UFormField label="Third-Party Costs">
-                  <UTextarea
-                    v-model="form.third_party_costs"
-                    :rows="2"
-                    autoresize
-                    placeholder="Hosting, domain, plugins — who pays"
-                    class="w-full"
-                  />
-                </UFormField>
-              </div>
-
-              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <UFormField label="Content Provided By">
-                  <USelect
-                    v-model="form.content_provided_by"
-                    :items="CONTENT_BY_ITEMS"
-                    placeholder="Select…"
-                    size="lg"
-                    class="w-full"
-                  />
-                </UFormField>
-                <UFormField label="Revision Rounds Included">
-                  <UInput
-                    v-model.number="form.revision_rounds"
-                    type="number"
-                    min="0"
-                    size="lg"
-                    class="w-full"
-                  />
-                </UFormField>
-              </div>
-
-              <!-- Fees -->
-              <div class="rounded-card bg-muted p-4 ring ring-default">
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <UFormField label="Project Fee (Total)">
-                    <UInput
-                      v-model.number="form.project_fee"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      icon="i-lucide-dollar-sign"
-                      size="lg"
-                      class="w-full"
-                    />
-                  </UFormField>
-                  <UFormField label="Deposit %">
-                    <UInput
-                      v-model.number="form.deposit_pct"
-                      type="number"
-                      min="1"
-                      max="100"
-                      step="1"
-                      size="lg"
-                      class="w-full"
-                    />
-                  </UFormField>
-                  <UFormField label="Hourly Rate (Extra Work)">
-                    <UInput
-                      v-model.number="form.hourly_rate"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      icon="i-lucide-dollar-sign"
-                      size="lg"
-                      class="w-full"
-                    />
-                  </UFormField>
-                </div>
-                <div class="mt-3 flex items-center gap-4 text-[13px] text-muted">
-                  <span>Deposit ({{ form.deposit_pct || 0 }}%): <span class="font-semibold text-highlighted tabular-nums">{{ money(deposit) }}</span></span>
-                  <span>Final ({{ 100 - (form.deposit_pct || 0) }}%): <span class="font-semibold text-highlighted tabular-nums">{{ money(balance) }}</span></span>
-                </div>
-              </div>
-
-              <!-- Dates -->
-              <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <UFormField label="Content Deadline">
-                  <UInput
-                    v-model="form.content_deadline"
-                    type="date"
-                    size="lg"
-                    class="w-full"
-                  />
-                </UFormField>
-                <UFormField label="Start Date">
-                  <UInput
-                    v-model="form.start_date"
-                    type="date"
-                    size="lg"
-                    class="w-full"
-                  />
-                </UFormField>
-                <UFormField label="Target Launch">
-                  <UInput
-                    v-model="form.target_launch_date"
-                    type="date"
-                    size="lg"
-                    class="w-full"
-                  />
-                </UFormField>
-              </div>
-
-              <UFormField label="Special Terms / Notes">
-                <UTextarea
-                  v-model="form.special_terms"
-                  :rows="2"
-                  autoresize
-                  placeholder="Anything specific to this engagement."
-                  class="w-full"
-                />
-              </UFormField>
-
-              <!-- Policy Terms (collapsible) -->
-              <div class="rounded-card ring ring-default">
-                <button
-                  type="button"
-                  class="flex w-full items-center justify-between px-4 py-3 text-left"
-                  @click="showPolicy = !showPolicy"
-                >
-                  <span class="text-[13.5px] font-semibold text-highlighted">Policy Terms</span>
-                  <UIcon
-                    :name="showPolicy ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
-                    class="size-4 text-muted"
-                  />
-                </button>
-                <div
-                  v-if="showPolicy"
-                  class="grid grid-cols-2 gap-4 border-t border-default px-4 py-4 sm:grid-cols-4"
-                >
-                  <UFormField label="Inactivity (Days)">
-                    <UInput
-                      v-model.number="form.inactivity_days"
-                      type="number"
-                      min="0"
-                      class="w-full"
-                    />
-                  </UFormField>
-                  <UFormField label="Feedback (Days)">
-                    <UInput
-                      v-model.number="form.feedback_days"
-                      type="number"
-                      min="0"
-                      class="w-full"
-                    />
-                  </UFormField>
-                  <UFormField label="Late (Days)">
-                    <UInput
-                      v-model.number="form.late_fee_days"
-                      type="number"
-                      min="0"
-                      class="w-full"
-                    />
-                  </UFormField>
-                  <UFormField label="Bug-Fix (Days)">
-                    <UInput
-                      v-model.number="form.bugfix_days"
-                      type="number"
-                      min="0"
-                      class="w-full"
-                    />
-                  </UFormField>
-                </div>
-              </div>
-            </template>
+            <!-- The Statement of Work is not here any more: it belongs to the
+                 proposal this project was born from. The project page links
+                 through to it. -->
           </div>
         </div>
 

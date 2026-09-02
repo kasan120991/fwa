@@ -717,7 +717,7 @@ async function linkClickup() {
 
 const headerMenu = computed(() => [
   [
-    { label: 'Edit Scope', icon: 'i-lucide-pencil', onSelect: openEdit },
+    { label: 'Edit Project', icon: 'i-lucide-pencil', onSelect: openEdit },
     { label: 'Generate Contract', icon: 'i-lucide-file-signature', onSelect: openContractModal, disabled: !canGenerate.value },
     { label: 'Provision Hosting', icon: 'i-lucide-server-cog', onSelect: () => { provisionOpen.value = true } },
     clickupUrl.value
@@ -1352,7 +1352,7 @@ const scopeFields = computed(() => project.value
               class="rounded-full"
               @click="openEdit"
             >
-              Edit scope
+              Edit project
             </UButton>
           </div>
         </div>

@@ -226,7 +226,7 @@ const sortItems = computed(() => [
 function rowMenuItems(p: Project) {
   return [[
     { label: 'View Project', icon: 'i-lucide-eye', onSelect: () => navigateTo(`/projects/${p.id}`) },
-    { label: 'Edit Scope / SOW', icon: 'i-lucide-pencil', onSelect: () => openEdit(p) },
+    { label: 'Edit Project', icon: 'i-lucide-pencil', onSelect: () => openEdit(p) },
     { label: 'Open Client', icon: 'i-lucide-building-2', onSelect: () => navigateTo(`/clients/${p.contactId}`) }
   ]]
 }

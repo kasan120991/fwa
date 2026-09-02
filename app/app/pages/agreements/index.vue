@@ -177,8 +177,14 @@ function onContractChanged() {
 onMounted(() => {
   load()
   socket.on('contract:changed', onContractChanged)
+  // The server has always emitted this and this page never listened, so an
+  // accepted proposal's new contract only appeared on a manual refresh.
+  socket.on('proposal:changed', onContractChanged)
 })
-onBeforeUnmount(() => socket.off('contract:changed', onContractChanged))
+onBeforeUnmount(() => {
+  socket.off('contract:changed', onContractChanged)
+  socket.off('proposal:changed', onContractChanged)
+})
 
 const byId = (id?: string | null) => agreements.value.find(a => a.id === id) || null
 
@@ -202,7 +208,10 @@ const valueText = (a: Agreement) => formatMoney(a.total)
 
 // ---- state ----
 const view = ref<'table' | 'board'>('table')
-const seg = ref<'all' | 'proposals' | 'contracts'>('all')
+// Proposals have their own page now, so this one is contracts. The segment
+// control is kept (and defaults to contracts) rather than ripped out, because
+// the union query still backs care-plan contracts and the board/table views.
+const seg = ref<'all' | 'proposals' | 'contracts'>('contracts')
 const statusFilter = ref<Group>('all')
 const recurringOnly = ref(false)
 const sortKey = ref<'recent' | 'value' | 'client' | 'status'>('recent')
@@ -271,8 +280,8 @@ const boardColumns = computed(() => BOARD_COLS.map(col => ({
 
 const segments = computed(() => ([
   { key: 'all' as const, label: 'All', count: segCounts.value.all },
-  { key: 'proposals' as const, label: 'Proposals', count: segCounts.value.proposals },
-  { key: 'contracts' as const, label: 'Contracts', count: segCounts.value.contracts }
+  { key: 'contracts' as const, label: 'Contracts', count: segCounts.value.contracts },
+  { key: 'proposals' as const, label: 'From Proposals', count: segCounts.value.proposals }
 ]))
 
 const filterActive = computed(() => statusFilter.value !== 'all' || recurringOnly.value)
@@ -415,9 +424,9 @@ const lineTotalText = (li: LineItem, a: Agreement) => formatMoney(li.unit * li.q
     <!-- header -->
     <PageHeader
       icon="i-lucide-file-signature"
-      title="Agreements"
+      title="Contracts"
       :count="agreements.length"
-      subtitle="Every proposal and contract across all clients, generated and signed through PandaDoc."
+      subtitle="Agreements out for signature and signed, across all clients. Scope and pricing live on the proposal that produced each one."
     >
       <template #actions>
         <UButton
