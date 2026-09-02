@@ -51,7 +51,8 @@ Both are Nuxt 4 SPAs on Nuxt UI 4 hitting the same Express API, distinguished by
 - Leads (Inbound / Outreach) + new/edit, with an outreach **touch log**
 - Clients list + Client detail (incl. an activity timeline + Calls tab) + new/edit
 - AI Receptionist (call inbox; Vapi, caller-aware, with in-call tools)
-- **Sales — Agreements**: proposals + contracts merged into one page, PandaDoc-driven
+- **Sales — Proposals** (the SOW lives here, with a public accept link) **+ Contracts**,
+  PandaDoc-driven
 - **Billing**: Invoices + Payments (Stripe-driven) + **Expenses** (incl. recurring subscriptions)
 - **Delivery**: Projects (+ detail), **milestones**, Tasks (+ checklists), project types,
   reusable **project templates**
@@ -150,11 +151,16 @@ append-only table. Links via **nullable `lead_id`** *or* **`client_id`** (`ON DE
 
 ### Sales & billing (children of a client)
 
-- **Proposals** and **contracts** — children of a client, line items snapshotted from the
-  `services` price book. Proposals are PandaDoc-backed; contracts carry a `type`
-  (`project` / `care_plan`). `document_templates` maps a `purpose` to a PandaDoc template.
-- **Agreements** is a *view*, not a table — the page merges proposals + contracts into one union
-  query (each row carries a `kind` + `uid`). Keep the merge in the query layer; the tables stay separate.
+- **Proposals own the Statement of Work** and are the entry point to everything downstream —
+  children of a client, line items optionally snapshotted from the `services` price book (with no
+  itemisation the SOW's `project_fee` is the total). A proposal carries the 18 SOW fields, a
+  `project_type_id` pinning which contract template it generates from, and a `code` (`PROP-0007`).
+- **Contracts** carry a `type` (`project` / `care_plan`) and a `deposit_pct` **snapshotted at
+  signature**, so the deposit's amount and its percentage come from one frozen record.
+  `document_templates` maps a `purpose` to a PandaDoc template.
+- **Agreements** is a *view*, not a table — the Contracts page merges proposals + contracts into
+  one union query (each row carries a `kind` + `uid`). Keep the merge in the query layer; the
+  tables stay separate.
 - **Invoices** + **payments** — Stripe-driven, children of a client (invoices carry line items).
   Project billing is a **deposit/balance split**, not milestone invoicing: `kind='deposit'`
   (fee × `deposit_pct`, idempotent, auto-issued on contract signature) and `kind='balance'`
@@ -171,12 +177,52 @@ append-only table. Links via **nullable `lead_id`** *or* **`client_id`** (`ON DE
   Assigning a plan and provisioning recurring Stripe invoicing is unbuilt — the Stripe service
   knows one-off invoices only (no products/prices/subscriptions).
 
+### The sales flow (proposal → contract → deposit → project)
+
+One direction, each step gated on the last. Nothing downstream can be conjured by hand.
+
+```
+proposal (SOW)  →  [email optional]  →  accept  →  contract  →  signed
+                        │                             │
+              (or Mark Accepted after            deposit invoice
+               a yes given on the phone)              │
+                                                  deposit PAID
+                                                       │
+                                       PROJECT created, seeded, ClickUp provisioned
+```
+
+- **Sending is optional.** `POST /api/proposals/:id/send` mints a public link and emails it
+  (Resend `proposal-sent`), but nothing downstream depends on it — a proposal agreed on a call goes
+  straight to Mark Accepted. `accept_source` + `accepted_by` record which it was, because a spoken
+  yes is legally a different thing from a click.
+- **`proposal_access_tokens`** is a sibling of `portal_invites`, deliberately not a reuse of it
+  (that table's `user_id` is NOT NULL and a prospect has no user row). Only the SHA-256 hash is
+  stored; the raw token travels in the URL of the emailed link and then in the
+  **`X-Proposal-Token` header** — never in a request path, because morgan logs every URL. A read
+  never consumes it (mail scanners GET every link in an inbound email); a decision burns it.
+  Missing, expired and already-used all return the *same* 404, so nothing is probeable.
+- **`services/proposalAcceptance.js` is the only accept/decline path** — the public page, the admin
+  button and the PandaDoc webhook all go through it. It claims the status transition *first*
+  (`claimProposalStatus`, a conditional UPDATE), then does the expensive work, so N concurrent
+  accepts on one link produce exactly one contract.
+- **Paying the deposit is what creates the project.** `invoice.paid` → `ensureProjectForContract`,
+  whose idempotency token is `claimContractForProject` — a conditional UPDATE run as the **last**
+  statement inside the project-create transaction (it locks the contract row, so claiming first
+  would hold that lock across the whole template-seeding loop). Its repair steps run on **every**
+  path, not only when the project was just created, or a retry after a mid-flight crash would leave
+  a paid project with no ClickUp tree forever.
+- Both claims live **outside** any `UPDATABLE` whitelist on purpose: an unconditional SET is an
+  overwrite, not a claim, and would expose the field to `PATCH`.
+- **`server/src/db/proposal-flow-check.mjs`** walks the whole chain (22 checks, both replay guards,
+  self-cleaning) against a real database. Run it with the integration keys blanked.
+
 ### Delivery — projects, milestones, tasks
 
-- **Projects** are the **SOW hub**: a project originates its contract (inverting a naive
-  "contract creates project" flow). A project holds the full Statement of Work (Exhibit A) —
-  goals, pages, key features, design deliverables, fee, `deposit_pct`, dates — plus four editable
-  policy constants that fill bracketed placeholders in the agreement body.
+- **A project is delivery work, and it doesn't exist until it's been paid for.** It owns no SOW of
+  its own: `projects.repo.js` LEFT JOINs the accepted proposal and exposes the SOW **under the same
+  column names**, which is why every consumer (the money card, the balance invoice, time billing,
+  the ClickUp date push) reads it untouched. A project created without a proposal is *bare* — it
+  has no fee, so it can't raise a balance invoice.
 - **`projects.status` is a commercial pipeline, forward-only**:
   `planning → awaiting_signature → awaiting_deposit → in_progress → in_review → awaiting_final →
   completed`, plus out-of-band `on_hold`. `advanceProject()` never moves backward and is driven by
@@ -239,7 +285,7 @@ away — it's load-bearing, and safe only because milestones are one-way.
 |---|---|---|
 | Work items | **two-way** | shadow + `clickup_version` CAS; ClickUp wins on conflict |
 | Milestone tasks | **one-way**, Ops → ClickUp | no shadow; the sweep re-asserts drift |
-| Project task | **one-way**, Ops → ClickUp | SOW fields Ops owns |
+| Project task | **one-way**, Ops → ClickUp | SOW fields (read through the proposal) Ops owns |
 
 - **Ops owns milestone existence.** A direct child of a project task is a milestone *only* if Ops
   knows it by stored id; an unrecognized one is adopted as a milestone-less task. **ClickUp can
@@ -349,13 +395,16 @@ Persistent left sidebar (collapsible) + top bar + main content. Nav groups (✓ 
 
 - **(top)** Dashboard ✓ · AI Receptionist ✓
 - **Clients & Work** — Leads ✓ · Clients ✓ · Projects ✓ · Tasks ✓
-- **Sales** — Agreements ✓
+- **Sales** — Proposals ✓ · Contracts ✓
 - **Billing** — Invoices ✓ · Payments ✓ · Expenses ✓
 - **Workspace** — Files ✓ · **Calendar (stub)** · Websites ✓
 - **(pinned bottom)** Support Tickets ✓
 
 **Settings is not in the sidebar** — it lives in the AppTopBar account dropdown, and its page is a
 section rail driven by a `?section=` query param.
+
+`/p/:token` is the one **unauthenticated** page in the portal (whitelisted in `auth.global.ts`) —
+the public proposal, for a prospect who has no account and never will.
 
 Portal nav (`portal/app/layouts/default.vue`): Home · Projects · Invoices · Agreements · Files ·
 Support · Websites, with Account / Sign out in a menu.
@@ -529,7 +578,11 @@ Full build rules (design conversion, motion, content voice) live in **`website/C
   Never auto-create a lead from a raw call; conversion is explicit (`POST /api/calls/:id/convert`).
 - Keep `calls` an append-only event log (nullable `lead_id`/`client_id`, SET NULL).
 - Keep Agreements a query-layer merge — proposals and contracts stay separate tables.
-- Keep the project → contract direction: projects are the SOW hub that originate contracts.
+- **Keep the sales flow's direction: proposal → contract → deposit → project.** The proposal owns
+  the SOW; accepting it generates the contract; signing raises the deposit; **paying the deposit is
+  what creates the project**. Never re-add SOW editing to `ProjectForm` or to `projects`'
+  `UPDATABLE` — the read path prefers the proposal, so such a save appears to work and changes
+  nothing. Never create a project from an unsigned or unpaid contract.
 - **Keep `projects.status` (commercial, forward-only, event-driven) separate from
   `project_milestones` (client-visible delivery, task-derived).** They are deliberately orthogonal.
 - **ClickUp: work items are two-way, milestones and the project task are one-way.** Ops owns
