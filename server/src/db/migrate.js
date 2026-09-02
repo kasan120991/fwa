@@ -26,11 +26,47 @@ const ADDITIVE_COLUMNS = {
   ],
   // Soft project back-links (no FK — projects is created after these tables in
   // schema.sql, and a trailing ADD CONSTRAINT wouldn't be idempotent).
+  // The proposal owns the Statement of Work: sales owns what was sold, delivery
+  // owns the work. Column names deliberately match what `projects` used to
+  // carry, so the contract token builder and the lifted SOW form needed no
+  // renaming and a project can read them straight back through its link.
+  // Order matters — ensureColumns adds in array order, so each AFTER target
+  // must already be present.
   proposals: [
-    ['project_id', 'BIGINT UNSIGNED NULL AFTER client_id']
+    ['project_id', 'BIGINT UNSIGNED NULL AFTER client_id'],
+    ['project_type_id', 'BIGINT UNSIGNED NULL AFTER project_id'],
+    ['code', 'VARCHAR(50) NULL AFTER project_type_id'],
+    ['goals', 'TEXT NULL AFTER total'],
+    ['pages_included', 'TEXT NULL AFTER goals'],
+    ['key_features', 'TEXT NULL AFTER pages_included'],
+    ['design_deliverables', 'TEXT NULL AFTER key_features'],
+    ['content_provided_by', "ENUM('client','developer','mix') NULL AFTER design_deliverables"],
+    ['revision_rounds', 'INT NOT NULL DEFAULT 2 AFTER content_provided_by'],
+    ['third_party_costs', 'TEXT NULL AFTER revision_rounds'],
+    ['project_fee', 'DECIMAL(10,2) NULL AFTER third_party_costs'],
+    ['deposit_pct', 'DECIMAL(5,2) NOT NULL DEFAULT 50.00 AFTER project_fee'],
+    ['hourly_rate', 'DECIMAL(10,2) NULL AFTER deposit_pct'],
+    ['content_deadline', 'DATE NULL AFTER hourly_rate'],
+    ['start_date', 'DATE NULL AFTER content_deadline'],
+    ['target_launch_date', 'DATE NULL AFTER start_date'],
+    ['special_terms', 'TEXT NULL AFTER target_launch_date'],
+    ['inactivity_days', 'INT NOT NULL DEFAULT 30 AFTER special_terms'],
+    ['feedback_days', 'INT NOT NULL DEFAULT 5 AFTER inactivity_days'],
+    ['late_fee_days', 'INT NOT NULL DEFAULT 7 AFTER feedback_days'],
+    ['bugfix_days', 'INT NOT NULL DEFAULT 30 AFTER late_fee_days'],
+    ['accept_source', "ENUM('client','admin') NULL AFTER bugfix_days"],
+    ['accepted_by', 'VARCHAR(200) NULL AFTER accept_source']
+  ],
+  invoices: [
+    // A deposit is raised on contract signature, before any project exists, so
+    // this is what scopes its idempotency and tells invoice.paid what to build.
+    ['contract_id', 'BIGINT UNSIGNED NULL AFTER project_id']
   ],
   contracts: [
-    ['project_id', 'BIGINT UNSIGNED NULL AFTER proposal_id']
+    ['project_id', 'BIGINT UNSIGNED NULL AFTER proposal_id'],
+    // Copied from the proposal at generation time so the deposit's amount and
+    // its percentage come from one signed snapshot.
+    ['deposit_pct', 'DECIMAL(5,2) NULL AFTER billing_interval']
   ],
   projects: [
     ['deposit_pct', 'DECIMAL(5,2) NOT NULL DEFAULT 50.00 AFTER project_fee'],
@@ -135,6 +171,13 @@ const ADDITIVE_INDEXES = {
   ],
   task_checklist_items: [
     ['uq_tci_clickup', 'ADD UNIQUE KEY uq_tci_clickup (clickup_item_id)']
+  ],
+  proposals: [
+    ['uq_proposals_code', 'ADD UNIQUE KEY uq_proposals_code (code)'],
+    ['idx_proposals_type', 'ADD KEY idx_proposals_type (project_type_id)']
+  ],
+  invoices: [
+    ['idx_invoices_contract', 'ADD KEY idx_invoices_contract (contract_id)']
   ]
 }
 
@@ -164,8 +207,10 @@ const ENUM_COLUMNS = {
       "ENUM('planning','awaiting_signature','awaiting_deposit','in_progress','in_review','awaiting_final','on_hold','completed') NOT NULL DEFAULT 'planning'"]
   ],
   notifications: [
-    ['category', 'website',
-      "ENUM('lead','call','proposal','contract','invoice','payment','task','ticket','expense','website','system') NOT NULL"]
+    // 'project' arrived with the proposal-first flow: a paid deposit creating a
+    // project is its own kind of event, and the one an admin most wants to see.
+    ['category', 'project',
+      "ENUM('lead','call','proposal','contract','invoice','payment','project','task','ticket','expense','website','system') NOT NULL"]
   ]
 }
 
@@ -249,6 +294,70 @@ async function backfillClientActivity(conn) {
   if (total > 0) console.log(`  + client_activity backfilled (${total} events)`)
 }
 
+
+// The 18 Statement-of-Work columns, in the order both tables declare them.
+// Exported shape used by the backfill and by the drop step (migrate-drop-sow.js).
+export const SOW_COLUMNS = [
+  'goals', 'pages_included', 'key_features', 'design_deliverables', 'content_provided_by',
+  'revision_rounds', 'third_party_costs', 'project_fee', 'deposit_pct', 'hourly_rate',
+  'content_deadline', 'start_date', 'target_launch_date', 'special_terms',
+  'inactivity_days', 'feedback_days', 'late_fee_days', 'bugfix_days'
+]
+
+/**
+ * Give every pre-existing project the proposal it would have had.
+ *
+ * The SOW moved to the proposal, so a project without one has nowhere to read
+ * its scope, fee or dates from. This mints an already-accepted proposal per
+ * project from the columns the project still carries, and links any contract
+ * that project produced.
+ *
+ * Idempotent BY CONSTRUCTION rather than by a flag: the NOT EXISTS makes runs
+ * 2..n insert zero rows, and a partially-completed run heals on the next pass
+ * instead of refusing to continue. (backfillClientActivity's "return if the
+ * table is non-empty" guard can't work here — proposals is not empty.)
+ */
+async function backfillProposalSow(conn, database) {
+  // If the source columns are gone the migration has already completed; the
+  // INSERT..SELECT below would be a hard error 1054 on every future run.
+  const [cols] = await conn.query(
+    'SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?',
+    [database, 'projects']
+  )
+  const have = new Set(cols.map(r => r.COLUMN_NAME))
+  if (!SOW_COLUMNS.every(c => have.has(c))) return
+
+  const list = SOW_COLUMNS.join(', ')
+  const [res] = await conn.query(
+    `INSERT INTO proposals
+       (client_id, project_id, project_type_id, title, currency, total, status, accepted_at, accept_source, ${list})
+     SELECT p.client_id, p.id, p.project_type_id, p.name, 'USD',
+            COALESCE(p.project_fee, 0), 'accepted', p.created_at, 'admin',
+            ${SOW_COLUMNS.map(c => 'p.' + c).join(', ')}
+       FROM projects p
+      WHERE NOT EXISTS (SELECT 1 FROM proposals pr WHERE pr.project_id = p.id)`
+  )
+  if (res.affectedRows > 0) {
+    // Codes need the auto-increment ids, so they're a second pass.
+    await conn.query(
+      "UPDATE proposals SET code = CONCAT('PROP-', LPAD(id, 4, '0')) WHERE code IS NULL"
+    )
+    console.log(`  + backfilled ${res.affectedRows} proposal(s) from existing projects`)
+  }
+
+  // Point each project's contract at the proposal that now holds its scope.
+  // The type filter is load-bearing: without it a client's care-plan contract
+  // would also claim the project's proposal, and getContractByProposalId is a
+  // LIMIT 1 with no ordering — it would then return whichever MySQL felt like.
+  const [linked] = await conn.query(
+    `UPDATE contracts c
+       JOIN proposals pr ON pr.project_id = c.project_id
+        SET c.proposal_id = pr.id
+      WHERE c.proposal_id IS NULL AND c.project_id IS NOT NULL AND c.type = 'project'`
+  )
+  if (linked.affectedRows > 0) console.log(`  + linked ${linked.affectedRows} contract(s) to their proposal`)
+}
+
 // Connect without selecting a database so we can create it first.
 const conn = await mysql.createConnection({
   host: config.db.host,
@@ -269,6 +378,7 @@ try {
   await ensureIndexes(conn, config.db.database)
   await ensureEnums(conn, config.db.database)
   await backfillClientActivity(conn)
+  await backfillProposalSow(conn, config.db.database)
   console.log(`✔ Schema applied to \`${config.db.database}\` at ${config.db.host}:${config.db.port}`)
 } finally {
   await conn.end()

@@ -364,13 +364,55 @@ CREATE TABLE IF NOT EXISTS services (
 CREATE TABLE IF NOT EXISTS proposals (
   id                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   client_id            BIGINT UNSIGNED NOT NULL,
-  project_id           BIGINT UNSIGNED NULL,       -- soft link: the originating project (no FK, see migrate.js)
+  -- Soft link (no FK, see migrate.js) to the project this proposal produced.
+  -- The direction is proposal -> project: a project is born from a PAID deposit
+  -- on this proposal's contract, so this is written at project-birth time and is
+  -- NULL for everything still in flight. Deliberately NOT unique — re-scoping an
+  -- existing project with a fresh proposal has to stay possible.
+  project_id           BIGINT UNSIGNED NULL,
+  -- The project type this proposal is scoped as. Pins which PandaDoc contract
+  -- template the contract generates from (project_types.contract_template_id),
+  -- and is the type the eventual project is created with.
+  project_type_id      BIGINT UNSIGNED NULL,
+  code                 VARCHAR(50)     NULL,       -- PROP-0007; assigned after insert
   title                VARCHAR(255)    NOT NULL,
   status               ENUM('draft', 'sent', 'viewed', 'accepted',
                             'declined', 'expired', 'voided')
                                        NOT NULL DEFAULT 'draft',
   currency             CHAR(3)         NOT NULL DEFAULT 'USD',
   total                DECIMAL(10,2)   NOT NULL DEFAULT 0.00,  -- app-maintained from line items
+
+  -- ---- Statement of Work -------------------------------------------------
+  -- This is the agreed scope, and it lives here rather than on the project:
+  -- sales owns what was sold, delivery owns the work. Column names match what
+  -- projects used to carry so the contract token builder and the lifted form
+  -- needed no renaming. The project reads these back through its link.
+  goals                TEXT            NULL,
+  pages_included       TEXT            NULL,
+  key_features         TEXT            NULL,
+  design_deliverables  TEXT            NULL,
+  content_provided_by  ENUM('client', 'developer', 'mix') NULL,
+  revision_rounds      INT             NOT NULL DEFAULT 2,
+  third_party_costs    TEXT            NULL,
+  project_fee          DECIMAL(10,2)   NULL,
+  deposit_pct          DECIMAL(5,2)    NOT NULL DEFAULT 50.00,
+  hourly_rate          DECIMAL(10,2)   NULL,
+  content_deadline     DATE            NULL,
+  start_date           DATE            NULL,
+  target_launch_date   DATE            NULL,
+  special_terms        TEXT            NULL,
+  -- Editable policy constants that fill bracketed placeholders in the
+  -- agreement body. Nothing reads them but the contract token builder.
+  inactivity_days      INT             NOT NULL DEFAULT 30,
+  feedback_days        INT             NOT NULL DEFAULT 5,
+  late_fee_days        INT             NOT NULL DEFAULT 7,
+  bugfix_days          INT             NOT NULL DEFAULT 30,
+
+  -- How the acceptance happened. 'admin' is you clicking Mark Accepted because
+  -- they said yes on a call — legally and operationally distinct from a click,
+  -- so it's recorded rather than inferred.
+  accept_source        ENUM('client', 'admin') NULL,
+  accepted_by          VARCHAR(200)    NULL,       -- name typed on the public page, or the admin's
 
   -- PandaDoc sync
   pandadoc_document_id VARCHAR(100)    NULL,
@@ -390,12 +432,43 @@ CREATE TABLE IF NOT EXISTS proposals (
                                        ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_proposals_pandadoc_doc (pandadoc_document_id),
+  UNIQUE KEY uq_proposals_code (code),
   KEY idx_proposals_client (client_id),
   KEY idx_proposals_project (project_id),
   KEY idx_proposals_status  (status),
+  KEY idx_proposals_type    (project_type_id),
   CONSTRAINT fk_proposals_client
     FOREIGN KEY (client_id) REFERENCES clients (id)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_proposals_type
+    FOREIGN KEY (project_type_id) REFERENCES project_types (id)
     ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- proposal_access_tokens — capability links for the public accept/decline
+--   page. A sibling of portal_invites, deliberately NOT that table: its
+--   user_id is NOT NULL, and a prospect has no user row — minting one would
+--   create a portal login for someone who hasn't bought, and would put
+--   set-password tokens and proposal tokens in one lookup path.
+--   Only the SHA-256 hash is stored; the raw token exists solely in the URL.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS proposal_access_tokens (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  proposal_id BIGINT UNSIGNED NOT NULL,
+  token_hash  CHAR(64)        NOT NULL,
+  expires_at  DATETIME        NOT NULL,
+  -- Stamped when the proposal is decided, or when a re-send supersedes this
+  -- link. Never stamped on a GET: mail scanners fetch every link in an inbound
+  -- email, which would kill the page before the client ever clicked it.
+  used_at     DATETIME        NULL,
+  created_at  TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_proposal_tokens_hash (token_hash),
+  KEY idx_proposal_tokens_proposal (proposal_id),
+  CONSTRAINT fk_proposal_tokens_proposal
+    FOREIGN KEY (proposal_id) REFERENCES proposals (id)
+    ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
@@ -443,6 +516,11 @@ CREATE TABLE IF NOT EXISTS contracts (
   currency             CHAR(3)         NOT NULL DEFAULT 'USD',
   total                DECIMAL(10,2)   NOT NULL DEFAULT 0.00,
   billing_interval     ENUM('one_time', 'monthly') NOT NULL DEFAULT 'one_time',
+  -- Copied from the proposal when the contract is generated, so the deposit's
+  -- amount and its percentage come from the SAME signed snapshot. Reading the
+  -- fee here and the pct off the proposal would drift the moment the proposal
+  -- was edited after signature.
+  deposit_pct          DECIMAL(5,2)    NULL,
   start_date           DATE            NULL,       -- care-plan / engagement start
 
   -- PandaDoc sync
@@ -534,7 +612,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   user_id     BIGINT UNSIGNED NULL,
 
   category    ENUM('lead', 'call', 'proposal', 'contract',
-                   'invoice', 'payment', 'task', 'ticket', 'expense', 'website', 'system') NOT NULL,
+                   'invoice', 'payment', 'project', 'task', 'ticket', 'expense', 'website', 'system') NOT NULL,
   tone        ENUM('brand', 'success', 'warning', 'info', 'error')
                 NOT NULL DEFAULT 'brand',
   icon        VARCHAR(64)  NOT NULL,   -- lucide id, e.g. 'i-lucide-user-plus'
@@ -928,6 +1006,10 @@ CREATE TABLE IF NOT EXISTS invoices (
   id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   client_id          BIGINT UNSIGNED NOT NULL,
   project_id         BIGINT UNSIGNED NULL,             -- soft link (no FK, see migrate.js)
+  -- The contract this invoice was issued against. A deposit is raised on
+  -- signature, BEFORE any project exists, so this — not project_id — scopes its
+  -- idempotency and tells invoice.paid which contract to turn into a project.
+  contract_id        BIGINT UNSIGNED NULL,             -- soft link (no FK, see migrate.js)
   stripe_invoice_id  VARCHAR(100)    NULL,
   number             VARCHAR(50)     NULL,             -- Stripe number, set on finalize
   status             ENUM('draft', 'open', 'paid', 'uncollectible', 'void')
@@ -950,6 +1032,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   UNIQUE KEY uq_invoices_stripe (stripe_invoice_id),
   KEY idx_invoices_client (client_id),
   KEY idx_invoices_project (project_id),
+  KEY idx_invoices_contract (contract_id),
   KEY idx_invoices_status  (status),
   KEY idx_invoices_due     (due_date),
   CONSTRAINT fk_invoices_client
