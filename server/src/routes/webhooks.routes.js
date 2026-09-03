@@ -1,7 +1,8 @@
 import crypto from 'node:crypto'
 import { Router } from 'express'
 import { config } from '../config/env.js'
-import { constructWebhookEvent, createStripeCustomer, mapStripeInvoice, getInvoicePaymentIntentId } from '../services/stripe.js'
+import { constructWebhookEvent, createStripeCustomer, mapStripeInvoice, getInvoicePaymentIntentId, stripeIsLive
+} from '../services/stripe.js'
 import { verifyWebhookSignature, hasViewedDocument } from '../services/pandadoc.js'
 import { getClient, getClientByStripeCustomerId, getClientByPhone, updateClient } from '../repositories/clients.repo.js'
 import { createLead, getRecentWebsiteLeadByEmail } from '../repositories/leads.repo.js'
@@ -141,6 +142,26 @@ webhooksRouter.post('/contact-form', async (req, res) => {
   res.status(201).json({ ok: true, id: lead.id })
 })
 
+/**
+ * Resolve the local invoice behind a Stripe invoice. Prefers the stored Stripe
+ * id; falls back to the local id we stamp into `fwa_invoice_id` metadata, which
+ * is what closes the create race (the row exists before Stripe knows about it).
+ *
+ * The fallback is only trusted when that row is unlinked or already linked to
+ * THIS Stripe invoice. Metadata is a plain string anyone with Stripe access can
+ * edit, and a stale or foreign one would otherwise resolve to a same-numbered
+ * invoice belonging to a different client.
+ */
+async function localInvoiceFor(inv) {
+  const byStripe = await getInvoiceByStripeId(inv.id)
+  if (byStripe) return byStripe
+  const hint = inv.metadata?.fwa_invoice_id ? Number(inv.metadata.fwa_invoice_id) : null
+  if (!Number.isInteger(hint) || hint <= 0) return null
+  const row = await getInvoice(hint)
+  if (!row) return null
+  return !row.stripe_invoice_id || row.stripe_invoice_id === inv.id ? row : null
+}
+
 // POST /api/webhooks/stripe — receives Stripe events. Authenticated by signature
 // (not the session cookie), so it's mounted outside requireAuth. Needs the raw
 // request body, which app.js parses as a Buffer for this path before JSON.
@@ -150,6 +171,17 @@ webhooksRouter.post('/stripe', async (req, res) => {
     event = constructWebhookEvent(req.body, req.headers['stripe-signature'])
   } catch (err) {
     return res.status(400).json({ error: { message: `Webhook signature verification failed: ${err.message}` } })
+  }
+
+  // Stripe registers webhook endpoints PER MODE, so a test-mode endpoint aimed
+  // at production quietly feeds test events into live data. Everything inside
+  // such an event — customer ids, invoice ids, and our own `fwa_invoice_id`
+  // metadata — is meaningless here, and the metadata hint below would happily
+  // resolve it to a same-numbered invoice belonging to someone else. Ack (so
+  // Stripe stops retrying) and drop.
+  if (event.livemode !== stripeIsLive()) {
+    console.warn(`Ignoring ${event.livemode ? 'live' : 'test'}-mode Stripe event ${event.type} (${event.id}) — this server is in ${stripeIsLive() ? 'live' : 'test'} mode`)
+    return res.json({ received: true, ignored: 'livemode mismatch' })
   }
 
   try {
@@ -183,8 +215,7 @@ webhooksRouter.post('/stripe', async (req, res) => {
         const inv = event.data.object
         const m = mapStripeInvoice(inv)
         const client = inv.customer ? await getClientByStripeCustomerId(inv.customer) : null
-        const hint = inv.metadata?.fwa_invoice_id ? Number(inv.metadata.fwa_invoice_id) : null
-        const local = await getInvoiceByStripeId(inv.id) ?? (hint ? await getInvoice(hint) : null)
+        const local = await localInvoiceFor(inv)
         if (local) {
           await updateInvoice(local.id, { status: 'paid', amount_paid: m.amount_paid, paid_at: new Date() })
           emitInvoiceChanged(local.id)
@@ -296,8 +327,7 @@ webhooksRouter.post('/stripe', async (req, res) => {
       }
       case 'invoice.voided': {
         const inv = event.data.object
-        const hint = inv.metadata?.fwa_invoice_id ? Number(inv.metadata.fwa_invoice_id) : null
-        const local = await getInvoiceByStripeId(inv.id) ?? (hint ? await getInvoice(hint) : null)
+        const local = await localInvoiceFor(inv)
         if (local) {
           await updateInvoice(local.id, { status: 'void', voided_at: new Date() })
           emitInvoiceChanged(local.id)
@@ -306,8 +336,7 @@ webhooksRouter.post('/stripe', async (req, res) => {
       }
       case 'invoice.marked_uncollectible': {
         const inv = event.data.object
-        const hint = inv.metadata?.fwa_invoice_id ? Number(inv.metadata.fwa_invoice_id) : null
-        const local = await getInvoiceByStripeId(inv.id) ?? (hint ? await getInvoice(hint) : null)
+        const local = await localInvoiceFor(inv)
         if (local) {
           await updateInvoice(local.id, { status: 'uncollectible' })
           emitInvoiceChanged(local.id)

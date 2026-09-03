@@ -22,6 +22,15 @@ const stripe = config.stripe.secretKey ? new Stripe(config.stripe.secretKey) : n
 
 export const stripeEnabled = () => stripe !== null
 
+/**
+ * Whether this server is talking to live Stripe or test Stripe. Used to reject
+ * webhook events from the other mode: endpoints are registered per mode, and a
+ * test-mode endpoint pointed at a production URL is an easy mistake — the ids
+ * inside such an event (customers, invoices, and our own metadata) belong to a
+ * different world and must never be acted on here.
+ */
+export const stripeIsLive = () => config.stripe.secretKey.startsWith('sk_live')
+
 /** Publishable key (pk_…) — safe to hand to the browser for embedded Checkout. */
 export const publishableKey = () => config.stripe.publishableKey
 
