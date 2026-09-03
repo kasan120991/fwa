@@ -205,6 +205,12 @@ proposal (SOW)  →  [email optional]  →  accept  →  contract  →  signed
   button and the PandaDoc webhook all go through it. It claims the status transition *first*
   (`claimProposalStatus`, a conditional UPDATE), then does the expensive work, so N concurrent
   accepts on one link produce exactly one contract.
+- **PandaDoc creates documents asynchronously**, and its two send errors are opposites: a document
+  still rendering (`document.uploaded`) answers **409**, one already out answers **403
+  document-cant-be-sent**. Both send paths go through `sendDocumentWhenReady()`, which waits for
+  `document.draft` first and treats already-sent as success — it also re-reads the status after a
+  failed send, because PandaDoc can accept the send and still fail the HTTP call, which used to
+  strand a contract as `draft` here while it was out for signature there.
 - **Paying the deposit is what creates the project.** `invoice.paid` → `ensureProjectForContract`,
   whose idempotency token is `claimContractForProject` — a conditional UPDATE run as the **last**
   statement inside the project-create transaction (it locks the contract row, so claiming first
@@ -596,6 +602,13 @@ Full build rules (design conversion, motion, content voice) live in **`website/C
 - **Every portal query scopes to `req.clientId`, never to a URL param.** Foreign ids 404 rather
   than 403. Never trust a client-supplied id, and never trust the Vapi model's args for identity —
   resolve the client server-side from the caller's number.
+- **Stripe webhooks: drop anything from the other livemode, and never trust `fwa_invoice_id`
+  metadata on its own.** Endpoints are registered per mode, so a test-mode endpoint aimed at the
+  production URL feeds test events into live data — and the metadata hint (which exists to close
+  the invoice create race) would resolve a test id to a same-numbered *live* invoice and mark the
+  wrong client's invoice paid. The livemode check sits right after signature verification;
+  `localInvoiceFor()` only trusts the hint when that row is unlinked or already linked to this
+  Stripe invoice.
 - Respect the server layering: all SQL lives in repositories.
 - Defer app visual styling to the `fwa-design` skill; keep app work in `app/`, portal work in
   `portal/`, backend in `server/`. The two apps' token layers stay identical.
