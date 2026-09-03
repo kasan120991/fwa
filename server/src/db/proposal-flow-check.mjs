@@ -13,9 +13,15 @@ const { getClient } = await import(`${B}/repositories/clients.repo.js`)
 
 const ok = (label, cond, extra = '') => console.log(`${cond ? '  PASS' : '  FAIL'}  ${label}${extra ? ' — ' + extra : ''}`)
 
+// Which client the test hangs its rows off, and when this run began — both are
+// needed by the cleanup at the bottom. MySQL's clock, not node's: this
+// connection isn't timezone-pinned, so a JS Date can land hours off.
+const CLIENT_ID = 62
+const runStartedAt = (await query('SELECT NOW() AS now'))[0].now
+
 console.log('\n1. Create a proposal carrying the SOW')
 const proposal = await createProposal({
-  client_id: 62,
+  client_id: CLIENT_ID,
   project_type_id: (await query("SELECT id FROM project_types WHERE `key`='website'"))[0].id,
   title: 'Acme Redesign (flow test)',
   total: 20000,
@@ -72,9 +78,19 @@ const count = (await query('SELECT COUNT(*) n FROM projects WHERE client_id=62 A
 ok('exactly one project for this contract', count === 1, `${count}`)
 
 console.log('\ncleanup')
+// Captured before the deletes: client_activity and notifications are written by
+// the services under test and outlive the rows that caused them, so a run that
+// only removed the business rows still left a trail in the client's timeline and
+// the alert feed.
+const startedAt = runStartedAt
 await query('DELETE FROM projects WHERE id = :p', { p: born.projectId })
 await query('DELETE FROM invoices WHERE contract_id = :c', { c: accepted.contract.id })
 await query('DELETE FROM contracts WHERE id = :c', { c: accepted.contract.id })
 await query('DELETE FROM proposals WHERE id = :p', { p: proposal.id })
-console.log('  removed the test rows')
+const trail = await query(
+  'DELETE FROM client_activity WHERE client_id = :c AND occurred_at >= :since',
+  { c: CLIENT_ID, since: startedAt }
+)
+const alerts = await query('DELETE FROM notifications WHERE created_at >= :since', { since: startedAt })
+console.log(`  removed the test rows (+ ${trail.affectedRows} activity, ${alerts.affectedRows} notification)`)
 process.exit(0)
