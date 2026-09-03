@@ -116,6 +116,62 @@ export async function getDocumentStatus(documentId) {
   return doc.status
 }
 
+// PandaDoc creates a document asynchronously. A freshly created one sits in
+// `document.uploaded` while it renders, and /send answers **409 Conflict** until
+// it reaches `document.draft` — so a send fired immediately after creation loses
+// the race. Once it HAS gone out, /send answers **403 document-cant-be-sent**.
+// Those two are opposites (too early vs too late) and must not be treated alike.
+const DRAFT_POLL_ATTEMPTS = 12
+const DRAFT_POLL_MS = 700
+
+/** Statuses meaning the document is already out with its recipients. */
+export const SENT_OR_LATER = new Set([
+  'document.sent', 'document.viewed', 'document.waiting_approval',
+  'document.approved', 'document.completed', 'document.paid'
+])
+
+/**
+ * Poll until a document leaves `document.uploaded`, returning the status it
+ * settled on (or the last one seen if it never settles). Bounded — the caller is
+ * usually inside a request a human is waiting on.
+ */
+export async function waitForDraft(documentId, { attempts = DRAFT_POLL_ATTEMPTS, delayMs = DRAFT_POLL_MS } = {}) {
+  let status = null
+  for (let i = 0; i < attempts; i++) {
+    status = await getDocumentStatus(documentId)
+    if (status !== 'document.uploaded') return status
+    await new Promise(resolve => setTimeout(resolve, delayMs))
+  }
+  return status
+}
+
+/**
+ * Send a document for signature, waiting out PandaDoc's processing first and
+ * treating an already-sent document as success rather than an error.
+ *
+ * That second part matters: PandaDoc can accept a send and still fail the HTTP
+ * call, which used to leave the document sent on their side and `draft` on ours
+ * — and every retry then 403'd, so the two never reconciled. Returns
+ * `{ status, alreadySent }`; throws only when the document genuinely can't go.
+ */
+export async function sendDocumentWhenReady(documentId, { message, silent = false } = {}) {
+  if (!pandadocEnabled()) return null
+  const status = await waitForDraft(documentId)
+  if (SENT_OR_LATER.has(status)) return { status, alreadySent: true }
+  if (status !== 'document.draft') {
+    throw new Error(`document is ${status ?? 'in an unknown state'}, not ready to send`)
+  }
+  try {
+    await sendDocument(documentId, { message, silent })
+  } catch (err) {
+    // Re-read before believing the error: the send may have landed anyway.
+    const after = await getDocumentStatus(documentId).catch(() => null)
+    if (SENT_OR_LATER.has(after)) return { status: after, alreadySent: true }
+    throw err
+  }
+  return { status: 'document.sent', alreadySent: false }
+}
+
 /** Full document details (recipients, roles, fields). Null when disabled. */
 export async function getDocument(documentId) {
   if (!pandadocEnabled()) return null

@@ -6,7 +6,7 @@ import {
 import { getClient } from '../repositories/clients.repo.js'
 import { getActiveTemplate } from '../repositories/documentTemplates.repo.js'
 import { resolveLineItems } from '../services/lineItems.js'
-import { pandadocEnabled, createDocumentFromTemplate, sendDocument, getDocumentStatus, createDocumentSession, downloadDocument } from '../services/pandadoc.js'
+import { pandadocEnabled, createDocumentFromTemplate, sendDocumentWhenReady, getDocumentStatus, createDocumentSession, downloadDocument } from '../services/pandadoc.js'
 import { advanceProject } from '../services/projects.service.js'
 import { emitContractChanged } from '../realtime/io.js'
 
@@ -219,7 +219,10 @@ contractsRouter.post('/:id/send', async (req, res) => {
 
   if (pandadocEnabled() && contract.pandadoc_document_id) {
     try {
-      await sendDocument(contract.pandadoc_document_id, { message: req.body?.message })
+      // Tolerates both halves of PandaDoc's timing: still processing (wait for
+      // it) and already sent (reconcile rather than 502, which is what stranded
+      // contracts as `draft` here while PandaDoc had them out for signature).
+      await sendDocumentWhenReady(contract.pandadoc_document_id, { message: req.body?.message })
     } catch (err) {
       return res.status(502).json({ error: { message: `PandaDoc send failed: ${err.message}` } })
     }

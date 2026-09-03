@@ -3,7 +3,7 @@ import {
 } from '../repositories/contracts.repo.js'
 import { getClient } from '../repositories/clients.repo.js'
 import { getProjectType } from '../repositories/projectTypes.repo.js'
-import { pandadocEnabled, createDocumentFromTemplate, sendDocument } from './pandadoc.js'
+import { pandadocEnabled, createDocumentFromTemplate, sendDocumentWhenReady } from './pandadoc.js'
 import { buildTokens, resolveContractTemplate } from './projectContract.js'
 import { emitContractChanged, emitClientAgreementChanged } from '../realtime/io.js'
 import { notify } from './notifications.service.js'
@@ -74,8 +74,13 @@ export async function ensureContractForProposal(proposal) {
       pandadoc_status: doc.status
     })
     try {
-      await sendDocument(doc.id, { message: 'Your agreement is ready to sign.' })
-      updated = await updateContract(contract.id, { status: 'sent', sent_at: new Date() })
+      // Waits out PandaDoc's async processing — a send fired the instant the
+      // document is created 409s, which used to leave every auto-generated
+      // contract sitting in draft with nothing to tell the client.
+      const sent = await sendDocumentWhenReady(doc.id, { message: 'Your agreement is ready to sign.' })
+      updated = await updateContract(contract.id, {
+        status: 'sent', sent_at: new Date(), pandadoc_status: sent?.status ?? 'document.sent'
+      })
     } catch (err) {
       // The document exists but didn't go out — recoverable by hand from the
       // contract page, so don't fail the acceptance over it.
