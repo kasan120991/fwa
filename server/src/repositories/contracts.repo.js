@@ -15,7 +15,8 @@ const UPDATABLE = [
 const num = v => (v == null ? null : Number(v))
 function mapContract(row) {
   if (!row) return row
-  return { ...row, total: num(row.total) }
+  // deposit_pct: NULL (legacy) is left NULL — consumers fall back to 50; 0 is exact.
+  return { ...row, total: num(row.total), deposit_pct: num(row.deposit_pct) }
 }
 function mapItem(row) {
   return {

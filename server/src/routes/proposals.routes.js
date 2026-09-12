@@ -69,7 +69,7 @@ function validateSow(body, fields) {
   }
   if (body.deposit_pct !== undefined) {
     const n = Number(body.deposit_pct)
-    if (!Number.isFinite(n) || n <= 0 || n > 100) fields.deposit_pct = 'must be between 0 and 100'
+    if (!Number.isFinite(n) || n < 0 || n > 100) fields.deposit_pct = 'must be between 0 and 100'
     else sow.deposit_pct = n
   }
   if (body.content_provided_by !== undefined) {

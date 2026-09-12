@@ -156,16 +156,19 @@ append-only table. Links via **nullable `lead_id`** *or* **`client_id`** (`ON DE
   itemisation the SOW's `project_fee` is the total). A proposal carries the 18 SOW fields, a
   `project_type_id` pinning which contract template it generates from, and a `code` (`PROP-0007`).
 - **Contracts** carry a `type` (`project` / `care_plan`) and a `deposit_pct` **snapshotted at
-  signature**, so the deposit's amount and its percentage come from one frozen record.
+  signature**, so the deposit's amount and its percentage come from one frozen record. On a
+  contract `NULL` is legacy and means 50; **`0` is exact and means no deposit** (the column is a
+  DECIMAL — read it through `contractDepositPct()`, never with a bare `?? 50`).
   `document_templates` maps a `purpose` to a PandaDoc template.
 - **Agreements** is a *view*, not a table — the Contracts page merges proposals + contracts into
   one union query (each row carries a `kind` + `uid`). Keep the merge in the query layer; the
   tables stay separate.
 - **Invoices** + **payments** — Stripe-driven, children of a client (invoices carry line items).
   Project billing is a **deposit/balance split**, not milestone invoicing: `kind='deposit'`
-  (fee × `deposit_pct`, idempotent, auto-issued on contract signature) and `kind='balance'`
-  (fee − deposit). Invoices are created as a local draft *first* so their id can ride in Stripe
-  metadata and dodge the webhook create race.
+  (fee × `deposit_pct`, idempotent, auto-issued on contract signature when `deposit_pct > 0`) and
+  `kind='balance'` (fee − deposit, one per project — the whole fee when there was no deposit).
+  Invoices are created as a local draft *first* so their id can ride in Stripe metadata and dodge
+  the webhook create race.
 - **`expenses`** — `category` `client`/`business`/`subscription`, **immutable after creation**.
   Client expenses require a client and can be flagged `billable` for rebilling; subscriptions add
   `billing_interval`, `next_renewal_at`, and `renewal_reminded_on` (the reminder job's idempotency
@@ -184,10 +187,12 @@ One direction, each step gated on the last. Nothing downstream can be conjured b
 ```
 proposal (SOW)  →  [email optional]  →  accept  →  contract  →  signed
                         │                             │
-              (or Mark Accepted after            deposit invoice
-               a yes given on the phone)              │
-                                                  deposit PAID
-                                                       │
+              (or Mark Accepted after       deposit_pct > 0        deposit_pct = 0
+               a yes given on the phone)              │                   │
+                                                deposit invoice           │
+                                                      │                   │
+                                                 deposit PAID             │
+                                                      └─────────┬─────────┘
                                        PROJECT created, seeded, ClickUp provisioned
 ```
 
@@ -211,7 +216,11 @@ proposal (SOW)  →  [email optional]  →  accept  →  contract  →  signed
   `document.draft` first and treats already-sent as success — it also re-reads the status after a
   failed send, because PandaDoc can accept the send and still fail the HTTP call, which used to
   strand a contract as `draft` here while it was out for signature there.
-- **Paying the deposit is what creates the project.** `invoice.paid` → `ensureProjectForContract`,
+- **Paying the deposit is what creates the project** — or, for a **no-deposit** proposal
+  (`deposit_pct = 0`), the signature itself is. Both go through `onContractSigned()` in
+  `services/contractToProject.js`: it **re-reads the contract and refuses unless it is `signed`**
+  (the PandaDoc webhook hands it the pre-update row), then either raises the deposit or calls
+  `ensureProjectForContract` directly with `invoice: null`. `invoice.paid` → `ensureProjectForContract`,
   whose idempotency token is `claimContractForProject` — a conditional UPDATE run as the **last**
   statement inside the project-create transaction (it locks the contract row, so claiming first
   would hold that lock across the whole template-seeding loop). Its repair steps run on **every**
@@ -219,8 +228,9 @@ proposal (SOW)  →  [email optional]  →  accept  →  contract  →  signed
   a paid project with no ClickUp tree forever.
 - Both claims live **outside** any `UPDATABLE` whitelist on purpose: an unconditional SET is an
   overwrite, not a claim, and would expose the field to `PATCH`.
-- **`server/src/db/proposal-flow-check.mjs`** walks the whole chain (22 checks, both replay guards,
-  self-cleaning) against a real database. Run it with the integration keys blanked.
+- **`server/src/db/proposal-flow-check.mjs`** walks the whole chain — the deposit leg and the
+  no-deposit leg (38 checks, every replay guard, the unsigned-contract refusal, self-cleaning)
+  against a real database. Run it with the integration keys blanked.
 
 ### Delivery — projects, milestones, tasks
 
@@ -586,9 +596,12 @@ Full build rules (design conversion, motion, content voice) live in **`website/C
 - Keep Agreements a query-layer merge — proposals and contracts stay separate tables.
 - **Keep the sales flow's direction: proposal → contract → deposit → project.** The proposal owns
   the SOW; accepting it generates the contract; signing raises the deposit; **paying the deposit is
-  what creates the project**. Never re-add SOW editing to `ProjectForm` or to `projects`'
+  what creates the project** — except at `deposit_pct = 0`, where the signature is, via
+  `onContractSigned` (the only path that may birth a project without a payment, and it re-checks
+  `status = 'signed'` itself). Never re-add SOW editing to `ProjectForm` or to `projects`'
   `UPDATABLE` — the read path prefers the proposal, so such a save appears to work and changes
-  nothing. Never create a project from an unsigned or unpaid contract.
+  nothing. Never create a project from an unsigned contract, or from an unpaid contract that
+  carries a deposit.
 - **Keep `projects.status` (commercial, forward-only, event-driven) separate from
   `project_milestones` (client-visible delivery, task-derived).** They are deliberately orthogonal.
 - **ClickUp: work items are two-way, milestones and the project task are one-way.** Ops owns

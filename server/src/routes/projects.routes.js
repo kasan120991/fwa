@@ -12,7 +12,7 @@ import { issueDeposit } from '../services/projectBilling.js'
 import { listContracts } from '../repositories/contracts.repo.js'
 import { pandadocEnabled } from '../services/pandadoc.js'
 import { stripeEnabled, createStripeCustomer, sendDepositInvoice } from '../services/stripe.js'
-import { createInvoice, updateInvoice } from '../repositories/invoices.repo.js'
+import { createInvoice, updateInvoice, listInvoices } from '../repositories/invoices.repo.js'
 import { notify } from '../services/notifications.service.js'
 import { emitInvoiceChanged, emitContractChanged } from '../realtime/io.js'
 
@@ -210,7 +210,7 @@ projectsRouter.post('/:id/contract', async (req, res) => {
   }
   if (body.deposit_pct !== undefined) {
     const n = Number(body.deposit_pct)
-    if (!Number.isFinite(n) || n <= 0 || n > 100) fields.deposit_pct = 'must be a number in (0, 100]'
+    if (!Number.isFinite(n) || n < 0 || n > 100) fields.deposit_pct = 'must be a number in [0, 100]'
     else overrides.deposit_pct = n
   }
   if (Array.isArray(body.items) && body.items.length) overrides.items = body.items
@@ -240,6 +240,10 @@ projectsRouter.post('/:id/deposit-invoice', async (req, res) => {
   if (project.project_fee == null || project.project_fee <= 0) {
     throw badRequest('Validation failed', { project_fee: 'set a project fee before requesting a deposit' })
   }
+  // A no-deposit project has nothing to request — the whole fee rides on the final invoice.
+  if (Number(project.deposit_pct ?? 50) === 0) {
+    return res.status(409).json({ error: { message: 'This project has no deposit — send the final invoice instead.' } })
+  }
   if (!stripeEnabled()) return res.status(409).json({ error: { message: 'Stripe is not configured' } })
 
   let client = await getClient(project.client_id)
@@ -264,14 +268,21 @@ projectsRouter.post('/:id/provision', async (req, res) => {
 })
 
 // POST /api/projects/:id/final-invoice — Stripe-send the client the final
-// (balance) invoice for the remaining fee after the deposit. Mirror of the
-// deposit route; kind = 'balance'.
+// (balance) invoice for the remaining fee after the deposit — or the full fee
+// for a no-deposit project. Mirror of the deposit route; kind = 'balance'.
 projectsRouter.post('/:id/final-invoice', async (req, res) => {
   const id = parseId(req)
   const project = await getProject(id)
   if (!project) return res.status(404).json({ error: { message: 'Project not found' } })
   if (project.project_fee == null || project.project_fee <= 0) {
     throw badRequest('Validation failed', { project_fee: 'set a project fee before sending the final invoice' })
+  }
+  // One final invoice per project. On a no-deposit project it is the ONLY
+  // invoice, so a double-click here would bill the whole fee twice.
+  const existingFinal = (await listInvoices({ project_id: project.id, limit: 200 })).rows
+    .find(i => i.kind === 'balance' && i.status !== 'void')
+  if (existingFinal) {
+    return res.status(409).json({ error: { message: 'A final invoice has already been sent for this project.', invoice_id: existingFinal.id } })
   }
   if (!stripeEnabled()) return res.status(409).json({ error: { message: 'Stripe is not configured' } })
 
@@ -288,7 +299,9 @@ projectsRouter.post('/:id/final-invoice', async (req, res) => {
   const balance = Math.round((project.project_fee - deposit) * 100) / 100
   const finalPct = Math.round((100 - pct) * 100) / 100
   const clientName = client.company || client.name
-  const description = `Final payment (${finalPct}%) — ${project.name}`
+  const description = pct === 0
+    ? `Project fee — ${project.name}`
+    : `Final payment (${finalPct}%) — ${project.name}`
 
   // Billable time that hasn't been invoiced yet rides along as a second line
   // item. The entries are stamped with this invoice's id further down, which is

@@ -221,7 +221,7 @@ async function submit() {
                 <UInput
                   v-model.number="depositPct"
                   type="number"
-                  min="1"
+                  min="0"
                   max="100"
                   size="lg"
                   class="w-full"

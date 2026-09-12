@@ -614,6 +614,8 @@ function openContractModal() {
 // ---- request deposit (Stripe) ----
 const requestingDeposit = ref(false)
 const hasPricing = computed(() => project.value?.project_fee != null && project.value.project_fee > 0)
+// deposit_pct = 0 is "no deposit": the whole fee rides on the final invoice.
+const noDeposit = computed(() => (project.value?.deposit_pct ?? 50) === 0)
 async function requestDeposit() {
   if (!hasPricing.value || requestingDeposit.value) return
   requestingDeposit.value = true
@@ -657,10 +659,11 @@ async function sendFinalInvoice() {
 }
 
 // One contextual billing button: request the deposit first, then — once it's
-// been raised — send the final invoice.
+// been raised — send the final invoice. A no-deposit project skips straight to
+// the final invoice.
 const billingAction = computed(() => {
   if (!hasPricing.value) return null
-  if (!depositInvoice.value) return { label: 'Request Deposit', icon: 'i-lucide-hand-coins', run: requestDeposit, loading: requestingDeposit.value }
+  if (!depositInvoice.value && !noDeposit.value) return { label: 'Request Deposit', icon: 'i-lucide-hand-coins', run: requestDeposit, loading: requestingDeposit.value }
   if (!finalInvoice.value) return { label: 'Send Final Invoice', icon: 'i-lucide-send', run: sendFinalInvoice, loading: requestingFinal.value }
   return null
 })
@@ -857,6 +860,7 @@ const scopeFields = computed(() => project.value
           <div class="mt-6">
             <ProjectStepper
               :status="project.status"
+              :no-deposit="noDeposit"
               @advance="setStatus"
             />
           </div>

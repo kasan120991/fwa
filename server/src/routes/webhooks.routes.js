@@ -28,9 +28,8 @@ import { getProposalByDocumentId, updateProposal } from '../repositories/proposa
 import {
   getContractByDocumentId, getContract, updateContract
 } from '../repositories/contracts.repo.js'
-import { ensureProjectForContract } from '../services/contractToProject.js'
+import { ensureProjectForContract, onContractSigned, hasNoDeposit } from '../services/contractToProject.js'
 import { ensureContractForProposal } from '../services/proposalContract.js'
-import { issueDepositForContract } from '../services/projectBilling.js'
 import { acceptProposal } from '../services/proposalAcceptance.js'
 import { notify, clientNotify } from '../services/notifications.service.js'
 import { sendTemplateEmail, alertTimestamp, TEMPLATES } from '../services/email.js'
@@ -421,8 +420,8 @@ async function clientDidView(doc) {
 
 // A signed project contract is the "won" event: confirm the client active and
 // stamp client_since. Idempotent — an already-active client is left as-is.
-// (No project exists yet — one is created when the deposit is PAID. See
-// services/contractToProject.js.)
+// (No project exists yet — one is created when the deposit is PAID, or on the
+// signature itself for a no-deposit contract. See services/contractToProject.js.)
 async function markClientWon(contract) {
   const client = await getClient(contract.client_id)
   if (!client) return null
@@ -533,16 +532,20 @@ async function handleDocumentEvent(doc) {
         await advanceProject(contract.project_id, 'awaiting_signature')
       } else if (internal === 'signed') {
         const client = await markClientWon(contract)
-        // The deposit is raised against the CONTRACT, because there is no
-        // project yet — paying this invoice is what creates one.
+        // Deposit contracts raise the deposit against the CONTRACT, because
+        // there is no project yet — paying that invoice is what creates one.
+        // No-deposit contracts (deposit_pct = 0) start the project right now.
         if (client) {
           try {
-            await issueDepositForContract(contract, client, { actorUserId: null })
+            await onContractSigned(contract, client, { actorUserId: null })
           } catch (err) {
-            console.error(`Auto deposit-invoice failed for contract ${contract.id}:`, err.message)
+            console.error(`Post-signature handling failed for contract ${contract.id}:`, err.message)
           }
         }
-        if (contract.project_id) await advanceProject(contract.project_id, 'awaiting_deposit')
+        // Legacy project-first contracts only (the project predates the signature).
+        if (contract.project_id) {
+          await advanceProject(contract.project_id, hasNoDeposit(contract) ? 'in_progress' : 'awaiting_deposit')
+        }
       }
     }
     return

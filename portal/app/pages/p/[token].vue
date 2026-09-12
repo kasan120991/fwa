@@ -279,8 +279,11 @@ const scope = computed(() => {
                 v-if="deposit != null"
                 class="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-[13px] text-muted"
               >
-                <span>{{ proposal.deposit_pct }}% deposit to begin: <span class="font-semibold text-highlighted tabular-nums">{{ money(deposit) }}</span></span>
-                <span>Balance on completion: <span class="font-semibold text-highlighted tabular-nums">{{ money(balance) }}</span></span>
+                <span v-if="proposal.deposit_pct === 0">No deposit — full fee due on completion</span>
+                <template v-else>
+                  <span>{{ proposal.deposit_pct }}% deposit to begin: <span class="font-semibold text-highlighted tabular-nums">{{ money(deposit) }}</span></span>
+                  <span>Balance on completion: <span class="font-semibold text-highlighted tabular-nums">{{ money(balance) }}</span></span>
+                </template>
               </div>
               <ul
                 v-if="proposal.items.length"

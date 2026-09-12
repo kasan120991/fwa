@@ -43,9 +43,17 @@ function clientAddress(c) {
 export function buildTokens(sow, client) {
   const project = sow
   const fee = project.project_fee
-  const pct = project.deposit_pct ?? 50
+  const pct = Number(project.deposit_pct ?? 50)
   const deposit = fee == null ? null : Math.round((fee * pct / 100) * 100) / 100
   const balance = fee == null ? null : Math.round((fee - deposit) * 100) / 100
+  const finalPct = Math.round((100 - pct) * 100) / 100
+  // One sentence the template can drop in wholesale, so a single template
+  // reads correctly whether or not the project carries a deposit.
+  const paymentSchedule = fee == null
+    ? ''
+    : pct === 0
+      ? `The full project fee of ${money(fee)} is due on receipt of the final invoice, issued on completion.`
+      : `A deposit of ${pct}% (${money(deposit)}) is due on signing; the remaining ${finalPct}% (${money(balance)}) is due on completion.`
   const pairs = {
     // The agreement's "as of [Effective Date]" — the date the contract is generated.
     'Agreement.EffectiveDate': date(new Date()),
@@ -66,7 +74,8 @@ export function buildTokens(sow, client) {
     'Project.Deposit': money(deposit),
     'Project.Balance': money(balance),
     'Project.DepositPct': pct,
-    'Project.FinalPct': Math.round((100 - pct) * 100) / 100,
+    'Project.FinalPct': finalPct,
+    'Project.PaymentSchedule': paymentSchedule,
     'Project.HourlyRate': money(project.hourly_rate),
     'Project.ContentDeadline': date(project.content_deadline),
     'Project.StartDate': date(project.start_date),

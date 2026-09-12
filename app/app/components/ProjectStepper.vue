@@ -7,7 +7,10 @@
 type Status = 'planning' | 'awaiting_signature' | 'awaiting_deposit' | 'in_progress' | 'in_review' | 'awaiting_final' | 'on_hold' | 'completed'
 type Step = Exclude<Status, 'on_hold'>
 
-const props = defineProps<{ status: Status }>()
+// `noDeposit`: the project's proposal carried deposit_pct = 0, so the Deposit
+// step never happens — drop it from the track. A legacy project *currently* in
+// awaiting_deposit keeps the step so it still has a place to stand.
+const props = defineProps<{ status: Status, noDeposit?: boolean }>()
 const emit = defineEmits<{ advance: [Status] }>()
 
 // The 7-step lifecycle — deliberately excludes `on_hold` (see above).
@@ -21,8 +24,11 @@ const LIFECYCLE: { status: Step, label: string }[] = [
   { status: 'completed', label: 'Completed' }
 ]
 
+const steps = computed(() => (props.noDeposit && props.status !== 'awaiting_deposit'
+  ? LIFECYCLE.filter(s => s.status !== 'awaiting_deposit')
+  : LIFECYCLE))
 const onHold = computed(() => props.status === 'on_hold')
-const currentIndex = computed(() => LIFECYCLE.findIndex(s => s.status === props.status))
+const currentIndex = computed(() => steps.value.findIndex(s => s.status === props.status))
 
 function stateOf(i: number): 'done' | 'current' | 'future' {
   if (i < currentIndex.value) return 'done'
@@ -38,7 +44,7 @@ function stateOf(i: number): 'done' | 'current' | 'future' {
          gets sliced off at the top. -->
     <div class="flex items-start gap-0 overflow-x-auto pb-1 pt-1.5">
       <template
-        v-for="(step, i) in LIFECYCLE"
+        v-for="(step, i) in steps"
         :key="step.status"
       >
         <!-- connector (between steps) -->

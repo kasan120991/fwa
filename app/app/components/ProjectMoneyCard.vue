@@ -34,6 +34,8 @@ function invChip(i: ProjectInvoice): { label: string, status: ChipStatus } {
 }
 
 const depositPct = computed(() => props.project.deposit_pct ?? 50)
+// 0% is "no deposit" — the fee is billed whole on the final invoice.
+const noDeposit = computed(() => depositPct.value === 0)
 const deposit = computed(() => (props.project.project_fee == null ? null : Math.round((props.project.project_fee * depositPct.value / 100) * 100) / 100))
 const balance = computed(() => (props.project.project_fee == null || deposit.value == null ? null : Math.round((props.project.project_fee - deposit.value) * 100) / 100))
 const depositInvoice = computed(() => props.invoices.find(i => i.kind === 'deposit'))
@@ -58,7 +60,18 @@ const collectedPct = computed(() => {
     </div>
 
     <div class="mt-3 flex flex-col gap-2.5 text-[13px] text-muted">
-      <div class="flex items-center justify-between gap-2">
+      <!-- A legacy deposit invoice still shows even at 0%, so nothing paid ever hides. -->
+      <div
+        v-if="noDeposit && !depositInvoice"
+        class="flex items-center justify-between gap-2"
+      >
+        <span>Deposit</span>
+        <span class="rounded-chip bg-muted px-2 py-0.5 text-[11px] font-medium text-muted">No deposit</span>
+      </div>
+      <div
+        v-else
+        class="flex items-center justify-between gap-2"
+      >
         <span>Deposit ({{ depositPct }}%)</span>
         <div class="flex items-center gap-2">
           <StatusChip

@@ -78,12 +78,14 @@ export async function issueDepositForContract(contract, client, { actorUserId = 
   const existing = await getDepositInvoiceForContract(contract.id)
   if (existing) return { invoice: existing, created: false, amount: Number(existing.amount_due) }
 
-  const pct = contract.deposit_pct ?? 50
+  const pct = Number(contract.deposit_pct ?? 50)
   const fee = Number(contract.total ?? 0)
   const deposit = Math.round((fee * pct / 100) * 100) / 100
 
   // A zero deposit is never paid, and the project is born from the payment — so
-  // this would stall the whole pipeline in silence. Refuse loudly instead.
+  // this would stall the whole pipeline in silence. Refuse loudly instead. A 0%
+  // contract never reaches here (onContractSigned routes it straight to a
+  // project), so a zero deposit at this point means the fee itself is $0.
   if (!(deposit > 0)) {
     console.error(`Contract ${contract.id} has no billable total — deposit not issued`)
     await notify({
