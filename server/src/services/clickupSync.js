@@ -3,7 +3,7 @@ import * as cu from './clickup.js'
 import * as map from './clickupMap.js'
 import {
   ensureClientSpace, ensureProjectTask, ensureMilestoneTask, pushMilestone,
-  pushProjectMilestones, milestoneTaskName, projectDates, statusMapFor, isConfigured
+  pushProjectMilestones, milestoneTaskName, projectTaskBody, statusMapFor, isConfigured
 } from './clickupProvision.js'
 import * as repo from '../repositories/clickup.repo.js'
 import * as tasksService from './tasks.service.js'
@@ -487,13 +487,16 @@ export async function deleteRemoteChecklistItem(task, clickupItemId) {
 }
 
 /**
- * Push the project's own fields onto its ClickUp task — name, goals, and the
- * schedule: start_date comes from the project's start date, due_date from its
- * target launch date, so the ClickUp task carries the same window as the SOW.
+ * Push the project's own fields onto its ClickUp task — name, the scope
+ * summary, and the schedule: start_date comes from the project's start date,
+ * due_date from its target launch date, so the ClickUp task carries the same
+ * window as the SOW.
  *
  * One-way by design. These are Statement of Work fields that drive the contract
  * and the client's portal, so Ops owns them; the webhook already ignores
- * parentless tasks rather than reading a project back out of ClickUp.
+ * parentless tasks rather than reading a project back out of ClickUp. The
+ * description is overwritten wholesale on every push, so a hand edit in ClickUp
+ * lasts only until the next link/backfill.
  */
 export async function pushProject(projectId) {
   if (!isConfigured()) return { pushed: false, configured: false }
@@ -503,11 +506,7 @@ export async function pushProject(projectId) {
   if (!link.linked) return { pushed: false, ...link }
   if (link.created) return { pushed: true, created: true } // dates went up with the create
   try {
-    await cu.updateTask(link.clickup_task_id, {
-      name: `${project.code ? project.code + ' — ' : ''}${project.name}`,
-      description: project.goals || '',
-      ...projectDates(project, { clearEmpty: true })
-    })
+    await cu.updateTask(link.clickup_task_id, projectTaskBody(project, { clearEmpty: true }))
     return { pushed: true, clickup_task_id: link.clickup_task_id }
   } catch (err) {
     await repo.setProjectSyncError(project.id, err.message)

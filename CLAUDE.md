@@ -305,6 +305,12 @@ away — it's load-bearing, and safe only because milestones are one-way.
 | Milestone tasks | **one-way**, Ops → ClickUp | no shadow; the sweep re-asserts drift |
 | Project task | **one-way**, Ops → ClickUp | SOW fields (read through the proposal) Ops owns |
 
+- **The project task's description is a Markdown scope summary** (`clickupMap.scopeSummaryMarkdown`):
+  a back-link to the Ops project + proposal code, then the SOW sections — deliberately **no
+  fee/deposit/rate**. `projectTaskBody()` builds it for both create and `pushProject`
+  (link/backfill), sent as ClickUp's `markdown_content` (parsed on POST and PUT; probed). The SOW
+  is frozen once the proposal is accepted, so nothing re-pushes it; the sweep never re-asserts it.
+
 - **Ops owns milestone existence.** A direct child of a project task is a milestone *only* if Ops
   knows it by stored id; an unrecognized one is adopted as a milestone-less task. **ClickUp can
   never create a phase** — and deleting a milestone task there doesn't delete the phase, it gets

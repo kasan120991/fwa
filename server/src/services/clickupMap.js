@@ -7,6 +7,8 @@
 // Ops value is therefore invisible to the sync — no write, no emit, no push
 // back. That's what makes a deliberately lossy status mapping safe.
 
+import { date } from '../utils/format.js'
+
 const norm = s => String(s ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 export const normTitle = s => String(s ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
 
@@ -175,3 +177,50 @@ export function shadowOf(x) {
 
 export const shadowEq = (a, b) => SYNCED_FIELDS.every(f => (a?.[f] ?? null) === (b?.[f] ?? null))
 export const changedFields = (a, b) => SYNCED_FIELDS.filter(f => (a?.[f] ?? null) !== (b?.[f] ?? null))
+
+/* ------------------------------------------------------------------ project task */
+
+// The project task's description: a Markdown scope summary of the Statement of
+// Work, plus a line linking back to Ops. Deliberately no money — no fee,
+// deposit or hourly rate — ClickUp is the delivery space and the figures stay in
+// Ops. Empty fields drop out, so a bare project (no proposal) renders just the
+// back-link and whatever goals it has. The base URL is an argument to keep this
+// module free of config.
+const para = v => String(v ?? '').replace(/\r\n?/g, '\n').trim()
+const section = (title, body) => (para(body) ? `## ${title}\n${para(body)}` : null)
+// Same label map the PandaDoc tokens use (services/projectContract.js).
+const CONTENT_BY = { client: 'Client', developer: 'Developer', mix: 'Shared' }
+
+export function scopeSummaryMarkdown(project, { opsBaseUrl = '' } = {}) {
+  if (!project) return ''
+  const base = String(opsBaseUrl ?? '').replace(/\/+$/, '')
+  const label = project.code || `Project #${project.id}`
+  const ref = base && project.id ? `[${label}](${base}/projects/${project.id})` : label
+  const head = `**Ops:** ${ref}${project.proposal_code ? ` · Proposal ${project.proposal_code}` : ''}`
+
+  const contentBy = CONTENT_BY[project.content_provided_by] ?? project.content_provided_by
+  const contentLine = [
+    contentBy ? `**Content provided by:** ${contentBy}` : null,
+    // revision_rounds is NOT NULL DEFAULT 2 on both tables, so only a proposal
+    // makes the number mean anything.
+    project.proposal_id && project.revision_rounds != null ? `**Revision rounds:** ${project.revision_rounds}` : null
+  ].filter(Boolean).join(' · ')
+
+  const dates = [
+    ['Content deadline', project.content_deadline],
+    ['Start', project.start_date],
+    ['Target launch', project.target_launch_date]
+  ].filter(([, v]) => date(v)).map(([k, v]) => `${k}: ${date(v)}`).join(' · ')
+
+  return [
+    head,
+    section('Goals', project.goals),
+    section('Pages Included', project.pages_included),
+    section('Key Features', project.key_features),
+    section('Design Deliverables', project.design_deliverables),
+    contentLine || null,
+    section('Third-Party Costs', project.third_party_costs),
+    dates ? `## Dates\n${dates}` : null,
+    section('Special Terms', project.special_terms)
+  ].filter(Boolean).join('\n\n')
+}

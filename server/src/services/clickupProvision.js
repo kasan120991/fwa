@@ -1,5 +1,6 @@
 import * as cu from './clickup.js'
-import { buildStatusMap, dateToClickUp, milestoneStateToOps } from './clickupMap.js'
+import { buildStatusMap, dateToClickUp, milestoneStateToOps, scopeSummaryMarkdown } from './clickupMap.js'
+import { config } from '../config/env.js'
 import { getClient } from '../repositories/clients.repo.js'
 import { getProject } from '../repositories/projects.repo.js'
 import * as repo from '../repositories/clickup.repo.js'
@@ -65,6 +66,25 @@ export function projectDates(project, { clearEmpty = false } = {}) {
   return { ...field('start_date', start), ...field('due_date', due) }
 }
 
+/**
+ * The project task's fields as ClickUp wants them: the name, the SOW scope
+ * summary (Markdown, deliberately no money) and the schedule. One builder for
+ * create and update, like milestoneBody, so the two payloads can't drift.
+ *
+ * `markdown_content` is parsed as Markdown on both POST and PUT (probed
+ * 2026-09-12; ClickUp's docs disagree with themselves on the name). The summary
+ * is never empty for a persisted project — it always carries the Ops back-link
+ * — so the clearing branch is symmetry with milestoneBody, not a live path.
+ */
+export function projectTaskBody(project, { clearEmpty = false } = {}) {
+  const summary = scopeSummaryMarkdown(project, { opsBaseUrl: config.appBaseUrl })
+  return {
+    name: `${project.code ? project.code + ' — ' : ''}${project.name}`,
+    ...(summary ? { markdown_content: summary } : (clearEmpty ? { description: '' } : {})),
+    ...projectDates(project, { clearEmpty })
+  }
+}
+
 export function folderName(client) {
   return client.company?.trim() || client.name?.trim() || `Client ${client.id}`
 }
@@ -127,11 +147,7 @@ export async function ensureProjectTask(projectOrId) {
     return { linked: true, listId: space.listId, clickup_task_id: project.clickup_task_id, project }
   }
   try {
-    const remote = await cu.createTask(space.listId, {
-      name: `${project.code ? project.code + ' — ' : ''}${project.name}`,
-      description: project.goals || undefined,
-      ...projectDates(project)
-    })
+    const remote = await cu.createTask(space.listId, projectTaskBody(project))
     await repo.setProjectClickup(project.id, { clickup_task_id: remote.id })
     return { linked: true, listId: space.listId, clickup_task_id: remote.id, created: true, project }
   } catch (err) {
