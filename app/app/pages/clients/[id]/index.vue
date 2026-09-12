@@ -1,9 +1,12 @@
 <script setup lang="ts">
-// Client detail — grouped-workspace layout. The page owns the header identity,
-// metric strip (from /summary), profile rail, and the five-tab shell; each tab
+// Client detail — the area-rail layout (the Settings pattern). The page owns
+// the header identity, the stat row (from /summary), a sticky rail of areas
+// with a compact contact card, and the full profile as a slide-over. Each area
 // is a lazy-mounted component that fetches its own data on first activation
-// (Overview · Projects & Sites · Sales & Billing · Support & Calls · Files).
+// and renders full width (Overview · Projects & Sites · Sales & Billing ·
+// Support & Calls · Files).
 import type { ClientSummary } from '~/utils/clientDetail'
+import type { StatRowItem } from '~/components/StatRow.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -63,7 +66,7 @@ function buildClient(c: ApiContact): ClientIdentity {
   return {
     name: c.company || c.name,
     initials: initials(c.company || c.name),
-    avatar: AVATAR[c.id % AVATAR.length],
+    avatar: AVATAR[c.id % AVATAR.length] ?? AVATAR[0]!,
     logo: c.logo_url || '',
     domain: c.website || '',
     stage: c.status === 'past' ? 'past' : 'active',
@@ -101,7 +104,7 @@ function saveNotes() {
   api(`/clients/${clientId.value}`, { method: 'PATCH', body: { notes: notes.value } }).catch(() => {})
 }
 
-// ---- summary (GET /clients/:id/summary) — metric strip + tab badges ----
+// ---- summary (GET /clients/:id/summary) — stat row + area counts ----
 const summary = ref<ClientSummary | null>(null)
 async function loadSummary() {
   try {
@@ -110,62 +113,64 @@ async function loadSummary() {
   } catch { /* non-fatal */ }
 }
 
-function money(n: number) {
-  return n === 0 ? '$0' : `$${n.toLocaleString('en-US')}`
-}
-
-const metrics = computed(() => {
+const metrics = computed<StatRowItem[]>(() => {
   const s = summary.value
   return [
     {
       label: 'Outstanding',
-      value: money(s?.outstanding ?? 0),
+      value: formatMoney(s?.outstanding ?? 0),
       sub: s?.invoices_open ? `${s.invoices_open} unpaid` : '',
-      tone: (s?.outstanding ?? 0) > 0 ? 'text-error' : 'text-highlighted'
+      tone: (s?.outstanding ?? 0) > 0 ? 'error' : 'default'
     },
-    { label: 'Active Projects', value: String(s?.projects_active ?? 0), sub: '', tone: 'text-highlighted' },
-    { label: 'Open Tickets', value: String(s?.tickets_open ?? 0), sub: '', tone: 'text-highlighted' },
-    { label: 'Websites', value: String(s?.websites_total ?? 0), sub: s?.websites_live ? `${s.websites_live} live` : '', tone: 'text-highlighted' },
-    { label: 'Total Billed', value: money(s?.total_billed ?? 0), sub: 'lifetime', tone: 'text-highlighted' }
+    { label: 'Active Projects', value: String(s?.projects_active ?? 0) },
+    { label: 'Open Tickets', value: String(s?.tickets_open ?? 0), tone: s?.tickets_open ? 'warning' : 'default' },
+    { label: 'Websites', value: String(s?.websites_total ?? 0), sub: s?.websites_live ? `${s.websites_live} live` : '' },
+    { label: 'Total Billed', value: formatMoney(s?.total_billed ?? 0), sub: 'lifetime' }
   ]
 })
 
-// ---- tabs (deep-linkable via ?tab=) ----
-type TabKey = 'overview' | 'work' | 'money' | 'comms' | 'files'
-const TAB_KEYS: TabKey[] = ['overview', 'work', 'money', 'comms', 'files']
+// ---- areas (deep-linkable via ?tab=; overview is the clean URL) ----
+type AreaKey = 'overview' | 'work' | 'money' | 'comms' | 'files'
+const AREA_KEYS: AreaKey[] = ['overview', 'work', 'money', 'comms', 'files']
 
-function tabFromRoute(): TabKey {
+function areaFromRoute(): AreaKey {
   const t = String(route.query.tab ?? '')
-  return (TAB_KEYS as string[]).includes(t) ? t as TabKey : 'overview'
+  return (AREA_KEYS as string[]).includes(t) ? t as AreaKey : 'overview'
 }
-const activeTab = ref<TabKey>(tabFromRoute())
-// Tabs mount on first visit and stay mounted (v-show) so switching back is instant.
-const visited = ref<Record<TabKey, boolean>>({ overview: false, work: false, money: false, comms: false, files: false })
-visited.value[activeTab.value] = true
+const activeArea = ref<AreaKey>(areaFromRoute())
+// Areas mount on first visit and stay mounted (v-show) so switching back is instant.
+const visited = ref<Record<AreaKey, boolean>>({ overview: false, work: false, money: false, comms: false, files: false })
+visited.value[activeArea.value] = true
 
-function showTab(key: TabKey) {
-  activeTab.value = key
+function showArea(key: AreaKey) {
+  activeArea.value = key
   visited.value[key] = true
   router.replace({ query: { ...route.query, tab: key === 'overview' ? undefined : key } })
 }
 watch(() => route.query.tab, () => {
-  const t = tabFromRoute()
-  if (t !== activeTab.value) {
-    activeTab.value = t
+  const t = areaFromRoute()
+  if (t !== activeArea.value) {
+    activeArea.value = t
     visited.value[t] = true
   }
 })
 
-const tabs = computed(() => {
+const areas = computed(() => {
   const s = summary.value
   return [
-    { key: 'overview' as const, label: 'Overview', badge: null },
-    { key: 'work' as const, label: 'Projects & Sites', badge: (s?.projects_total ?? 0) + (s?.websites_total ?? 0) || null },
-    { key: 'money' as const, label: 'Sales & Billing', badge: (s?.invoices_total ?? 0) + (s?.agreements_total ?? 0) || null },
-    { key: 'comms' as const, label: 'Support & Calls', badge: s?.tickets_open || null },
-    { key: 'files' as const, label: 'Files', badge: s?.files_total || null }
+    { key: 'overview' as const, label: 'Overview', icon: 'i-lucide-layout-dashboard', count: null },
+    { key: 'work' as const, label: 'Projects & Sites', icon: 'i-lucide-layers', count: (s?.projects_total ?? 0) + (s?.websites_total ?? 0) || null },
+    { key: 'money' as const, label: 'Sales & Billing', icon: 'i-lucide-receipt-text', count: (s?.invoices_total ?? 0) + (s?.agreements_total ?? 0) || null },
+    { key: 'comms' as const, label: 'Support & Calls', icon: 'i-lucide-life-buoy', count: s?.tickets_open || null },
+    { key: 'files' as const, label: 'Files', icon: 'i-lucide-folder', count: s?.files_total || null }
   ]
 })
+
+// ---- profile slide-over ----
+const profileOpen = ref(false)
+function openProfile() {
+  profileOpen.value = true
+}
 
 // ---- portal access ----
 const portalAccount = ref<{ invited: boolean, email?: string, last_login_at?: string | null }>({ invited: false })
@@ -194,13 +199,16 @@ async function inviteToPortal() {
   }
 }
 
-// ---- forms (owned here; opened from the header menu and tab components) ----
+// ---- forms (owned here; opened from the header menu and area components) ----
 const projectFormOpen = ref(false)
+function openProjectForm() {
+  projectFormOpen.value = true
+}
 const websiteFormOpen = ref(false)
 const ticketFormOpen = ref(false)
 
 const headerMenu = computed(() => [[
-  { label: 'New Invoice', icon: 'i-lucide-receipt-text', onSelect: () => showTab('money') },
+  { label: 'New Invoice', icon: 'i-lucide-receipt-text', onSelect: () => showArea('money') },
   { label: 'New Ticket', icon: 'i-lucide-life-buoy', onSelect: () => { ticketFormOpen.value = true } },
   { label: 'Add Website', icon: 'i-lucide-globe', onSelect: () => { websiteFormOpen.value = true } },
   { label: portalAccount.value.invited ? 'Re-send Portal Invite' : 'Invite to Portal', icon: 'i-lucide-user-plus', onSelect: inviteToPortal }
@@ -230,9 +238,6 @@ const STAGE_META: Record<Stage, { status: 'success' | 'neutral', label: string }
   active: { status: 'success', label: 'Active' },
   past: { status: 'neutral', label: 'Past' }
 }
-
-const tagVariant = { primary: 'soft', neutral: 'soft', outline: 'outline' } as const
-const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } as const
 </script>
 
 <template>
@@ -248,7 +253,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
     class="flex min-h-[60vh] items-center justify-center"
   >
     <div class="flex max-w-md flex-col items-center rounded-card bg-default px-10 py-14 text-center ring ring-default">
-      <span class="mb-5 inline-flex size-12 items-center justify-center rounded-[12px] bg-muted text-muted">
+      <span class="mb-5 inline-flex size-12 items-center justify-center rounded-card bg-muted text-muted">
         <UIcon
           name="i-lucide-user-x"
           class="size-6"
@@ -272,7 +277,12 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
     </div>
   </div>
 
-  <template v-else>
+  <!-- display: contents keeps the header, stat row and body as direct children of
+       the layout column (its gap does the spacing) while giving v-else one root -->
+  <div
+    v-else
+    class="contents"
+  >
     <!-- header identity -->
     <div class="flex flex-wrap items-center justify-between gap-5">
       <div class="flex min-w-0 items-center gap-4">
@@ -280,11 +290,11 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
           v-if="client.logo"
           :src="resolveUrl(client.logo)"
           alt=""
-          class="size-[58px] flex-none rounded-[14px] object-cover ring ring-default"
+          class="size-[58px] flex-none rounded-card object-cover ring ring-default"
         >
         <span
           v-else
-          class="inline-flex size-[58px] flex-none items-center justify-center rounded-[14px] font-display text-2xl font-semibold tracking-tight"
+          class="inline-flex size-[58px] flex-none items-center justify-center rounded-card font-display text-2xl font-semibold tracking-tight"
           :class="client.avatar"
         >{{ client.initials }}</span>
         <div class="min-w-0">
@@ -296,7 +306,7 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
               {{ STAGE_META[client.stage].label }}
             </StatusChip>
           </div>
-          <div class="mt-1.5 flex items-center gap-3.5">
+          <div class="mt-1.5 flex flex-wrap items-center gap-3.5">
             <a
               v-if="client.domain"
               :href="`https://${client.domain}`"
@@ -308,7 +318,10 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
                 class="size-[15px]"
               />{{ client.domain }}
             </a>
-            <span class="text-[13px] text-muted">Client since {{ client.sinceShort }}</span>
+            <span
+              v-if="client.sinceShort"
+              class="text-[13px] text-muted"
+            >Client since {{ client.sinceShort }}</span>
           </div>
         </div>
       </div>
@@ -318,14 +331,13 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
           icon="i-lucide-pencil"
           color="neutral"
           variant="outline"
-          class="rounded-full"
         >
           Edit
         </UButton>
         <UButton
           icon="i-lucide-plus"
           color="primary"
-          @click="projectFormOpen = true"
+          @click="openProjectForm"
         >
           New Project
         </UButton>
@@ -341,191 +353,135 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
       </div>
     </div>
 
-    <!-- metric strip -->
-    <div class="grid grid-cols-2 gap-3.5 md:grid-cols-3 xl:grid-cols-5">
-      <div
-        v-for="m in metrics"
-        :key="m.label"
-        class="rounded-[14px] bg-default p-4 ring ring-default"
-      >
-        <div class="mb-2 whitespace-nowrap text-[12.5px] text-muted">
-          {{ m.label }}
-        </div>
-        <div class="flex items-baseline gap-2">
-          <span
-            class="font-display text-2xl font-semibold leading-none tracking-tight tabular-nums"
-            :class="m.tone"
-          >{{ m.value }}</span>
-          <span
-            v-if="m.sub"
-            class="text-xs text-muted"
-          >{{ m.sub }}</span>
-        </div>
-      </div>
-    </div>
+    <!-- stat row -->
+    <StatRow :items="metrics" />
 
-    <!-- body -->
-    <div class="grid grid-cols-1 items-start gap-5 lg:grid-cols-[300px_1fr]">
-      <!-- profile rail -->
-      <div class="flex flex-col gap-4 lg:sticky lg:top-4">
-        <div class="overflow-hidden rounded-card bg-default ring ring-default">
-          <div class="border-b border-default p-[18px]">
-            <div class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
-              Primary contact
-            </div>
-            <div class="mt-2.5 flex items-center gap-3">
-              <span class="inline-flex size-[38px] flex-none items-center justify-center rounded-full bg-sand text-[13px] font-semibold text-highlighted">
-                {{ client.contact.split(' ').map(w => w[0]).slice(0, 2).join('') }}
-              </span>
-              <div class="min-w-0">
-                <div class="text-sm font-semibold text-highlighted">
-                  {{ client.contact }}
-                </div>
-                <div class="text-[13px] text-muted">
-                  {{ client.contactTitle }}
-                </div>
-              </div>
-            </div>
-            <div class="mt-3.5 flex flex-col gap-2.5">
-              <a
-                :href="`mailto:${client.email}`"
-                class="flex items-center gap-2.5 text-[13.5px] text-default hover:text-primary"
-              >
-                <UIcon
-                  name="i-lucide-mail"
-                  class="size-[15px] flex-none text-muted"
-                />{{ client.email }}
-              </a>
-              <div
-                v-if="portalAccount.invited"
-                class="flex items-center gap-2.5 text-[13.5px] text-muted"
-              >
-                <UIcon
-                  name="i-lucide-user-check"
-                  class="size-[15px] flex-none text-success"
-                />Portal access · {{ portalAccount.last_login_at ? 'active' : 'invited' }}
-              </div>
-              <a
-                :href="`tel:${phoneDigits(client.phone)}`"
-                class="flex items-center gap-2.5 text-[13.5px] text-default hover:text-primary"
-              >
-                <UIcon
-                  name="i-lucide-phone"
-                  class="size-[15px] flex-none text-muted"
-                />{{ formatPhone(client.phone) }}
-              </a>
-            </div>
-          </div>
-
-          <div class="border-b border-default p-[18px]">
-            <div class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
-              Billing address
-            </div>
-            <div class="mt-2.5 text-[13.5px] leading-relaxed text-default">
-              <div
-                v-for="line in client.address"
-                :key="line"
-              >
-                {{ line }}
-              </div>
-            </div>
-          </div>
-
-          <div class="border-b border-default p-[18px]">
-            <div class="mb-3 text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
-              Tags
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <UBadge
-                v-for="t in client.tags"
-                :key="t.label"
-                :color="tagColor[t.tone]"
-                :variant="tagVariant[t.tone]"
-                size="sm"
-                class="rounded-full"
-              >
-                {{ t.label }}
-              </UBadge>
-            </div>
-          </div>
-
-          <div class="flex flex-col gap-3 p-[18px]">
-            <div class="flex items-center justify-between gap-3">
-              <span class="text-[13px] text-muted">Client since</span>
-              <span class="text-[13.5px] font-semibold text-highlighted tabular-nums">{{ client.since }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- notes -->
-        <div class="rounded-card bg-default p-[18px] ring ring-default">
-          <div class="mb-2.5 flex items-center justify-between">
-            <div class="text-[11px] font-medium uppercase tracking-[0.06em] text-muted">
-              Internal notes
-            </div>
-            <span class="text-xs text-muted">{{ notes.length }} chars</span>
-          </div>
-          <UTextarea
-            v-model="notes"
-            :rows="4"
-            autoresize
-            placeholder="Add a private note about this client…"
-            class="w-full"
-            @blur="saveNotes"
+    <!-- rail + area -->
+    <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-7">
+      <!-- area rail -->
+      <nav class="flex gap-1 overflow-x-auto lg:sticky lg:top-2 lg:flex-col lg:overflow-visible">
+        <button
+          v-for="a in areas"
+          :key="a.key"
+          type="button"
+          class="flex flex-none items-center gap-2.5 rounded-[10px] border px-3 py-2 text-left text-sm transition-colors"
+          :class="activeArea === a.key
+            ? 'border-primary/25 bg-mist font-semibold text-primary'
+            : 'border-transparent text-toned hover:bg-default'"
+          @click="showArea(a.key)"
+        >
+          <UIcon
+            :name="a.icon"
+            class="size-[17px] flex-none"
+            :class="activeArea === a.key ? 'text-primary' : 'text-muted'"
           />
-        </div>
-      </div>
+          <span class="flex-1 whitespace-nowrap">{{ a.label }}</span>
+          <span
+            v-if="a.count != null"
+            class="text-[11px] font-semibold text-muted tabular-nums"
+          >{{ a.count }}</span>
+        </button>
 
-      <!-- tabbed panel -->
-      <div class="flex min-w-0 flex-col gap-[18px]">
-        <div class="flex items-center gap-1 overflow-x-auto border-b border-default">
-          <button
-            v-for="t in tabs"
-            :key="t.key"
-            class="inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 pb-3 pt-2.5 text-sm transition-colors"
-            :class="activeTab === t.key ? 'border-citrine font-semibold text-highlighted' : 'border-transparent font-medium text-muted hover:text-highlighted'"
-            @click="showTab(t.key)"
+        <!-- compact contact card; the full profile is a slide-over -->
+        <div class="mt-5 hidden rounded-card bg-sand p-5 lg:block">
+          <div class="eyebrow">
+            Primary Contact
+          </div>
+          <div class="mt-2.5 flex items-center gap-2.5">
+            <span class="inline-flex size-[34px] flex-none items-center justify-center rounded-btn bg-default text-[12px] font-semibold text-highlighted ring ring-default">
+              {{ client.contact.split(' ').map(w => w[0]).slice(0, 2).join('') }}
+            </span>
+            <div class="min-w-0">
+              <div class="truncate text-[13.5px] font-semibold text-highlighted">
+                {{ client.contact }}
+              </div>
+              <div
+                v-if="client.contactTitle"
+                class="truncate text-[12.5px] text-muted"
+              >
+                {{ client.contactTitle }}
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 flex flex-col gap-1.5 text-[13px]">
+            <a
+              v-if="client.email"
+              :href="`mailto:${client.email}`"
+              class="truncate text-default hover:text-primary"
+            >{{ client.email }}</a>
+            <a
+              v-if="client.phone"
+              :href="`tel:${phoneDigits(client.phone)}`"
+              class="text-default hover:text-primary tabular-nums"
+            >{{ formatPhone(client.phone) }}</a>
+          </div>
+          <div
+            v-if="client.tags.length"
+            class="mt-3 flex flex-wrap gap-1.5"
           >
-            {{ t.label }}
             <span
-              v-if="t.badge != null"
-              class="rounded-chip px-1.5 py-px text-[11px] font-semibold tabular-nums"
-              :class="activeTab === t.key ? 'bg-mist text-primary' : 'bg-muted text-muted'"
-            >{{ t.badge }}</span>
+              v-for="t in client.tags"
+              :key="t.label"
+              class="inline-flex items-center rounded-chip bg-default px-2 py-0.5 text-[11.5px] font-medium text-muted ring ring-default"
+            >{{ t.label }}</span>
+          </div>
+          <button
+            type="button"
+            class="mt-3.5 inline-flex items-center gap-1 text-[13px] font-semibold text-primary"
+            @click="openProfile"
+          >
+            Full Profile
+            <UIcon
+              name="i-lucide-arrow-right"
+              class="size-3.5"
+            />
           </button>
         </div>
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          icon="i-lucide-user"
+          class="flex-none lg:hidden"
+          @click="openProfile"
+        >
+          Profile
+        </UButton>
+      </nav>
 
-        <div v-show="activeTab === 'overview'">
+      <!-- active area -->
+      <div class="flex min-w-0 flex-col">
+        <div v-show="activeArea === 'overview'">
           <ClientsClientOverviewTab
             v-if="visited.overview"
             :client-id="clientId"
             :summary="summary"
-            @go="showTab($event as TabKey)"
-            @new-project="projectFormOpen = true"
+            @go="showArea($event as AreaKey)"
+            @new-project="openProjectForm"
           />
         </div>
-        <div v-show="activeTab === 'work'">
+        <div v-show="activeArea === 'work'">
           <ClientsClientWorkTab
             v-if="visited.work"
             :client-id="clientId"
-            @new-project="projectFormOpen = true"
+            @new-project="openProjectForm"
             @add-website="websiteFormOpen = true"
           />
         </div>
-        <div v-show="activeTab === 'money'">
+        <div v-show="activeArea === 'money'">
           <ClientsClientMoneyTab
             v-if="visited.money"
             :client-id="clientId"
           />
         </div>
-        <div v-show="activeTab === 'comms'">
+        <div v-show="activeArea === 'comms'">
           <ClientsClientCommsTab
             v-if="visited.comms"
             :client-id="clientId"
             @new-ticket="ticketFormOpen = true"
           />
         </div>
-        <div v-show="activeTab === 'files'">
+        <div v-show="activeArea === 'files'">
           <FilesPanel
             v-if="visited.files"
             :client-id="clientId"
@@ -533,6 +489,16 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
         </div>
       </div>
     </div>
+
+    <ClientsClientProfileSlideover
+      v-model:open="profileOpen"
+      v-model:notes="notes"
+      :client="client"
+      :portal="portalAccount"
+      :edit-to="`/clients/${clientId}/edit`"
+      @save-notes="saveNotes"
+      @invite="inviteToPortal"
+    />
 
     <ProjectForm
       v-model:open="projectFormOpen"
@@ -553,5 +519,5 @@ const tagColor = { primary: 'primary', neutral: 'neutral', outline: 'neutral' } 
       :client-id="clientId"
       :client-label="client?.name"
     />
-  </template>
+  </div>
 </template>

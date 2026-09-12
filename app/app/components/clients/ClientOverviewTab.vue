@@ -1,7 +1,8 @@
 <script setup lang="ts">
-// Client detail › Overview — attention-first summary. Leans on the parent's
-// /summary payload for counts + attention strips; fetches only the small
-// client-scoped extras it renders (in-flight projects, latest activity, hosting).
+// Client detail › Overview — attention-first, one column. Leans on the parent's
+// /summary payload for the attention strips; fetches only the two small
+// client-scoped lists it renders (in-flight projects, latest activity). The
+// counts live in the stat row above, so nothing here repeats them.
 import { PROJECT_META, type ClientSummary, type PStatus } from '~/utils/clientDetail'
 
 const props = defineProps<{
@@ -56,16 +57,6 @@ async function loadActivity() {
   } catch { /* non-fatal */ }
 }
 
-// ---- hosting margin ----
-interface Hosting { configured: boolean, monthly_cost?: number, droplet_count?: number, mrr?: number, margin?: number, margin_pct?: number | null, error?: string }
-const hosting = ref<Hosting | null>(null)
-async function loadHosting() {
-  try {
-    const { data } = await api<{ data: Hosting }>(`/clients/${props.clientId}/hosting`)
-    hosting.value = data
-  } catch { /* non-fatal */ }
-}
-
 const socket = useSocket()
 function onActivity(a: { client_id: number }) {
   if (a.client_id === props.clientId) loadActivity()
@@ -73,7 +64,6 @@ function onActivity(a: { client_id: number }) {
 onMounted(() => {
   loadProjects()
   loadActivity()
-  loadHosting()
   socket.on('client-activity:new', onActivity)
   socket.on('project:created', loadProjects)
   socket.on('project:updated', loadProjects)
@@ -101,7 +91,7 @@ const CATEGORY_TONE: Record<string, string> = {
     <!-- attention strips -->
     <div
       v-if="overdue"
-      class="flex items-center gap-3 rounded-[12px] border-l-[3px] border-error bg-default p-3.5 pl-4 ring ring-default"
+      class="flex items-center gap-3 rounded-card border-l-[3px] border-error bg-default px-4 py-3.5 pl-5 ring ring-default"
     >
       <UIcon
         name="i-lucide-alert-circle"
@@ -120,7 +110,7 @@ const CATEGORY_TONE: Record<string, string> = {
     </div>
     <div
       v-if="attentionTicket"
-      class="flex items-center gap-3 rounded-[12px] border-l-[3px] border-warning bg-default p-3.5 pl-4 ring ring-default"
+      class="flex items-center gap-3 rounded-card border-l-[3px] border-warning bg-default px-4 py-3.5 pl-5 ring ring-default"
     >
       <UIcon
         name="i-lucide-clock"
@@ -138,193 +128,106 @@ const CATEGORY_TONE: Record<string, string> = {
       </button>
     </div>
 
-    <div class="grid grid-cols-1 items-start gap-4 xl:grid-cols-[1.25fr_1fr]">
-      <!-- left: in-flight work + latest activity -->
-      <div class="flex min-w-0 flex-col gap-4">
-        <div class="overflow-hidden rounded-card bg-default ring ring-default">
-          <div class="flex items-center justify-between px-[18px] py-4">
-            <span class="text-[15px] font-semibold text-highlighted">In-Flight Work</span>
-            <button
-              class="text-[13px] font-semibold text-primary"
-              @click="emit('go', 'work')"
-            >
-              Projects &amp; Sites →
-            </button>
-          </div>
-          <div
-            v-for="p in inFlight"
-            :key="p.id"
-            class="flex cursor-pointer items-center gap-3 border-t border-default px-[18px] py-3 transition-colors hover:bg-muted"
-            @click="navigateTo(`/projects/${p.id}`)"
-          >
-            <div class="min-w-0 flex-1">
-              <div class="truncate text-sm font-semibold text-highlighted">
-                {{ p.name }}
-              </div>
-              <div class="mt-1 text-[12.5px] text-muted">
-                {{ p.due }} · {{ p.open }} {{ p.open === 1 ? 'task' : 'tasks' }} open
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="h-[5px] w-[86px] overflow-hidden rounded-full bg-muted">
-                <div
-                  class="h-full rounded-full"
-                  :class="p.bar"
-                  :style="{ width: p.progress + '%' }"
-                />
-              </div>
-              <span class="w-8 text-right text-xs text-muted tabular-nums">{{ p.progress }}%</span>
-            </div>
-            <StatusChip :status="p.status">
-              {{ p.statusLabel }}
-            </StatusChip>
-          </div>
-          <div
-            v-if="!inFlight.length"
-            class="flex flex-col items-center border-t border-default px-[18px] py-8 text-center"
-          >
-            <p class="text-sm text-muted">
-              No active projects right now.
-            </p>
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="sm"
-              class="mt-4 rounded-full"
-              icon="i-lucide-plus"
-              @click="emit('new-project')"
-            >
-              New Project
-            </UButton>
-          </div>
-        </div>
-
-        <div class="overflow-hidden rounded-card bg-default ring ring-default">
-          <div class="flex items-center justify-between px-[18px] py-4">
-            <span class="text-[15px] font-semibold text-highlighted">Latest Activity</span>
-            <button
-              class="text-[13px] font-semibold text-primary"
-              @click="emit('go', 'comms')"
-            >
-              Full Timeline →
-            </button>
-          </div>
-          <div
-            v-for="a in activity"
-            :key="a.id"
-            class="flex items-start gap-3 border-t border-default px-[18px] py-3"
-          >
-            <span
-              class="mt-0.5 inline-flex size-[30px] flex-none items-center justify-center rounded-[9px]"
-              :class="CATEGORY_TONE[a.category] ?? 'bg-muted text-muted'"
-            >
-              <UIcon
-                :name="a.icon"
-                class="size-[15px]"
-              />
-            </span>
-            <div class="min-w-0 flex-1">
-              <div class="truncate text-[13.5px] font-semibold text-highlighted">
-                {{ a.title }}
-              </div>
-              <div
-                v-if="a.meta"
-                class="mt-0.5 truncate text-[12.5px] text-muted"
-              >
-                {{ a.meta }}
-              </div>
-            </div>
-            <span class="whitespace-nowrap pt-0.5 text-xs text-muted tabular-nums">{{ shortDate(a.occurred_at) }}</span>
-          </div>
-          <div
-            v-if="!activity.length"
-            class="border-t border-default px-[18px] py-6 text-center text-[13px] text-muted"
-          >
-            No activity yet — events land here as they happen.
-          </div>
-        </div>
+    <div class="overflow-hidden rounded-card bg-default ring ring-default">
+      <div class="flex items-center justify-between px-6 py-5">
+        <span class="text-[15px] font-semibold text-highlighted">In-Flight Work</span>
+        <button
+          class="text-[13px] font-semibold text-primary"
+          @click="emit('go', 'work')"
+        >
+          Projects &amp; Sites →
+        </button>
       </div>
-
-      <!-- right: snapshots -->
-      <div class="flex min-w-0 flex-col gap-4">
-        <div class="rounded-card bg-default p-[18px] ring ring-default">
-          <div class="mb-3 flex items-center justify-between">
-            <span class="text-[15px] font-semibold text-highlighted">Billing Snapshot</span>
-            <button
-              class="text-[13px] font-semibold text-primary"
-              @click="emit('go', 'money')"
-            >
-              Sales &amp; Billing →
-            </button>
+      <div
+        v-for="p in inFlight"
+        :key="p.id"
+        class="flex cursor-pointer items-center gap-3 border-t border-default px-6 py-3.5 transition-colors hover:bg-muted"
+        @click="navigateTo(`/projects/${p.id}`)"
+      >
+        <div class="min-w-0 flex-1">
+          <div class="truncate text-sm font-semibold text-highlighted">
+            {{ p.name }}
           </div>
-          <div class="flex items-center justify-between text-[13.5px]">
-            <span class="text-muted">Outstanding</span>
-            <span
-              class="font-bold tabular-nums"
-              :class="(summary?.outstanding ?? 0) > 0 ? 'text-error' : 'text-highlighted'"
-            >{{ formatMoney(summary?.outstanding ?? 0) }}</span>
-          </div>
-          <div class="mt-2 flex items-center justify-between text-[13.5px]">
-            <span class="text-muted">Open Invoices</span>
-            <span class="tabular-nums text-default">{{ summary?.invoices_open ?? 0 }}</span>
-          </div>
-          <div class="mt-2 flex items-center justify-between text-[13.5px]">
-            <span class="text-muted">Total Billed</span>
-            <span class="tabular-nums text-default">{{ formatMoney(summary?.total_billed ?? 0) }}</span>
-          </div>
-          <template v-if="hosting?.configured && !hosting.error">
-            <div class="my-3 border-t border-default" />
-            <div class="flex items-center justify-between">
-              <span class="text-[13px] text-muted">Hosting Margin · Monthly</span>
-              <span
-                class="text-[14px] font-bold tabular-nums"
-                :class="(hosting.margin ?? 0) >= 0 ? 'text-success' : 'text-error'"
-              >{{ (hosting.margin ?? 0) >= 0 ? '+' : '' }}{{ formatMoney(hosting.margin ?? 0) }}<span
-                v-if="hosting.margin_pct != null"
-                class="ml-1 text-[12px] font-semibold text-muted"
-              >({{ hosting.margin_pct }}%)</span></span>
-            </div>
-          </template>
-        </div>
-
-        <div class="rounded-card bg-default p-[18px] ring ring-default">
-          <div class="mb-3 flex items-center justify-between">
-            <span class="text-[15px] font-semibold text-highlighted">Websites</span>
-            <button
-              class="text-[13px] font-semibold text-primary"
-              @click="emit('go', 'work')"
-            >
-              Manage →
-            </button>
-          </div>
-          <div class="flex items-center justify-between text-[13.5px]">
-            <span class="text-default">{{ summary?.websites_total ?? 0 }} {{ (summary?.websites_total ?? 0) === 1 ? 'site' : 'sites' }}</span>
-            <span
-              v-if="summary?.websites_live"
-              class="inline-flex items-center gap-1.5 font-semibold text-success"
-            ><span class="size-[7px] rounded-full bg-success" />{{ summary.websites_live }} live</span>
+          <div class="mt-1 text-[12.5px] text-muted">
+            {{ p.due }} · {{ p.open }} {{ p.open === 1 ? 'task' : 'tasks' }} open
           </div>
         </div>
+        <div class="flex items-center gap-2">
+          <div class="h-[5px] w-[86px] overflow-hidden rounded-full bg-muted">
+            <div
+              class="h-full rounded-full"
+              :class="p.bar"
+              :style="{ width: p.progress + '%' }"
+            />
+          </div>
+          <span class="w-8 text-right text-xs text-muted tabular-nums">{{ p.progress }}%</span>
+        </div>
+        <StatusChip :status="p.status">
+          {{ p.statusLabel }}
+        </StatusChip>
+      </div>
+      <div
+        v-if="!inFlight.length"
+        class="flex flex-col items-center border-t border-default px-6 py-8 text-center"
+      >
+        <p class="text-sm text-muted">
+          No active projects right now.
+        </p>
+        <UButton
+          color="neutral"
+          variant="outline"
+          size="sm"
+          class="mt-4"
+          icon="i-lucide-plus"
+          @click="emit('new-project')"
+        >
+          New Project
+        </UButton>
+      </div>
+    </div>
 
-        <div class="rounded-card bg-default p-[18px] ring ring-default">
-          <div class="mb-3 flex items-center justify-between">
-            <span class="text-[15px] font-semibold text-highlighted">Support Snapshot</span>
-            <button
-              class="text-[13px] font-semibold text-primary"
-              @click="emit('go', 'comms')"
-            >
-              Support &amp; Calls →
-            </button>
+    <div class="overflow-hidden rounded-card bg-default ring ring-default">
+      <div class="flex items-center justify-between px-6 py-5">
+        <span class="text-[15px] font-semibold text-highlighted">Latest Activity</span>
+        <button
+          class="text-[13px] font-semibold text-primary"
+          @click="emit('go', 'comms')"
+        >
+          Full Timeline →
+        </button>
+      </div>
+      <div
+        v-for="a in activity"
+        :key="a.id"
+        class="flex items-start gap-3 border-t border-default px-6 py-3.5"
+      >
+        <span
+          class="mt-0.5 inline-flex size-[30px] flex-none items-center justify-center rounded-btn"
+          :class="CATEGORY_TONE[a.category] ?? 'bg-muted text-muted'"
+        >
+          <UIcon
+            :name="a.icon"
+            class="size-[15px]"
+          />
+        </span>
+        <div class="min-w-0 flex-1">
+          <div class="truncate text-[13.5px] font-semibold text-highlighted">
+            {{ a.title }}
           </div>
-          <div class="flex items-center justify-between text-[13.5px]">
-            <span class="text-muted">Open Tickets</span>
-            <span class="tabular-nums text-default">{{ summary?.tickets_open ?? 0 }} of {{ summary?.tickets_total ?? 0 }}</span>
-          </div>
-          <div class="mt-2 flex items-center justify-between text-[13.5px]">
-            <span class="text-muted">Calls Logged</span>
-            <span class="tabular-nums text-default">{{ summary?.calls_total ?? 0 }}</span>
+          <div
+            v-if="a.meta"
+            class="mt-0.5 truncate text-[12.5px] text-muted"
+          >
+            {{ a.meta }}
           </div>
         </div>
+        <span class="whitespace-nowrap pt-0.5 text-xs text-muted tabular-nums">{{ shortDate(a.occurred_at) }}</span>
+      </div>
+      <div
+        v-if="!activity.length"
+        class="border-t border-default px-6 py-6 text-center text-[13px] text-muted"
+      >
+        No activity yet — events land here as they happen.
       </div>
     </div>
   </div>

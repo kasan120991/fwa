@@ -113,14 +113,15 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
+  <div class="flex flex-col gap-6">
     <!-- projects -->
     <div>
       <div class="mb-3.5 flex flex-wrap items-center justify-between gap-3.5">
         <div><span class="text-base font-semibold text-highlighted">Projects</span><span class="ml-2 text-sm text-muted">{{ activeCount }} active</span></div>
         <UButton
           icon="i-lucide-plus"
-          color="primary"
+          color="neutral"
+          variant="outline"
           size="sm"
           @click="emit('new-project')"
         >
@@ -138,7 +139,7 @@ onBeforeUnmount(() => {
           v-else-if="!projects.length"
           class="flex flex-col items-center px-6 py-12 text-center"
         >
-          <span class="mb-3 inline-flex size-11 items-center justify-center rounded-[12px] bg-muted text-muted"><UIcon
+          <span class="mb-3 inline-flex size-11 items-center justify-center rounded-card bg-muted text-muted"><UIcon
             name="i-lucide-folder-plus"
             class="size-5"
           /></span>
@@ -149,7 +150,7 @@ onBeforeUnmount(() => {
             color="neutral"
             variant="outline"
             size="sm"
-            class="mt-4 rounded-full"
+            class="mt-4"
             icon="i-lucide-plus"
             @click="emit('new-project')"
           >
@@ -163,22 +164,22 @@ onBeforeUnmount(() => {
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default bg-muted/40">
-                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th class="px-4 py-3 text-left eyebrow">
                   Project
                 </th>
-                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th class="px-4 py-3 text-left eyebrow">
                   Status
                 </th>
-                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th class="px-4 py-3 text-left eyebrow">
                   Progress
                 </th>
-                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th class="px-4 py-3 text-left eyebrow">
                   Due
                 </th>
-                <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th class="px-4 py-3 text-right eyebrow">
                   Value
                 </th>
-                <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th class="px-4 py-3 text-right eyebrow">
                   Tasks
                 </th>
                 <th class="w-11" />
@@ -239,7 +240,8 @@ onBeforeUnmount(() => {
         <div><span class="text-base font-semibold text-highlighted">Websites</span><span class="ml-2 text-sm text-muted">{{ websites.length }} {{ websites.length === 1 ? 'site' : 'sites' }} · {{ connectedCount }} connected</span></div>
         <UButton
           icon="i-lucide-plus"
-          color="primary"
+          color="neutral"
+          variant="outline"
           size="sm"
           @click="emit('add-website')"
         >
@@ -253,7 +255,7 @@ onBeforeUnmount(() => {
         <div
           v-for="w in websites"
           :key="w.id"
-          class="rounded-card bg-default p-5 ring ring-default"
+          class="rounded-card bg-default p-6 ring ring-default"
         >
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
@@ -330,23 +332,23 @@ onBeforeUnmount(() => {
               variant="outline"
               size="sm"
               icon="i-lucide-chart-line"
-              class="mt-4 rounded-full"
+              class="mt-4"
             >
               View Analytics
             </UButton>
           </div>
           <div v-else>
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted"><span class="size-1.5 rounded-full bg-ink-400" />Analytics not connected</span>
+            <span class="inline-flex items-center gap-1.5 rounded-chip bg-muted px-2 py-0.5 text-xs font-semibold text-muted"><span class="size-1.5 rounded-full bg-ink-400" />Analytics not connected</span>
             <p class="my-3.5 text-[13px] leading-relaxed text-muted">
               Connect analytics to track visitors and conversions for this site.
             </p>
             <UButton
               :to="`/websites/${w.id}`"
               block
-              color="primary"
+              color="neutral"
+              variant="outline"
               size="sm"
               icon="i-lucide-plus"
-              class="rounded-full"
             >
               Connect Analytics
             </UButton>
@@ -357,7 +359,7 @@ onBeforeUnmount(() => {
         v-else
         class="flex flex-col items-center rounded-card bg-default px-6 py-12 text-center ring ring-default"
       >
-        <span class="mb-3 inline-flex size-11 items-center justify-center rounded-[12px] bg-muted text-muted"><UIcon
+        <span class="mb-3 inline-flex size-11 items-center justify-center rounded-card bg-muted text-muted"><UIcon
           name="i-lucide-globe"
           class="size-5"
         /></span>
@@ -368,7 +370,7 @@ onBeforeUnmount(() => {
           color="neutral"
           variant="outline"
           size="sm"
-          class="mt-4 rounded-full"
+          class="mt-4"
           icon="i-lucide-plus"
           @click="emit('add-website')"
         >

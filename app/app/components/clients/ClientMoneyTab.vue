@@ -149,7 +149,8 @@ onBeforeUnmount(() => {
         </div>
         <UButton
           icon="i-lucide-plus"
-          color="primary"
+          color="neutral"
+          variant="outline"
           size="sm"
           @click="emit('new-invoice')"
         >
@@ -167,7 +168,7 @@ onBeforeUnmount(() => {
           v-else-if="!invoices.length"
           class="flex flex-col items-center px-4 py-12 text-center"
         >
-          <span class="mb-3 inline-flex size-11 items-center justify-center rounded-[12px] bg-muted text-muted"><UIcon
+          <span class="mb-3 inline-flex size-11 items-center justify-center rounded-card bg-muted text-muted"><UIcon
             name="i-lucide-receipt-text"
             class="size-5"
           /></span>
@@ -182,22 +183,22 @@ onBeforeUnmount(() => {
           <table class="w-full border-collapse">
             <thead>
               <tr class="border-b border-default bg-muted/40">
-                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th class="px-4 py-3 text-left eyebrow">
                   Invoice
                 </th>
-                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th class="px-4 py-3 text-left eyebrow">
                   Issued
                 </th>
-                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th class="px-4 py-3 text-left eyebrow">
                   Due
                 </th>
-                <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th class="px-4 py-3 text-right eyebrow">
                   Amount
                 </th>
-                <th class="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th class="px-4 py-3 text-right eyebrow">
                   Balance
                 </th>
-                <th class="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">
+                <th class="px-4 py-3 text-left eyebrow">
                   Status
                 </th>
               </tr>
@@ -253,10 +254,10 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div class="grid grid-cols-1 items-start gap-4 xl:grid-cols-[1.25fr_1fr]">
-      <!-- agreements -->
+    <!-- agreements -->
+    <div>
       <div class="overflow-hidden rounded-card bg-default ring ring-default">
-        <div class="flex items-center justify-between px-[18px] py-4">
+        <div class="flex items-center justify-between px-6 py-5">
           <span class="text-[15px] font-semibold text-highlighted">Agreements <span class="ml-1 text-[12.5px] font-normal text-muted">{{ agreements.length }} total</span></span>
           <NuxtLink
             to="/agreements"
@@ -281,10 +282,10 @@ onBeforeUnmount(() => {
           <div
             v-for="c in agreements"
             :key="c.key"
-            class="flex items-center gap-3.5 border-t border-default px-[18px] py-3.5 transition-colors hover:bg-muted"
+            class="flex items-center gap-3.5 border-t border-default px-6 py-3.5 transition-colors hover:bg-muted"
           >
             <span
-              class="inline-flex size-[38px] flex-none items-center justify-center rounded-[10px]"
+              class="inline-flex size-[38px] flex-none items-center justify-center rounded-btn"
               :class="c.type === 'Contract' ? 'bg-mist text-primary' : 'bg-muted text-muted'"
             >
               <UIcon
@@ -309,54 +310,60 @@ onBeforeUnmount(() => {
           </div>
         </template>
       </div>
+    </div>
 
-      <!-- hosting margin -->
-      <div class="rounded-card bg-default p-[18px] ring ring-default">
-        <div class="mb-3 flex items-center justify-between">
-          <span class="text-[15px] font-semibold text-highlighted">Hosting Margin</span>
-          <span class="text-[10px] font-medium uppercase tracking-[0.06em] text-muted">Monthly</span>
+    <!-- hosting margin -->
+    <div class="rounded-card bg-default ring ring-default">
+      <div class="flex items-center justify-between px-6 py-5">
+        <span class="text-[15px] font-semibold text-highlighted">Hosting Margin</span>
+        <span class="eyebrow">Monthly</span>
+      </div>
+      <p
+        v-if="!hosting"
+        class="border-t border-default px-6 py-5 text-[13px] text-muted"
+      >
+        Loading…
+      </p>
+      <p
+        v-else-if="!hosting.configured"
+        class="border-t border-default px-6 py-5 text-[13px] text-muted"
+      >
+        Connect DigitalOcean to see hosting cost.
+      </p>
+      <p
+        v-else-if="hosting.error"
+        class="border-t border-default px-6 py-5 text-[13px] text-muted"
+      >
+        Couldn't load hosting cost.
+      </p>
+      <div
+        v-else
+        class="grid grid-cols-1 gap-px border-t border-default bg-[var(--ui-border)] sm:grid-cols-3"
+      >
+        <div class="flex flex-col gap-2 bg-default px-6 py-[18px]">
+          <div class="eyebrow">
+            Care Plan MRR
+          </div>
+          <span class="text-[22px] font-bold leading-none tracking-tight text-highlighted tabular-nums">{{ formatMoney(hosting.mrr ?? 0) }}</span>
         </div>
-        <p
-          v-if="!hosting"
-          class="text-[13px] text-muted"
-        >
-          Loading…
-        </p>
-        <p
-          v-else-if="!hosting.configured"
-          class="text-[13px] text-muted"
-        >
-          Connect DigitalOcean to see hosting cost.
-        </p>
-        <p
-          v-else-if="hosting.error"
-          class="text-[13px] text-muted"
-        >
-          Couldn't load hosting cost.
-        </p>
-        <template v-else>
-          <div class="flex items-center justify-between text-[13.5px]">
-            <span class="text-muted">Care Plan MRR</span>
-            <span class="tabular-nums text-default">{{ formatMoney(hosting.mrr ?? 0) }}</span>
+        <div class="flex flex-col gap-2 bg-default px-6 py-[18px]">
+          <div class="eyebrow">
+            Hosting Cost{{ hosting.droplet_count ? ` · ${hosting.droplet_count} droplet${hosting.droplet_count === 1 ? '' : 's'}` : '' }}
           </div>
-          <div class="mt-2 flex items-center justify-between text-[13.5px]">
-            <span class="text-muted">Hosting Cost{{ hosting.droplet_count ? ` · ${hosting.droplet_count} droplet${hosting.droplet_count === 1 ? '' : 's'}` : '' }}</span>
-            <span class="tabular-nums text-default">{{ formatMoney(hosting.monthly_cost ?? 0) }}</span>
+          <span class="text-[22px] font-bold leading-none tracking-tight text-highlighted tabular-nums">{{ formatMoney(hosting.monthly_cost ?? 0) }}</span>
+        </div>
+        <div class="flex flex-col gap-2 bg-default px-6 py-[18px]">
+          <div class="eyebrow">
+            Margin
           </div>
-          <div class="my-3 border-t border-default" />
-          <div class="flex items-center justify-between">
-            <span class="text-[13px] text-muted">Margin</span>
-            <span
-              class="text-[15px] font-bold tabular-nums"
-              :class="(hosting.margin ?? 0) >= 0 ? 'text-success' : 'text-error'"
-            >
-              {{ formatMoney(hosting.margin ?? 0) }}<span
-                v-if="hosting.margin_pct != null"
-                class="ml-1 text-[12px] font-semibold text-muted"
-              >({{ hosting.margin_pct }}%)</span>
-            </span>
-          </div>
-        </template>
+          <span
+            class="text-[22px] font-bold leading-none tracking-tight tabular-nums"
+            :class="(hosting.margin ?? 0) >= 0 ? 'text-success' : 'text-error'"
+          >{{ formatMoney(hosting.margin ?? 0) }}<span
+            v-if="hosting.margin_pct != null"
+            class="ml-1.5 text-[12px] font-semibold text-muted"
+          >({{ hosting.margin_pct }}%)</span></span>
+        </div>
       </div>
     </div>
 
