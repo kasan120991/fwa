@@ -3,6 +3,7 @@ import { getTemplate, getActiveTemplate } from '../repositories/documentTemplate
 import { pandadocEnabled, createDocumentFromTemplate } from './pandadoc.js'
 import { resolveLineItems } from './lineItems.js'
 import { config } from '../config/env.js'
+import { getCachedSettings } from './settings.service.js'
 
 // Turn a Statement of Work into a contract. The SOW now lives on the PROPOSAL
 // (services/proposalContract.js is the live path); this file keeps the token
@@ -40,8 +41,16 @@ function clientAddress(c) {
  * identical on both, which is exactly why moving the SOW needed no renaming
  * here. Only the display name differs: proposals call it `title`.
  */
-export function buildTokens(sow, client) {
+export async function buildTokens(sow, client) {
   const project = sow
+  // The agency's own identity comes from Settings, so the agreement never
+  // hard-codes a legal name or address that later changes under it.
+  const settings = (await getCachedSettings()) ?? {}
+  const agencyAddress = clientAddress({
+    address_line1: settings.agency_address_line1, address_line2: settings.agency_address_line2,
+    city: settings.agency_city, region: settings.agency_region, postal_code: settings.agency_postal_code,
+    country: settings.agency_country
+  })
   const fee = project.project_fee
   const pct = Number(project.deposit_pct ?? 50)
   const deposit = fee == null ? null : Math.round((fee * pct / 100) * 100) / 100
@@ -57,6 +66,15 @@ export function buildTokens(sow, client) {
   const pairs = {
     // The agreement's "as of [Effective Date]" — the date the contract is generated.
     'Agreement.EffectiveDate': date(new Date()),
+    'Agency.LegalName': settings.agency_legal_name || settings.agency_display_name || 'Francis Web Agency',
+    'Agency.Address': agencyAddress,
+    'Agency.Email': settings.agency_support_email || '',
+    'Agency.Phone': settings.agency_phone || '',
+    'Invoice.DueDays': settings.invoice_due_days ?? 7,
+    // The proposal this agreement implements. Empty on the legacy project path,
+    // where there is no proposal to cite.
+    'Proposal.Code': project.code || '',
+    'Proposal.AcceptedDate': date(project.accepted_at),
     'Client.Company': client.company || client.name || '',
     'Client.Name': client.name || '',
     'Client.Address': clientAddress(client),
@@ -186,7 +204,7 @@ export async function generateProjectContract(project, client, overrides = {}) {
       templateUuid: template.template_uuid,
       name: title,
       client: recipientClient,
-      tokens: buildTokens(tokenProject, recipientClient),
+      tokens: await buildTokens(tokenProject, recipientClient),
       // Fee/deposit/balance are conveyed via tokens + the template's static payment
       // table — the project-contract template has no data-merge pricing block, so we
       // don't push a pricing table (avoids a PandaDoc 400). Local contract still

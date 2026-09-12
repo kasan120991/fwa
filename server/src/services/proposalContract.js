@@ -55,7 +55,7 @@ export async function ensureContractForProposal(proposal) {
       templateUuid: template.template_uuid,
       name: contract.title,
       client,
-      tokens: buildTokens(proposal, client),
+      tokens: await buildTokens(proposal, client),
       // No pricing table: this template conveys money through tokens and its
       // own static payment schedule, and pushing `items` at it is a 400.
       items: [],
