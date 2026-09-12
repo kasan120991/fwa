@@ -85,7 +85,8 @@ export async function buildTokens(sow, client) {
     'Project.Pages': project.pages_included,
     'Project.Features': project.key_features,
     'Project.Deliverables': project.design_deliverables,
-    'Project.ContentBy': project.content_provided_by,
+    // The enum reads as prose in Exhibit A, so give it its label, not its key.
+    'Project.ContentBy': { client: 'Client', developer: 'Developer', mix: 'Shared' }[project.content_provided_by] ?? project.content_provided_by,
     'Project.Revisions': project.revision_rounds,
     'Project.ThirdPartyCosts': project.third_party_costs,
     'Project.Fee': money(fee),
