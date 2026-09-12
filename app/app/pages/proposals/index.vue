@@ -101,15 +101,13 @@ const tiles = computed(() => [
 
 /* ------------------------------------------------------------------ actions */
 
-const formOpen = ref(false)
-const editId = ref<number | null>(null)
+// The editor is a full page (/proposals/new, /proposals/:id) — the SOW's six
+// paragraph fields never fit in a modal.
 function openNew() {
-  editId.value = null
-  formOpen.value = true
+  navigateTo('/proposals/new')
 }
 function openEdit(p: Proposal) {
-  editId.value = p.id
-  formOpen.value = true
+  navigateTo(`/proposals/${p.id}`)
 }
 
 const busy = ref<number | null>(null)
@@ -362,11 +360,5 @@ const clientName = (p: Proposal) => p.client_company || p.client_name || '—'
         </table>
       </div>
     </div>
-
-    <ProposalForm
-      v-model:open="formOpen"
-      :proposal-id="editId"
-      @saved="load"
-    />
   </div>
 </template>

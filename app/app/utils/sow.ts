@@ -1,8 +1,7 @@
-// The Statement of Work's shape, shared by the proposal form and the SowFields
-// component that renders it. Lives in utils rather than in the component because
-// `<script setup>` can't export, and both sides need the blank-state defaults to
+// The Statement of Work's shape, shared by the proposal editor and the
+// blank-state defaults it starts from. Lives in utils rather than in the
+// component because `<script setup>` can't export, and the defaults need to
 // agree with what the schema declares.
-
 export interface SowState {
   goals: string
   pages_included: string
