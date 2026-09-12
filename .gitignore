@@ -35,6 +35,7 @@ social/
 # Marketing website — its own git repo, tracked separately (see website/CLAUDE.md)
 website/
 
-# Brand strategy — internal positioning and price posture. Local-only; the rest of
-# brand/ (logos, tokens, system spec, voice guide) is public and intended to be.
-brand/rebrand/strategy/
+# The brand system (logos, tokens, spec, voice guide, strategy, PandaDoc agreement
+# source). Local-only since 2026-09-12 — the fwa-design skill symlinks into it and the
+# deploy rsync ships it, but it is not published with the code.
+brand/
