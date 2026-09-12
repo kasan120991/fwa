@@ -21,8 +21,10 @@ submission on the website POSTs to the server's webhook and becomes an **inbound
 `app/` and `portal/` share a byte-identical Highlighter token layer; `website/` shares the same
 brand but is built differently (the apps use Nuxt UI; the website deliberately does not).
 
-> Only `website/` is a separate git repo. `app/`, `server/`, `portal/`, `brand/`, and `deploy/`
-> are all tracked in this one.
+> Only `website/` is a separate git repo. `app/`, `server/`, `portal/`, and `deploy/` are tracked
+> in this one. **`brand/` is local-only** (gitignored since 2026-09-12, and rewritten out of the
+> public history) — the `fwa-design` skill symlinks into it and the deploy rsync ships it, but it
+> is never pushed. Back it up separately.
 
 > Working in `website/`? Follow **`website/CLAUDE.md`** (its build rules differ from the app's).
 > This root file is the shared context; the sections below are mostly the **Ops app**.
