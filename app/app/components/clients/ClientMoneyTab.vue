@@ -1,7 +1,8 @@
 <script setup lang="ts">
-// Client detail › Sales & Billing — invoices, agreements (proposals +
+// Client detail › Sales & Billing — invoices, agreements (one row per deal: the proposal +
 // contracts via the merged view), and the hosting-margin card.
-import { INV_STATUS, AGREEMENT_STATUS, type InvStatus, type AgreementStatus, type ChipStatus } from '~/utils/clientDetail'
+import { INV_STATUS, type InvStatus, type ChipStatus } from '~/utils/clientDetail'
+import { type ApiDeal, stageOf, chipFor, nextFor, whenFor } from '~/utils/deals'
 
 const props = defineProps<{ clientId: number }>()
 const emit = defineEmits<{ 'new-invoice': [], 'new-care-plan': [] }>()
@@ -60,44 +61,32 @@ const outstanding = computed(() => invoicesRaw.value
 // Shared invoice slideover — opened by id from the rows.
 const openInvoiceId = ref<number | null>(null)
 
-// ---- agreements ----
-interface ApiAgreementRow {
-  kind: 'proposal' | 'contract'
-  uid: string
-  title: string
-  status: AgreementStatus
-  total: number
-  recurring: boolean
-  created_at: string
-  closed_at: string | null
-  updated_at: string
-}
-interface AgreementRow { key: string, title: string, type: 'Contract' | 'Proposal', status: 'success' | 'info' | 'error' | 'neutral', statusLabel: string, meta: string, value: string }
+// ---- agreements: one row per deal, the Sales page's shape ----
+// Care plans have their own card below, so they're left out of this list.
+interface DealRow { key: string, title: string, code: string | null, chip: { label: string, status: ChipStatus }, next: string, when: string, value: string, to: string, projectCode: string | null }
 
-function mapAgreement(r: ApiAgreementRow): AgreementRow {
-  const type = r.kind === 'contract' ? 'Contract' : 'Proposal'
-  const m = AGREEMENT_STATUS[r.status]
-  let hint = 'Not sent'
-  if (r.status === 'accepted' || r.status === 'signed') hint = `${m.label} ${shortDate(r.closed_at)}`
-  else if (r.status === 'sent' || r.status === 'viewed') hint = type === 'Contract' ? 'Awaiting signature' : 'Awaiting response'
-  else if (r.status === 'declined' || r.status === 'expired' || r.status === 'voided') hint = `${m.label} ${shortDate(r.updated_at)}`
+function mapDeal(d: ApiDeal): DealRow {
+  const stage = stageOf(d)
+  const contractSide = !!d.contract_id && (stage === 'accepted' || stage === 'contract' || stage === 'signed')
   return {
-    key: r.uid,
-    title: r.title,
-    type,
-    status: m.status,
-    statusLabel: m.label,
-    meta: [type, shortDate(r.created_at), hint].filter(Boolean).join(' · '),
-    value: formatMoney(r.total) + (r.recurring ? '/mo' : '')
+    key: `${d.kind}-${d.proposal_id ?? d.contract_id}`,
+    title: d.title,
+    code: d.code,
+    chip: chipFor(d, stage),
+    next: nextFor(d, stage).text,
+    when: whenFor(d, stage),
+    value: formatMoney(d.total),
+    to: contractSide ? `/contracts/${d.contract_id}` : `/proposals/${d.proposal_id}`,
+    projectCode: d.project_code
   }
 }
 
-const agreements = ref<AgreementRow[]>([])
+const agreements = ref<DealRow[]>([])
 const agreementsPending = ref(true)
 async function loadAgreements() {
   try {
-    const { data } = await api<{ data: ApiAgreementRow[] }>('/agreements', { query: { client_id: props.clientId } })
-    agreements.value = data.map(mapAgreement)
+    const { data } = await api<{ data: ApiDeal[] }>('/agreements/deals', { query: { client_id: props.clientId } })
+    agreements.value = data.filter(d => d.kind === 'deal').map(mapDeal)
   } catch {
     agreements.value = []
   } finally {
@@ -126,6 +115,7 @@ onMounted(() => {
   socket.on('payment:created', onInvoiceChanged)
   socket.on('contract:changed', onAgreementChanged)
   socket.on('proposal:changed', onAgreementChanged)
+  socket.on('project:created', onAgreementChanged)
   socket.on('care-plan:changed', loadHosting)
 })
 onBeforeUnmount(() => {
@@ -133,6 +123,7 @@ onBeforeUnmount(() => {
   socket.off('payment:created', onInvoiceChanged)
   socket.off('contract:changed', onAgreementChanged)
   socket.off('proposal:changed', onAgreementChanged)
+  socket.off('project:created', onAgreementChanged)
   socket.off('care-plan:changed', loadHosting)
 })
 </script>
@@ -260,7 +251,7 @@ onBeforeUnmount(() => {
     <div>
       <div class="overflow-hidden rounded-card bg-default ring ring-default">
         <div class="flex items-center justify-between px-6 py-5">
-          <span class="text-[15px] font-semibold text-highlighted">Agreements <span class="ml-1 text-[12.5px] font-normal text-muted">{{ agreements.length }} total</span></span>
+          <span class="text-[15px] font-semibold text-highlighted">Agreements <span class="ml-1 text-[12.5px] font-normal text-muted">{{ agreements.length }} {{ agreements.length === 1 ? 'deal' : 'deals' }}</span></span>
           <NuxtLink
             to="/sales"
             class="text-[13px] font-semibold text-primary"
@@ -278,38 +269,39 @@ onBeforeUnmount(() => {
           v-else-if="!agreements.length"
           class="border-t border-default px-4 py-10 text-center text-sm text-muted"
         >
-          No proposals or contracts yet for this client.
+          No proposals yet for this client.
         </div>
         <template v-else>
-          <div
+          <NuxtLink
             v-for="c in agreements"
             :key="c.key"
-            class="flex items-center gap-3.5 border-t border-default px-6 py-3.5 transition-colors hover:bg-muted"
+            :to="c.to"
+            class="flex items-center gap-4 border-t border-default px-6 py-3.5 transition-colors hover:bg-muted"
           >
-            <span
-              class="inline-flex size-[38px] flex-none items-center justify-center rounded-btn"
-              :class="c.type === 'Contract' ? 'bg-mist text-primary' : 'bg-muted text-muted'"
-            >
-              <UIcon
-                :name="c.type === 'Contract' ? 'i-lucide-file-check-2' : 'i-lucide-file-text'"
-                class="size-[18px]"
-              />
-            </span>
             <div class="min-w-0 flex-1">
-              <div class="truncate text-sm font-semibold text-highlighted">
-                {{ c.title }}
+              <div class="flex items-center gap-2">
+                <span class="truncate text-sm font-semibold text-highlighted">{{ c.title }}</span>
+                <span
+                  v-if="c.projectCode"
+                  class="rounded-chip bg-muted px-1.5 py-px text-[11px] font-semibold text-muted tabular-nums"
+                >{{ c.projectCode }}</span>
               </div>
-              <div class="mt-0.5 text-[13px] text-muted">
-                {{ c.meta }}
+              <div class="mt-0.5 truncate text-[12.5px] text-muted">
+                <span
+                  v-if="c.code"
+                  class="tabular-nums"
+                >{{ c.code }} · </span>{{ c.when }} · {{ c.next }}
               </div>
             </div>
-            <span class="whitespace-nowrap text-sm text-highlighted tabular-nums">{{ c.value }}</span>
-            <div class="flex w-24 justify-end">
-              <StatusChip :status="c.status">
-                {{ c.statusLabel }}
-              </StatusChip>
-            </div>
-          </div>
+            <StatusChip :status="c.chip.status">
+              {{ c.chip.label }}
+            </StatusChip>
+            <span class="w-20 text-right text-sm font-semibold text-highlighted tabular-nums">{{ c.value }}</span>
+            <UIcon
+              name="i-lucide-chevron-right"
+              class="size-4 flex-none text-muted"
+            />
+          </NuxtLink>
         </template>
       </div>
     </div>
