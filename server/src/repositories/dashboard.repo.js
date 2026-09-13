@@ -168,7 +168,7 @@ export async function dashboardAttention() {
         : `${money(r.total)} · sent ${plural(Number(r.sent_days ?? 0), 'day')} ago`,
       icon: 'i-lucide-file-text', tone: expiring ? 'warning' : 'info',
       chip: expiring ? 'warning' : 'info', chipText: expiring ? 'Expiring' : 'Awaiting',
-      to: '/agreements', priority: 3000 - (expiring ? (7 - expIn) * 10 : 0)
+      to: '/sales', priority: 3000 - (expiring ? (7 - expIn) * 10 : 0)
     })
   }
 

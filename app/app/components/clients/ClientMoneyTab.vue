@@ -260,10 +260,10 @@ onBeforeUnmount(() => {
         <div class="flex items-center justify-between px-6 py-5">
           <span class="text-[15px] font-semibold text-highlighted">Agreements <span class="ml-1 text-[12.5px] font-normal text-muted">{{ agreements.length }} total</span></span>
           <NuxtLink
-            to="/agreements"
+            to="/sales"
             class="text-[13px] font-semibold text-primary"
           >
-            Open in Agreements →
+            Open in Sales →
           </NuxtLink>
         </div>
         <div

@@ -21,6 +21,8 @@ const lastSpan = computed(() => {
     'xl:col-span-1'
   ]
 })
+// At xl the row is one cell per item (three to five metrics).
+const xlCols = computed(() => ({ 3: 'xl:grid-cols-3', 4: 'xl:grid-cols-4' }[props.items.length] ?? 'xl:grid-cols-5'))
 
 const toneClass: Record<NonNullable<StatRowItem['tone']>, string> = {
   default: 'text-highlighted',
@@ -32,7 +34,10 @@ const toneClass: Record<NonNullable<StatRowItem['tone']>, string> = {
 
 <template>
   <!-- gap-px over the border colour draws the hairline grid at every breakpoint -->
-  <div class="grid grid-cols-2 gap-px overflow-hidden rounded-card border-t-2 border-citrine bg-[var(--ui-border)] ring ring-default md:grid-cols-3 xl:grid-cols-5">
+  <div
+    class="grid grid-cols-2 gap-px overflow-hidden rounded-card border-t-2 border-citrine bg-[var(--ui-border)] ring ring-default md:grid-cols-3"
+    :class="xlCols"
+  >
     <div
       v-for="(m, i) in items"
       :key="m.label"

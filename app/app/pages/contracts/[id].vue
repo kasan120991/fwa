@@ -267,7 +267,7 @@ onBeforeUnmount(() => {
         Contract Not Found
       </h3>
       <UButton
-        to="/agreements"
+        to="/sales"
         variant="link"
         color="primary"
         class="mt-2"

@@ -162,9 +162,12 @@ append-only table. Links via **nullable `lead_id`** *or* **`client_id`** (`ON DE
   contract `NULL` is legacy and means 50; **`0` is exact and means no deposit** (the column is a
   DECIMAL — read it through `contractDepositPct()`, never with a bare `?? 50`).
   `document_templates` maps a `purpose` to a PandaDoc template.
-- **Agreements** is a *view*, not a table — the Contracts page merges proposals + contracts into
-  one union query (each row carries a `kind` + `uid`). Keep the merge in the query layer; the
-  tables stay separate.
+- **Agreements** is a *view*, not a table — `GET /api/agreements` merges proposals + contracts into
+  one union query (each row carries a `kind` + `uid`; the portal and the client Money tab read it),
+  and `GET /api/agreements/deals` is the **Sales page's** shape: one row per deal (proposal LEFT
+  JOIN its latest project contract and the project it produced; care plans as their own rows).
+  Stage derivation lives in `app/utils/deals.ts`. Keep the merge in the query layer; the tables
+  stay separate.
 - **Invoices** + **payments** — Stripe-driven, children of a client (invoices carry line items).
   Project billing is a **deposit/balance split**, not milestone invoicing: `kind='deposit'`
   (fee × `deposit_pct`, idempotent, auto-issued on contract signature when `deposit_pct > 0`) and
@@ -419,7 +422,9 @@ Persistent left sidebar (collapsible) + top bar + main content. Nav groups (✓ 
 
 - **(top)** Dashboard ✓ · AI Receptionist ✓
 - **Clients & Work** — Leads ✓ · Clients ✓ · Projects ✓ · Tasks ✓
-- **Sales** — Proposals ✓ · Contracts ✓
+- **Sales** — Sales ✓ (one page, one row per deal: the proposal with its contract folded in as a
+  stage. `/proposals` and `/agreements` redirect there; the editor at `/proposals/:id` and the
+  contract viewer at `/contracts/:id` stay)
 - **Billing** — Invoices ✓ · Payments ✓ · Expenses ✓
 - **Workspace** — Files ✓ · **Calendar (stub)** · Websites ✓
 - **(pinned bottom)** Support Tickets ✓

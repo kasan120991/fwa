@@ -77,3 +77,56 @@ export async function agreementsSummary() {
     value_in_flight: Number(flight.v)
   }
 }
+
+/* ------------------------------------------------------------------ deals */
+
+// The Sales page: ONE row per deal — the proposal with the contract it
+// produced folded in (the latest project contract for that proposal, so a
+// voided-and-regenerated one doesn't double the row) plus the project the
+// signature created. Care plans have no proposal, so they ride along as their
+// own rows with kind = 'care_plan'. Stage derivation lives in the app
+// (utils/deals.ts); this is just the flat join.
+const DEALS = `
+  SELECT 'deal' AS kind, p.id AS proposal_id, p.code, p.title, p.client_id,
+         p.status AS proposal_status, p.total, p.deposit_pct, p.expires_at,
+         p.sent_at, p.viewed_at, p.accepted_at, p.declined_at, p.accept_source,
+         p.created_at, p.updated_at,
+         ct.id AS contract_id, ct.status AS contract_status,
+         ct.sent_at AS contract_sent_at, ct.viewed_at AS contract_viewed_at,
+         ct.signed_at, ct.updated_at AS contract_updated_at, 'one_time' AS billing_interval,
+         pr.id AS project_id, pr.code AS project_code, pr.status AS project_status,
+         c.company AS client_company, c.name AS client_name
+  FROM proposals p
+  JOIN clients c ON c.id = p.client_id
+  LEFT JOIN contracts ct ON ct.id = (SELECT MAX(x.id) FROM contracts x WHERE x.proposal_id = p.id)
+  LEFT JOIN projects pr ON pr.id = ct.project_id
+  UNION ALL
+  SELECT 'care_plan' AS kind, NULL AS proposal_id, CONCAT('CON-', LPAD(ct.id, 4, '0')) AS code, ct.title, ct.client_id,
+         NULL AS proposal_status, ct.total, NULL AS deposit_pct, ct.expires_at,
+         NULL AS sent_at, NULL AS viewed_at, NULL AS accepted_at, NULL AS declined_at, NULL AS accept_source,
+         ct.created_at, ct.updated_at,
+         ct.id AS contract_id, ct.status AS contract_status,
+         ct.sent_at AS contract_sent_at, ct.viewed_at AS contract_viewed_at,
+         ct.signed_at, ct.updated_at AS contract_updated_at, ct.billing_interval,
+         NULL AS project_id, NULL AS project_code, NULL AS project_status,
+         c.company AS client_company, c.name AS client_name
+  FROM contracts ct
+  JOIN clients c ON c.id = ct.client_id
+  WHERE ct.proposal_id IS NULL
+`
+
+export async function listDeals(opts = {}) {
+  const limit = Math.min(Math.max(Number(opts.limit) || 200, 1), 500)
+  const where = []
+  const params = {}
+  if (opts.client_id) { where.push('d.client_id = :client_id'); params.client_id = opts.client_id }
+  const whereSql = where.length ? ` WHERE ${where.join(' AND ')}` : ''
+  const rows = await query(`SELECT * FROM (${DEALS}) d${whereSql} ORDER BY d.updated_at DESC LIMIT ${limit}`, params)
+  return rows.map(r => ({
+    ...r,
+    total: r.total == null ? null : Number(r.total),
+    deposit_pct: r.deposit_pct == null ? null : Number(r.deposit_pct),
+    recurring: r.billing_interval === 'monthly',
+    client: r.client_company || r.client_name || 'Unknown'
+  }))
+}

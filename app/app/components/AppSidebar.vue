@@ -82,11 +82,9 @@ const groups: NavGroup[] = [
   {
     label: 'Sales',
     items: [
-      // Proposals then Contracts — the order the work actually happens in: the
-      // proposal carries the scope and the price, and accepting it is what
-      // produces the contract.
-      { label: 'Proposals', to: '/proposals', icon: 'i-lucide-file-text' },
-      { label: 'Contracts', to: '/agreements', icon: 'i-lucide-file-signature' }
+      // One page for the whole flow: a deal is the proposal with the contract
+      // it produced folded in as a stage.
+      { label: 'Sales', to: '/sales', icon: 'i-lucide-handshake' }
     ]
   },
   {

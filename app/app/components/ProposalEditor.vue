@@ -214,7 +214,7 @@ const cancelConfirm = ref(false)
 function leave() {
   cancelConfirm.value = false
   markPristine()
-  router.push('/proposals')
+  router.push('/sales')
 }
 function requestCancel() {
   if (dirty.value) cancelConfirm.value = true

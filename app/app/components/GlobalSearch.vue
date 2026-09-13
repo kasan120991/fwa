@@ -24,7 +24,7 @@ const NAV = [
   { label: 'Clients', icon: 'i-lucide-users', to: '/clients' },
   { label: 'Projects', icon: 'i-lucide-folder-kanban', to: '/projects' },
   { label: 'Tasks', icon: 'i-lucide-list-checks', to: '/tasks' },
-  { label: 'Agreements', icon: 'i-lucide-file-signature', to: '/agreements' },
+  { label: 'Sales', icon: 'i-lucide-handshake', to: '/sales' },
   { label: 'Invoices', icon: 'i-lucide-receipt-text', to: '/invoices' },
   { label: 'Payments', icon: 'i-lucide-credit-card', to: '/payments' },
   { label: 'Expenses', icon: 'i-lucide-wallet', to: '/expenses' },

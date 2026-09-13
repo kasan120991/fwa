@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { listAgreements, agreementsSummary } from '../repositories/agreements.repo.js'
+import { listAgreements, agreementsSummary, listDeals } from '../repositories/agreements.repo.js'
 
 export const agreementsRouter = Router()
 
@@ -37,4 +37,11 @@ agreementsRouter.get('/', async (req, res) => {
 // GET /api/agreements/summary — tile numbers for the Agreements page.
 agreementsRouter.get('/summary', async (req, res) => {
   res.json({ data: await agreementsSummary() })
+})
+
+// GET /api/agreements/deals — one row per deal for the Sales page (proposal +
+// its contract + the project it produced; care plans as their own rows).
+agreementsRouter.get('/deals', async (req, res) => {
+  const client_id = req.query.client_id ? Number(req.query.client_id) : undefined
+  res.json({ data: await listDeals({ client_id, limit: req.query.limit }) })
 })

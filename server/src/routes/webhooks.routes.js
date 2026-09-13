@@ -515,12 +515,12 @@ async function handleDocumentEvent(doc) {
         category: 'agreement', icon: 'i-lucide-file-check-2',
         title: `Contract signed: ${contract.title}`,
         meta: contract.total ? `$${Number(contract.total).toLocaleString('en-US')}` : null,
-        link: '/agreements'
+        link: '/sales'
       })
       try {
         await clientNotify(contract.client_id, {
           category: 'contract', tone: 'success', icon: 'i-lucide-file-check-2',
-          title: 'Contract signed', body: contract.title, link: '/agreements'
+          title: 'Contract signed', body: contract.title, link: '/sales'
         })
       } catch (err) { console.error('client contract notify failed:', err.message) }
     }
