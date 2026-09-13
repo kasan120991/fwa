@@ -144,19 +144,22 @@ const nextSteps = computed(() => {
   ]
 })
 
-/** Multi-line SOW fields render as lists; one line per item. */
-const lines = (v: string | null | undefined) =>
-  String(v ?? '').split(/\r?\n/).map(l => l.replace(/^[-•*]\s*/, '').trim()).filter(Boolean)
+/** Multi-line SOW fields render as paragraphs, one per line. A paragraph that
+ *  says "not in this SOW" is set as a muted aside so it can't be read as part
+ *  of the deliverable. */
+const paragraphs = (v: string | null | undefined) =>
+  String(v ?? '').split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+    .map(text => ({ text, aside: /not in this sow/i.test(text) }))
 
 /** The scope blocks, skipping any the proposal didn't fill in. */
 const scope = computed(() => {
   const p = proposal.value
   if (!p) return []
   return [
-    { label: 'Pages Included', items: lines(p.pages_included) },
-    { label: 'Key Features', items: lines(p.key_features) },
-    { label: 'Design Deliverables', items: lines(p.design_deliverables) }
-  ].filter(s => s.items.length)
+    { label: 'Pages Included', paragraphs: paragraphs(p.pages_included) },
+    { label: 'Key Features', paragraphs: paragraphs(p.key_features) },
+    { label: 'Design Deliverables', paragraphs: paragraphs(p.design_deliverables) }
+  ].filter(s => s.paragraphs.length)
 })
 
 /** The terms strip under the scope, skipping anything unset. */
@@ -285,35 +288,30 @@ const terms = computed(() => {
         </div>
 
         <template v-else>
-          <!-- ===== scope ===== -->
+          <!-- ===== scope: stacked prose sections ===== -->
           <section v-if="scope.length">
             <h2 class="font-display text-[22px] font-bold tracking-[-0.028em] text-highlighted">
               What's included
             </h2>
-            <div
-              class="mt-6 grid grid-cols-1 gap-8"
-              :class="scope.length > 1 ? 'md:grid-cols-2 lg:grid-cols-3' : ''"
-            >
+            <div class="mt-5 border-t border-default">
               <div
                 v-for="s in scope"
                 :key="s.label"
+                class="border-b border-default py-6"
               >
-                <h3 class="eyebrow">
+                <h3 class="eyebrow mb-3">
                   {{ s.label }}
                 </h3>
-                <ul class="mt-3 border-t border-default">
-                  <li
-                    v-for="(item, i) in s.items"
+                <div class="flex flex-col gap-3.5">
+                  <p
+                    v-for="(para, i) in s.paragraphs"
                     :key="i"
-                    class="flex gap-3 border-b border-default py-2.5 text-[14.5px] leading-snug text-default"
+                    class="text-[15.5px] leading-[1.6]"
+                    :class="para.aside ? 'border-l-2 border-ink-300 pl-3.5 text-muted' : 'text-default'"
                   >
-                    <UIcon
-                      name="i-lucide-check"
-                      class="mt-[3px] size-3.5 flex-none text-muted"
-                    />
-                    <span>{{ item }}</span>
-                  </li>
-                </ul>
+                    {{ para.text }}
+                  </p>
+                </div>
               </div>
             </div>
           </section>
@@ -448,7 +446,7 @@ const terms = computed(() => {
             <h2 class="eyebrow">
               Terms &amp; Notes
             </h2>
-            <p class="mt-3 max-w-[68ch] whitespace-pre-line text-[14.5px] leading-relaxed text-muted">
+            <p class="mt-3 whitespace-pre-line text-[14.5px] leading-relaxed text-muted">
               {{ proposal.special_terms }}
             </p>
           </section>
