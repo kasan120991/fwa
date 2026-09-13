@@ -96,7 +96,19 @@ publicRouter.get('/proposals/self', async (req, res) => {
   // A decided proposal stops being a live pricing page. This also matters for
   // the backfilled historical ones, which would otherwise each have a public URL.
   if (proposal.status !== 'sent' && proposal.status !== 'viewed') {
-    return res.json({ data: { decided: true, status: proposal.status, title: proposal.title, code: proposal.code } })
+    // Still branded: the page shows who sent it and how to reach them.
+    const settings = await getCachedSettings()
+    return res.json({ data: {
+      decided: true,
+      status: proposal.status,
+      title: proposal.title,
+      code: proposal.code,
+      agency: {
+        name: settings?.agency_display_name || settings?.agency_legal_name || 'Francis Web Agency',
+        email: settings?.agency_support_email || null,
+        logo_url: settings?.agency_logo_url || null
+      }
+    } })
   }
   res.json({ data: { decided: false, ...(await publicView(proposal)) } })
 })

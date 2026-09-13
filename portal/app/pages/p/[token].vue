@@ -33,9 +33,11 @@ interface View {
   start_date: string | null
   target_launch_date: string | null
   special_terms: string | null
+  expires_at: string | null
   items: Item[]
   client: { name: string }
-  agency: { name: string, email: string | null, logo_url: string | null }
+  // The decided payload is slimmer (no scope, no money) but still carries agency.
+  agency?: { name: string, email: string | null, logo_url: string | null }
 }
 
 const proposal = ref<View | null>(null)
@@ -95,6 +97,9 @@ async function decline() {
 
 const money = (n: number | null | undefined) =>
   n == null ? '—' : `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+// Whole dollars for the headline figure; cents live in the line items.
+const moneyRound = (n: number | null | undefined) =>
+  n == null ? '—' : `$${Math.round(Number(n)).toLocaleString('en-US')}`
 const longDate = (d: string | null) => {
   if (!d) return null
   const [y, m, day] = d.slice(0, 10).split('-').map(Number)
@@ -110,26 +115,111 @@ const balance = computed(() => {
   if (!p?.project_fee || deposit.value == null) return null
   return Math.round((p.project_fee - deposit.value) * 100) / 100
 })
-const CONTENT_BY: Record<string, string> = { client: 'Client', developer: 'Us', mix: 'Shared' }
+const CONTENT_BY: Record<string, string> = { client: 'Provided by you', developer: 'Written by us', mix: 'Shared' }
+
+const agencyName = computed(() => proposal.value?.agency?.name || 'Francis Web Agency')
+const agencyEmail = computed(() => proposal.value?.agency?.email || null)
+
+/** The ink band's metadata strip: CODE · PREPARED FOR … · VALID UNTIL … */
+const metaStrip = computed(() => {
+  const p = proposal.value
+  if (!p) return []
+  return [
+    p.code,
+    p.client?.name ? `Prepared for ${p.client.name}` : null,
+    p.expires_at ? `Valid until ${longDate(p.expires_at)}` : null
+  ].filter(Boolean) as string[]
+})
+
+/** What accepting sets in motion — honest about the deposit rule. */
+const nextSteps = computed(() => {
+  const p = proposal.value
+  const noDeposit = !p || p.deposit_pct === 0
+  return [
+    { title: 'Accept', body: 'Type your name below. Nothing is charged at this step.' },
+    { title: 'Sign the agreement', body: 'It arrives by email within a few minutes for e-signature.' },
+    noDeposit
+      ? { title: 'We start', body: 'Work begins on signature. The full fee is invoiced at completion.' }
+      : { title: 'Pay the deposit', body: `A ${p.deposit_pct}% deposit invoice follows the signature. Work starts when it's paid.` }
+  ]
+})
+
+/** Multi-line SOW fields render as lists; one line per item. */
+const lines = (v: string | null | undefined) =>
+  String(v ?? '').split(/\r?\n/).map(l => l.replace(/^[-•*]\s*/, '').trim()).filter(Boolean)
 
 /** The scope blocks, skipping any the proposal didn't fill in. */
 const scope = computed(() => {
   const p = proposal.value
   if (!p) return []
   return [
-    { label: 'Pages Included', value: p.pages_included },
-    { label: 'Key Features', value: p.key_features },
-    { label: 'Design Deliverables', value: p.design_deliverables }
-  ].filter(s => s.value)
+    { label: 'Pages Included', items: lines(p.pages_included) },
+    { label: 'Key Features', items: lines(p.key_features) },
+    { label: 'Design Deliverables', items: lines(p.design_deliverables) }
+  ].filter(s => s.items.length)
+})
+
+/** The terms strip under the scope, skipping anything unset. */
+const terms = computed(() => {
+  const p = proposal.value
+  if (!p) return []
+  return [
+    p.content_provided_by ? { label: 'Content', value: CONTENT_BY[p.content_provided_by] ?? p.content_provided_by } : null,
+    { label: 'Revisions', value: `${p.revision_rounds} ${p.revision_rounds === 1 ? 'round' : 'rounds'}` },
+    p.start_date ? { label: 'Start', value: longDate(p.start_date) } : null,
+    p.target_launch_date ? { label: 'Target Launch', value: longDate(p.target_launch_date) } : null
+  ].filter(Boolean) as { label: string, value: string | null }[]
 })
 </script>
 
 <template>
-  <div class="min-h-screen bg-muted px-4 py-10 sm:py-16">
-    <div class="mx-auto w-full max-w-3xl">
+  <div class="flex min-h-screen flex-col bg-default">
+    <!-- ===== ink band: the one per page ===== -->
+    <header class="bg-deep text-white">
+      <div class="mx-auto w-full max-w-[880px] px-5 py-8 sm:px-8 sm:py-10">
+        <div class="flex items-center justify-between gap-4">
+          <a
+            href="https://franciswebagency.com"
+            class="inline-flex items-center gap-3"
+          >
+            <img
+              src="/brand/fwa-mark-white.svg"
+              alt=""
+              class="block size-7"
+            >
+            <span class="text-[15px] font-semibold tracking-[-0.01em]">{{ agencyName }}</span>
+          </a>
+          <span class="eyebrow text-[#8C9096]">Proposal</span>
+        </div>
+
+        <div
+          v-if="proposal && !outcome && !loadError"
+          class="mt-12 sm:mt-16"
+        >
+          <div
+            v-if="metaStrip.length"
+            class="metastrip text-[#8C9096]"
+          >
+            {{ metaStrip.join(' · ') }}
+          </div>
+          <h1 class="mt-3 max-w-[16ch] font-display text-[34px] font-bold leading-[1.08] tracking-[-0.03em] text-white [text-wrap:balance] sm:text-[46px]">
+            {{ proposal.title }}
+          </h1>
+          <div class="mt-6 h-0.5 w-10 bg-citrine" />
+          <p
+            v-if="proposal.goals"
+            class="mt-6 max-w-[62ch] whitespace-pre-line text-[16px] leading-[1.6] text-[#B0B3B0] sm:text-[17px]"
+          >
+            {{ proposal.goals }}
+          </p>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto w-full max-w-[880px] flex-1 px-5 py-10 sm:px-8 sm:py-14">
       <div
         v-if="pending"
-        class="rounded-card bg-default p-10 text-center text-sm text-muted ring ring-default"
+        class="py-16 text-center text-sm text-muted"
       >
         Loading…
       </div>
@@ -138,16 +228,18 @@ const scope = computed(() => {
            can't be used to probe which tokens are real. -->
       <div
         v-else-if="loadError && !proposal"
-        class="rounded-card bg-default p-10 text-center ring ring-default"
+        class="mx-auto max-w-md py-10 text-center"
       >
-        <UIcon
-          name="i-lucide-link-2-off"
-          class="size-8 text-muted"
-        />
-        <h1 class="mt-4 font-display text-xl font-semibold text-highlighted">
+        <span class="inline-flex size-12 items-center justify-center rounded-card bg-sand text-muted">
+          <UIcon
+            name="i-lucide-link-2-off"
+            class="size-6"
+          />
+        </span>
+        <h2 class="mt-5 font-display text-2xl font-bold tracking-[-0.028em] text-highlighted">
           This link is no longer valid
-        </h1>
-        <p class="mt-2 text-sm text-muted">
+        </h2>
+        <p class="mt-3 text-[15px] leading-relaxed text-muted">
           It may have expired, or the proposal has already been decided. Get in touch and we'll send a fresh one.
         </p>
       </div>
@@ -156,17 +248,24 @@ const scope = computed(() => {
         <!-- Decided: either it already was, or we just decided it. -->
         <div
           v-if="outcome"
-          class="rounded-card bg-default p-10 text-center ring ring-default"
+          class="mx-auto max-w-md py-10 text-center"
         >
-          <UIcon
-            :name="outcome === 'accepted' ? 'i-lucide-circle-check' : 'i-lucide-circle-x'"
-            class="size-9"
-            :class="outcome === 'accepted' ? 'text-success' : 'text-muted'"
-          />
-          <h1 class="mt-4 font-display text-2xl font-semibold tracking-tight text-highlighted">
-            {{ outcome === 'accepted' ? 'Thank you — accepted' : 'Proposal declined' }}
-          </h1>
-          <p class="mx-auto mt-3 max-w-md text-sm text-muted">
+          <span
+            class="inline-flex size-12 items-center justify-center rounded-card"
+            :class="outcome === 'accepted' ? 'bg-success/10 text-success' : 'bg-sand text-muted'"
+          >
+            <UIcon
+              :name="outcome === 'accepted' ? 'i-lucide-check' : 'i-lucide-x'"
+              class="size-6"
+            />
+          </span>
+          <div class="metastrip mt-6">
+            {{ [proposal.code, proposal.title].filter(Boolean).join(' · ') }}
+          </div>
+          <h2 class="mt-2 font-display text-[30px] font-bold leading-tight tracking-[-0.028em] text-highlighted [text-wrap:balance]">
+            {{ outcome === 'accepted' ? 'Thank you — it’s accepted' : 'Proposal declined' }}
+          </h2>
+          <p class="mt-4 text-[15px] leading-relaxed text-muted">
             <template v-if="outcome === 'accepted'">
               We're preparing your agreement now. It'll arrive by email shortly for signature.
             </template>
@@ -175,159 +274,221 @@ const scope = computed(() => {
             </template>
           </p>
           <p
-            v-if="proposal.agency.email"
-            class="mt-6 text-[13px] text-muted"
+            v-if="agencyEmail"
+            class="mt-8 text-[13.5px] text-muted"
           >
             Questions? <a
-              :href="`mailto:${proposal.agency.email}`"
-              class="font-medium text-primary underline underline-offset-2"
-            >{{ proposal.agency.email }}</a>
+              :href="`mailto:${agencyEmail}`"
+              class="font-semibold text-highlighted underline decoration-ink-300 decoration-1 underline-offset-4 hover:decoration-citrine hover:decoration-2"
+            >{{ agencyEmail }}</a>
           </p>
         </div>
 
         <template v-else>
-          <!-- header -->
-          <div class="flex items-center justify-between gap-4">
-            <div class="text-[13px] font-semibold uppercase tracking-[0.08em] text-muted">
-              {{ proposal.agency.name }}
-            </div>
+          <!-- ===== scope ===== -->
+          <section v-if="scope.length">
+            <h2 class="font-display text-[22px] font-bold tracking-[-0.028em] text-highlighted">
+              What's included
+            </h2>
             <div
-              v-if="proposal.code"
-              class="text-[13px] text-muted tabular-nums"
-            >
-              {{ proposal.code }}
-            </div>
-          </div>
-
-          <div class="mt-4 rounded-card bg-default p-6 ring ring-default sm:p-8">
-            <div class="text-[13px] text-muted">
-              Prepared for {{ proposal.client.name }}
-            </div>
-            <h1 class="mt-1.5 font-display text-[28px] font-semibold leading-tight tracking-tight text-highlighted">
-              {{ proposal.title }}
-            </h1>
-            <p
-              v-if="proposal.goals"
-              class="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-default"
-            >
-              {{ proposal.goals }}
-            </p>
-
-            <!-- scope -->
-            <div
-              v-if="scope.length"
-              class="mt-8 space-y-5 border-t border-default pt-6"
+              class="mt-6 grid grid-cols-1 gap-8"
+              :class="scope.length > 1 ? 'md:grid-cols-2 lg:grid-cols-3' : ''"
             >
               <div
                 v-for="s in scope"
                 :key="s.label"
               >
-                <h2 class="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted">
+                <h3 class="eyebrow">
                   {{ s.label }}
-                </h2>
-                <p class="mt-1.5 whitespace-pre-line text-[14.5px] leading-relaxed text-default">
-                  {{ s.value }}
-                </p>
+                </h3>
+                <ul class="mt-3 border-t border-default">
+                  <li
+                    v-for="(item, i) in s.items"
+                    :key="i"
+                    class="flex gap-3 border-b border-default py-2.5 text-[14.5px] leading-snug text-default"
+                  >
+                    <UIcon
+                      name="i-lucide-check"
+                      class="mt-[3px] size-3.5 flex-none text-muted"
+                    />
+                    <span>{{ item }}</span>
+                  </li>
+                </ul>
               </div>
             </div>
+          </section>
 
-            <!-- terms -->
-            <dl class="mt-8 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-default pt-6 sm:grid-cols-4">
-              <div v-if="proposal.content_provided_by">
-                <dt class="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted">
-                  Content By
-                </dt>
-                <dd class="mt-1 text-sm text-highlighted">
-                  {{ CONTENT_BY[proposal.content_provided_by] ?? proposal.content_provided_by }}
-                </dd>
+          <!-- ===== terms strip ===== -->
+          <section
+            v-if="terms.length"
+            class="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-card border-t-2 border-citrine bg-[var(--ui-border)] ring ring-default"
+            :class="terms.length >= 4 ? 'sm:grid-cols-4' : terms.length === 3 ? 'sm:grid-cols-3' : ''"
+          >
+            <div
+              v-for="t in terms"
+              :key="t.label"
+              class="bg-default px-5 py-4"
+            >
+              <div class="eyebrow">
+                {{ t.label }}
               </div>
+              <div class="mt-1.5 text-[15px] font-semibold tracking-[-0.01em] text-highlighted">
+                {{ t.value }}
+              </div>
+            </div>
+          </section>
+
+          <!-- ===== investment: the linen register ===== -->
+          <section class="mt-10 overflow-hidden rounded-band bg-sand">
+            <div class="flex flex-col gap-6 px-6 pt-7 sm:flex-row sm:items-end sm:justify-between sm:px-8 sm:pt-8">
               <div>
-                <dt class="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted">
-                  Revisions
-                </dt>
-                <dd class="mt-1 text-sm text-highlighted">
-                  {{ proposal.revision_rounds }} rounds
-                </dd>
+                <div class="eyebrow">
+                  Investment
+                </div>
+                <div class="mt-2 font-display text-[40px] font-bold leading-none tracking-[-0.03em] text-highlighted tabular-nums sm:text-[48px]">
+                  {{ moneyRound(proposal.project_fee ?? proposal.total) }}
+                </div>
+                <div class="mt-2 text-[13px] text-muted">
+                  {{ proposal.currency }} · fixed fee for the scope above
+                </div>
               </div>
-              <div v-if="proposal.start_date">
-                <dt class="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted">
-                  Start
-                </dt>
-                <dd class="mt-1 text-sm text-highlighted">
-                  {{ longDate(proposal.start_date) }}
-                </dd>
-              </div>
-              <div v-if="proposal.target_launch_date">
-                <dt class="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted">
-                  Target Launch
-                </dt>
-                <dd class="mt-1 text-sm text-highlighted">
-                  {{ longDate(proposal.target_launch_date) }}
-                </dd>
-              </div>
-            </dl>
-
-            <!-- money -->
-            <div class="mt-8 rounded-card bg-muted p-5 ring ring-default">
-              <div class="flex items-baseline justify-between gap-4">
-                <span class="text-[13px] font-semibold uppercase tracking-[0.06em] text-muted">Project Fee</span>
-                <span class="font-display text-[30px] font-semibold leading-none tracking-tight text-highlighted tabular-nums">
-                  {{ money(proposal.project_fee ?? proposal.total) }}
-                </span>
-              </div>
-              <div
+              <dl
                 v-if="deposit != null"
-                class="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-[13px] text-muted"
+                class="flex gap-8"
               >
-                <span v-if="proposal.deposit_pct === 0">No deposit — full fee due on completion</span>
-                <template v-else>
-                  <span>{{ proposal.deposit_pct }}% deposit to begin: <span class="font-semibold text-highlighted tabular-nums">{{ money(deposit) }}</span></span>
-                  <span>Balance on completion: <span class="font-semibold text-highlighted tabular-nums">{{ money(balance) }}</span></span>
+                <template v-if="proposal.deposit_pct === 0">
+                  <div>
+                    <dt class="eyebrow">
+                      Payment
+                    </dt>
+                    <dd class="mt-1.5 text-[15px] font-semibold text-highlighted">
+                      No deposit
+                    </dd>
+                    <dd class="text-[12.5px] text-muted">
+                      Full fee on completion
+                    </dd>
+                  </div>
                 </template>
-              </div>
-              <ul
-                v-if="proposal.items.length"
-                class="mt-4 space-y-1.5 border-t border-default pt-4"
-              >
-                <li
+                <template v-else>
+                  <div>
+                    <dt class="eyebrow">
+                      Deposit · {{ proposal.deposit_pct }}%
+                    </dt>
+                    <dd class="mt-1.5 text-[17px] font-bold text-highlighted tabular-nums">
+                      {{ money(deposit) }}
+                    </dd>
+                    <dd class="text-[12.5px] text-muted">
+                      To begin
+                    </dd>
+                  </div>
+                  <div>
+                    <dt class="eyebrow">
+                      Balance
+                    </dt>
+                    <dd class="mt-1.5 text-[17px] font-bold text-highlighted tabular-nums">
+                      {{ money(balance) }}
+                    </dd>
+                    <dd class="text-[12.5px] text-muted">
+                      On completion
+                    </dd>
+                  </div>
+                </template>
+              </dl>
+            </div>
+
+            <table
+              v-if="proposal.items.length"
+              class="mt-7 w-full border-collapse"
+            >
+              <thead>
+                <tr class="border-t border-b border-ink-300/60">
+                  <th class="eyebrow px-6 py-2.5 text-left font-semibold sm:px-8">
+                    Item
+                  </th>
+                  <th class="eyebrow px-6 py-2.5 text-right font-semibold sm:px-8">
+                    Amount
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
                   v-for="(i, idx) in proposal.items"
                   :key="idx"
-                  class="flex items-baseline justify-between gap-4 text-[13.5px]"
+                  class="border-b border-ink-300/40 last:border-b-0"
                 >
-                  <span class="text-default">{{ i.name }}<span
-                    v-if="i.qty > 1"
-                    class="text-muted"
-                  > × {{ i.qty }}</span></span>
-                  <span class="flex-none font-medium text-highlighted tabular-nums">{{ money(i.line_total) }}</span>
-                </li>
-              </ul>
-            </div>
-
+                  <td class="px-6 py-3 text-[14.5px] text-default sm:px-8">
+                    {{ i.name }}<span
+                      v-if="i.qty > 1"
+                      class="text-muted"
+                    > × {{ i.qty }}</span>
+                    <div
+                      v-if="i.description"
+                      class="mt-0.5 text-[13px] text-muted"
+                    >
+                      {{ i.description }}
+                    </div>
+                  </td>
+                  <td class="px-6 py-3 text-right text-[14.5px] font-semibold text-highlighted tabular-nums sm:px-8">
+                    {{ money(i.line_total) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
             <div
-              v-if="proposal.special_terms"
-              class="mt-6"
-            >
-              <h2 class="text-[11px] font-semibold uppercase tracking-[0.07em] text-muted">
-                Notes
-              </h2>
-              <p class="mt-1.5 whitespace-pre-line text-[14px] leading-relaxed text-muted">
-                {{ proposal.special_terms }}
-              </p>
-            </div>
-          </div>
+              v-else
+              class="h-7"
+            />
+          </section>
 
-          <!-- decision -->
-          <div class="mt-5 rounded-card bg-default p-6 ring ring-default sm:p-8">
-            <h2 class="font-display text-lg font-semibold text-highlighted">
+          <!-- ===== notes ===== -->
+          <section
+            v-if="proposal.special_terms"
+            class="mt-10"
+          >
+            <h2 class="eyebrow">
+              Terms &amp; Notes
+            </h2>
+            <p class="mt-3 max-w-[68ch] whitespace-pre-line text-[14.5px] leading-relaxed text-muted">
+              {{ proposal.special_terms }}
+            </p>
+          </section>
+
+          <!-- ===== what happens next ===== -->
+          <section class="mt-12 border-t border-default pt-10">
+            <h2 class="font-display text-[22px] font-bold tracking-[-0.028em] text-highlighted">
+              What happens next
+            </h2>
+            <ol class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-3">
+              <li
+                v-for="(step, i) in nextSteps"
+                :key="step.title"
+                class="flex gap-3"
+              >
+                <span class="mt-0.5 inline-flex size-6 flex-none items-center justify-center rounded-chip bg-inverted text-[12px] font-bold text-inverted tabular-nums">{{ i + 1 }}</span>
+                <div>
+                  <div class="text-[15px] font-semibold tracking-[-0.01em] text-highlighted">
+                    {{ step.title }}
+                  </div>
+                  <p class="mt-1 text-[13.5px] leading-relaxed text-muted">
+                    {{ step.body }}
+                  </p>
+                </div>
+              </li>
+            </ol>
+          </section>
+
+          <!-- ===== decision ===== -->
+          <section class="mt-10 rounded-card bg-default p-6 ring ring-default sm:p-8">
+            <h2 class="font-display text-[22px] font-bold tracking-[-0.028em] text-highlighted">
               Ready to go ahead?
             </h2>
-            <p class="mt-1.5 text-sm text-muted">
-              Accepting sends you an agreement to sign — nothing is charged yet.
+            <p class="mt-2 text-[15px] leading-relaxed text-muted">
+              Accepting sends you the agreement to sign. <span class="hl font-semibold">Nothing is charged yet.</span>
             </p>
 
             <UAlert
               v-if="loadError"
-              class="mt-4"
+              class="mt-5"
               icon="i-lucide-triangle-alert"
               color="error"
               variant="soft"
@@ -336,20 +497,21 @@ const scope = computed(() => {
 
             <div
               v-if="!declining"
-              class="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end"
+              class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end"
             >
               <UFormField
-                label="Your name"
+                label="Your Name"
                 class="flex-1"
               >
                 <UInput
                   v-model="yourName"
-                  placeholder="Who's accepting"
+                  placeholder="Who's accepting on behalf of the company"
                   size="lg"
                   class="w-full"
+                  @keyup.enter="yourName.trim() && accept()"
                 />
               </UFormField>
-              <div class="flex gap-2.5">
+              <div class="flex items-center gap-4">
                 <UButton
                   color="primary"
                   size="lg"
@@ -359,24 +521,23 @@ const scope = computed(() => {
                 >
                   Accept Proposal
                 </UButton>
-                <UButton
-                  color="neutral"
-                  variant="outline"
-                  size="lg"
+                <button
+                  type="button"
+                  class="text-[14px] font-semibold text-highlighted underline decoration-citrine decoration-2 underline-offset-4 transition-colors hover:bg-citrine disabled:opacity-50"
                   :disabled="busy !== null"
                   @click="declining = true"
                 >
                   Decline
-                </UButton>
+                </button>
               </div>
             </div>
 
             <div
               v-else
-              class="mt-5 space-y-3"
+              class="mt-6 space-y-4"
             >
               <UFormField
-                label="Anything we should know?"
+                label="Anything We Should Know?"
                 hint="Optional"
               >
                 <UTextarea
@@ -387,37 +548,48 @@ const scope = computed(() => {
                   class="w-full"
                 />
               </UFormField>
-              <div class="flex gap-2.5">
+              <div class="flex items-center gap-4">
                 <UButton
                   color="neutral"
+                  variant="outline"
                   size="lg"
                   :loading="busy === 'decline'"
                   @click="decline"
                 >
                   Confirm Decline
                 </UButton>
-                <UButton
-                  color="neutral"
-                  variant="ghost"
-                  size="lg"
+                <button
+                  type="button"
+                  class="text-[14px] font-semibold text-muted hover:text-highlighted"
                   @click="declining = false"
                 >
                   Back
-                </UButton>
+                </button>
               </div>
             </div>
-          </div>
+          </section>
 
-          <p class="mt-6 text-center text-[13px] text-muted">
-            {{ proposal.agency.name }}<template v-if="proposal.agency.email">
-              · <a
-                :href="`mailto:${proposal.agency.email}`"
-                class="underline underline-offset-2"
-              >{{ proposal.agency.email }}</a>
+          <p class="mt-10 text-center text-[13px] text-muted">
+            Questions about this proposal?
+            <template v-if="agencyEmail">
+              Email <a
+                :href="`mailto:${agencyEmail}`"
+                class="font-semibold text-highlighted underline decoration-ink-300 decoration-1 underline-offset-4 hover:decoration-citrine hover:decoration-2"
+              >{{ agencyEmail }}</a> or just reply to the email this came in.
+            </template>
+            <template v-else>
+              Just reply to the email this came in.
             </template>
           </p>
         </template>
       </template>
-    </div>
+    </main>
+
+    <footer class="border-t border-default">
+      <div class="mx-auto flex w-full max-w-[880px] flex-wrap items-center justify-between gap-3 px-5 py-6 text-[12.5px] text-muted sm:px-8">
+        <span>{{ agencyName }}</span>
+        <span class="metastrip">{{ proposal?.code ? `Proposal · ${proposal.code}` : 'Proposal' }}</span>
+      </div>
+    </footer>
   </div>
 </template>
