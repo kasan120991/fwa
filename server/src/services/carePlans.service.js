@@ -52,7 +52,7 @@ function broadcast(plan) {
  * waits at pending_signature (contract row + PandaDoc document, not yet sent);
  * without one it is born at awaiting_card.
  */
-export async function createCarePlanForClient(client, input, { actorUserId = null } = {}) {
+export async function createCarePlanForClient(client, input, { actorUserId = null, owner = null } = {}) {
   let tier = null
   if (input.service_id) {
     tier = await getService(input.service_id)
@@ -86,7 +86,7 @@ export async function createCarePlanForClient(client, input, { actorUserId = nul
       items: [{ service_id: tier?.id ?? null, name_snapshot: name, description_snapshot: description, unit_price_snapshot: price, qty: 1, billing_interval_snapshot: 'monthly' }]
     })
     plan = await updateCarePlan(plan.id, { contract_id: contract.id })
-    await createCarePlanDocument(plan, contract, client)
+    await createCarePlanDocument(plan, contract, client, owner)
   }
 
   await logClientActivity(client.id, {
@@ -135,8 +135,10 @@ async function buildCarePlanTokens(plan, client) {
 }
 
 // Best-effort: a missing template or a PandaDoc hiccup leaves the contract as a
-// bare row; Send Agreement then reports why it can't go out.
-async function createCarePlanDocument(plan, contract, client) {
+// bare row; Send Agreement then reports why it can't go out. The admin who
+// assigned the plan is added as the countersigner (PANDADOC_OWNER_ROLE), so
+// the contract viewer's Countersign finds them on the document.
+async function createCarePlanDocument(plan, contract, client, owner = null) {
   if (!pandadocEnabled()) return contract
   const template = await getActiveTemplate('care_plan')
   if (!template) return contract
@@ -146,7 +148,9 @@ async function createCarePlanDocument(plan, contract, client) {
       name: `${contract.title} — ${clientLabel(client)}`,
       client,
       tokens: await buildCarePlanTokens(plan, client),
-      items: contract.items,
+      // No pricing table: the template carries the fee through tokens.
+      items: [],
+      owner: (config.pandadoc.ownerRole && owner?.email) ? { role: config.pandadoc.ownerRole, email: owner.email, name: owner.name } : null,
       metadata: { fwa_client_id: String(client.id), fwa_contract_id: String(contract.id), fwa_care_plan_id: String(plan.id), type: 'contract' }
     })
     if (doc) return await updateContract(contract.id, { pandadoc_document_id: doc.id, pandadoc_template_id: template.template_uuid, pandadoc_status: doc.status })

@@ -63,7 +63,10 @@ carePlansRouter.post('/', async (req, res) => {
   if (body.start_date != null && (typeof body.start_date !== 'string' || Number.isNaN(Date.parse(body.start_date)))) {
     throw badRequest('Validation failed', { start_date: 'must be a valid date' })
   }
-  const plan = await createCarePlanForClient(client, body, { actorUserId: req.user?.id ?? null })
+  const plan = await createCarePlanForClient(client, body, {
+    actorUserId: req.user?.id ?? null,
+    owner: req.user?.email ? { email: req.user.email, name: req.user.name } : null
+  })
   res.status(201).json({ data: plan })
 })
 
