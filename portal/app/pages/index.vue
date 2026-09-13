@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { type PortalDeal, mostUrgent, nextAction } from '~/utils/deals'
+
 useHead({ title: 'Home · Francis Web Agency' })
 const api = useApi()
 
@@ -42,6 +44,9 @@ const projects = ref<Project[]>([])
 const openInvoices = ref<Invoice[]>([])
 const files = ref<FileRow[]>([])
 const activity = ref<PortalNotification[]>([])
+const deals = ref<PortalDeal[]>([])
+interface PortalPlan { id: number, name: string, status: string }
+const plans = ref<PortalPlan[]>([])
 const pending = ref(true)
 
 const STATUS_LABEL: Record<string, string> = {
@@ -57,13 +62,17 @@ const STATUS_LABEL: Record<string, string> = {
 
 onMounted(async () => {
   try {
-    const [ov, pr, inv, fi, no] = await Promise.allSettled([
+    const [ov, pr, inv, fi, no, de, cp] = await Promise.allSettled([
       api<{ data: Overview }>('/portal/overview'),
       api<{ data: Project[] }>('/portal/projects'),
       api<{ data: Invoice[] }>('/portal/invoices'),
       api<{ data: FileRow[] }>('/portal/files'),
-      api<{ data: PortalNotification[] }>('/portal/notifications', { query: { limit: 5 } })
+      api<{ data: PortalNotification[] }>('/portal/notifications', { query: { limit: 5 } }),
+      api<{ data: PortalDeal[] }>('/portal/deals'),
+      api<{ data: PortalPlan[] }>('/portal/care-plans')
     ])
+    if (de.status === 'fulfilled') deals.value = de.value.data
+    if (cp.status === 'fulfilled') plans.value = cp.value.data
     if (ov.status === 'fulfilled') overview.value = ov.value.data
     if (pr.status === 'fulfilled') {
       projects.value = pr.value.data.map(p => ({ ...p, task_total: Number(p.task_total ?? 0), task_done: Number(p.task_done ?? 0) }))
@@ -83,13 +92,30 @@ const stats = computed(() => [
   { label: 'Open Tickets', value: String(overview.value?.open_tickets ?? 0), to: '/support' }
 ])
 
-// The band's single solid CTA — only when there's actually something to pay.
+// The band's single solid CTA — the one most urgent thing: sign an agreement,
+// review a proposal, add a card, fix a failed card, then pay what's due.
 const payCta = computed(() => {
   const due = overview.value?.outstanding_balance ?? 0
   if (!due) return null
   return openInvoices.value.length === 1
     ? { label: `Pay Invoice · ${formatMoney(due)}`, to: `/invoices/${openInvoices.value[0]!.id}` }
     : { label: `Pay Balance · ${formatMoney(due)}`, to: '/invoices' }
+})
+const attention = computed<{ label: string, to: string, line: string } | null>(() => {
+  const urgent = mostUrgent(deals.value)
+  if (urgent) {
+    const action = nextAction(urgent.deal, urgent.stage)!
+    const line = urgent.stage === 'sign'
+      ? `Your ${urgent.deal.kind === 'care_plan' ? 'care plan' : 'project'} agreement for ${urgent.deal.title} is ready to sign.`
+      : urgent.stage === 'review'
+        ? `${urgent.deal.title} is waiting for your decision.`
+        : `Add a card to start ${urgent.deal.title}.`
+    return { ...action, line }
+  }
+  if (plans.value.some(p => p.status === 'past_due')) {
+    return { label: 'Update Card', to: '/care-plan', line: 'Your last care plan payment didn’t go through — update your card to keep it active.' }
+  }
+  return payCta.value ? { ...payCta.value, line: '' } : null
 })
 
 // Work in motion first; completed projects live on the Projects page.
@@ -132,13 +158,23 @@ function fileIcon(f: FileRow) {
             {{ s.label }}
           </div>
         </NuxtLink>
-        <NuxtLink
-          v-if="payCta"
-          :to="payCta.to"
-          class="mb-1 ml-auto inline-flex items-center rounded-btn bg-paper px-5 py-2.5 text-sm font-semibold text-ink-900 transition-colors hover:bg-[#F0F0EC]"
+        <div
+          v-if="attention"
+          class="mb-1 ml-auto flex max-w-full flex-col items-start gap-2.5 sm:items-end"
         >
-          {{ payCta.label }}
-        </NuxtLink>
+          <p
+            v-if="attention.line"
+            class="text-[13px] text-[#B0B3B0] sm:text-right"
+          >
+            {{ attention.line }}
+          </p>
+          <NuxtLink
+            :to="attention.to"
+            class="inline-flex items-center rounded-btn bg-paper px-5 py-2.5 text-sm font-semibold text-ink-900 transition-colors hover:bg-[#F0F0EC]"
+          >
+            {{ attention.label }}
+          </NuxtLink>
+        </div>
       </div>
     </section>
 

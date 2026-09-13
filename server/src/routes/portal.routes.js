@@ -2,7 +2,11 @@ import { Router } from 'express'
 import { listProjects, getProject } from '../repositories/projects.repo.js'
 import { listMilestones } from '../repositories/milestones.repo.js'
 import { listInvoices, getInvoice } from '../repositories/invoices.repo.js'
-import { listAgreements } from '../repositories/agreements.repo.js'
+import { listDeals } from '../repositories/agreements.repo.js'
+import { proposalView, decidedProposalView } from '../services/proposalView.js'
+import { acceptProposal, declineProposal } from '../services/proposalAcceptance.js'
+import { rateLimit } from '../middleware/rateLimit.js'
+import { query } from '../db/pool.js'
 import { getProposal, updateProposal } from '../repositories/proposals.repo.js'
 import { getContract, updateContract } from '../repositories/contracts.repo.js'
 import { listCarePlans, getCarePlan } from '../repositories/carePlans.repo.js'
@@ -24,7 +28,7 @@ import {
   createSetupIntent, createStripeCustomer
 } from '../services/stripe.js'
 import { notify } from '../services/notifications.service.js'
-import { pandadocEnabled, getDocumentStatus, createDocumentSession } from '../services/pandadoc.js'
+import { pandadocEnabled, getDocumentStatus, createDocumentSession, downloadDocument } from '../services/pandadoc.js'
 import { sendTemplateEmail, alertTimestamp, TEMPLATES } from '../services/email.js'
 import { portalUpload } from '../storage/local.js'
 import {
@@ -237,13 +241,104 @@ portalRouter.post('/care-plans/:id/update-card', async (req, res) => {
   res.json({ data: portalPlan(fresh) })
 })
 
-// ---- agreements (proposals + contracts union; read-only this phase) ----
+// ---- deals: one row per proposal + its contract, plus care plans ------------
+// The Agreements page reads THIS; the union list below still backs the detail
+// header. Allow-listed: no client name, no PandaDoc ids, no accept_source.
+const PORTAL_DEAL_FIELDS = [
+  'kind', 'code', 'title', 'total', 'recurring', 'proposal_id', 'proposal_status',
+  'sent_at', 'viewed_at', 'accepted_at', 'declined_at', 'expires_at',
+  'contract_id', 'contract_status', 'contract_sent_at', 'signed_at',
+  'project_id', 'project_code', 'project_status',
+  'care_plan_id', 'care_plan_status', 'next_charge_at', 'cancel_at_period_end',
+  'created_at', 'updated_at'
+]
+const portalDeal = d => Object.fromEntries(PORTAL_DEAL_FIELDS.map(k => [k, d[k] ?? null]))
 
-// GET /api/portal/agreements
-portalRouter.get('/agreements', async (req, res) => {
-  const result = await listAgreements({ client_id: req.clientId, limit: 200 })
-  res.json({ data: result.rows })
+// GET /api/portal/deals
+portalRouter.get('/deals', async (req, res) => {
+  const rows = await listDeals({ client_id: req.clientId })
+  // A draft proposal isn't theirs to see yet; a draft care plan likewise.
+  res.json({ data: rows.filter(d => (d.kind === 'deal' ? d.proposal_status !== 'draft' : d.care_plan_status !== 'draft')).map(portalDeal) })
 })
+
+// ---- proposals: read and decide in the portal ---------------------------------
+// The signed-in equivalent of the public /p/:token page. Same view builder,
+// same single acceptance service, scoped to req.clientId (foreign ids 404).
+
+async function ownProposal(req, res) {
+  const proposal = await getProposal(parseId(req))
+  if (!proposal || Number(proposal.client_id) !== req.clientId || proposal.status === 'draft') {
+    res.status(404).json({ error: { message: 'Proposal not found' } })
+    return null
+  }
+  return proposal
+}
+async function contractIdForProposal(proposalId) {
+  const rows = await query('SELECT id FROM contracts WHERE proposal_id = :id ORDER BY id DESC LIMIT 1', { id: proposalId })
+  return rows[0]?.id ?? null
+}
+
+// GET /api/portal/proposals/:id
+portalRouter.get('/proposals/:id', async (req, res) => {
+  const proposal = await ownProposal(req, res)
+  if (!proposal) return
+  if (proposal.status !== 'sent' && proposal.status !== 'viewed') {
+    return res.json({ data: await decidedProposalView(proposal, { contract_id: await contractIdForProposal(proposal.id) }) })
+  }
+  if (proposal.status === 'sent') {
+    // Opening it in the portal is a view, the same as opening the emailed link.
+    await updateProposal(proposal.id, { status: 'viewed', viewed_at: new Date() })
+    emitProposalChanged(proposal.id)
+    emitClientAgreementChanged(req.clientId, proposal.id)
+  }
+  res.json({ data: { decided: false, ...(await proposalView(proposal)) } })
+})
+
+const portalDecide = rateLimit({ max: 10, name: 'portal-decide' })
+
+// POST /api/portal/proposals/:id/accept  { name }
+portalRouter.post('/proposals/:id/accept', portalDecide, async (req, res) => {
+  const proposal = await ownProposal(req, res)
+  if (!proposal) return
+  const result = await acceptProposal(proposal, {
+    acceptedBy: (typeof req.body?.name === 'string' && req.body.name.trim()) || req.user?.name || null,
+    source: 'client'
+  })
+  if (!result.ok) return res.status(409).json({ error: { message: `This proposal is already ${result.status}.` } })
+  res.json({ data: { status: 'accepted', contract_id: result.contract?.id ?? null } })
+})
+
+// POST /api/portal/proposals/:id/decline  { reason }
+portalRouter.post('/proposals/:id/decline', portalDecide, async (req, res) => {
+  const proposal = await ownProposal(req, res)
+  if (!proposal) return
+  const result = await declineProposal(proposal, { reason: req.body?.reason ?? null, source: 'client' })
+  if (!result.ok) return res.status(409).json({ error: { message: `This proposal is already ${result.status}.` } })
+  res.json({ data: { status: 'declined' } })
+})
+
+// GET /api/portal/agreements/contract/:id/pdf — a copy of a SIGNED agreement.
+// An API-key download registers no view, unlike a session. Signed only: an
+// unsigned document is read in the embed, where the signature fields live.
+portalRouter.get('/agreements/contract/:id/pdf', async (req, res) => {
+  const contract = await getContract(parseId(req))
+  if (!contract || Number(contract.client_id) !== req.clientId) return res.status(404).json({ error: { message: 'Agreement not found' } })
+  if (contract.status !== 'signed' || !pandadocEnabled() || !contract.pandadoc_document_id) {
+    return res.status(404).json({ error: { message: 'No signed copy is available yet' } })
+  }
+  try {
+    const pdf = await downloadDocument(contract.pandadoc_document_id)
+    if (!pdf) return res.status(404).json({ error: { message: 'No signed copy is available yet' } })
+    res.setHeader('Content-Type', 'application/pdf')
+    const filename = String(contract.title || `agreement-${contract.id}`).replace(/[^\w. -]+/g, '').trim() || `agreement-${contract.id}`
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}.pdf"`)
+    return res.send(pdf)
+  } catch (err) {
+    console.error(`Portal PDF download failed for contract ${contract.id}:`, err.message)
+    return res.status(502).json({ error: { message: 'The download failed — please try again in a moment.' } })
+  }
+})
+
 
 // ---- files (curated admin-shared + the client's own uploads) ----
 

@@ -1,8 +1,6 @@
 import { Router } from 'express'
 import { findProposalByToken } from '../repositories/proposalTokens.repo.js'
-import { getProposalItems } from '../repositories/proposals.repo.js'
-import { getClient } from '../repositories/clients.repo.js'
-import { getCachedSettings } from '../services/settings.service.js'
+import { proposalView, decidedProposalView } from '../services/proposalView.js'
 import { acceptProposal, declineProposal } from '../services/proposalAcceptance.js'
 import { rateLimit } from '../middleware/rateLimit.js'
 
@@ -39,54 +37,6 @@ async function resolve(req, res) {
   return proposal
 }
 
-/**
- * What the page renders. A strict allow-list, not the row: this is public, so
- * everything internal — ids, PandaDoc references, the hourly rate, third-party
- * cost notes, the client's contact details — stays out of it.
- */
-async function publicView(proposal) {
-  const [items, client, settings] = await Promise.all([
-    getProposalItems(proposal.id),
-    getClient(proposal.client_id),
-    getCachedSettings()
-  ])
-  // findProposalByToken returns the raw row (it joins through the token table
-  // rather than going via the repo's mapper), so the DECIMALs are still strings.
-  const num = v => (v == null ? null : Number(v))
-  return {
-    code: proposal.code,
-    title: proposal.title,
-    status: proposal.status,
-    currency: proposal.currency,
-    total: num(proposal.total),
-    goals: proposal.goals,
-    pages_included: proposal.pages_included,
-    key_features: proposal.key_features,
-    design_deliverables: proposal.design_deliverables,
-    content_provided_by: proposal.content_provided_by,
-    revision_rounds: proposal.revision_rounds,
-    project_fee: num(proposal.project_fee),
-    deposit_pct: num(proposal.deposit_pct),
-    start_date: proposal.start_date,
-    target_launch_date: proposal.target_launch_date,
-    special_terms: proposal.special_terms,
-    expires_at: proposal.expires_at,
-    items: items.map(i => ({
-      name: i.name_snapshot,
-      description: i.description_snapshot,
-      unit_price: num(i.unit_price_snapshot),
-      qty: num(i.qty),
-      line_total: num(i.line_total)
-    })),
-    client: { name: client?.company || client?.name || '' },
-    agency: {
-      name: settings?.agency_display_name || settings?.agency_legal_name || 'Francis Web Agency',
-      email: settings?.agency_support_email || null,
-      logo_url: settings?.agency_logo_url || null
-    }
-  }
-}
-
 // GET — read only. It must NEVER consume the token: mail scanners fetch every
 // link in an inbound email, and consuming here would kill the page before the
 // client ever opened it.
@@ -96,21 +46,9 @@ publicRouter.get('/proposals/self', async (req, res) => {
   // A decided proposal stops being a live pricing page. This also matters for
   // the backfilled historical ones, which would otherwise each have a public URL.
   if (proposal.status !== 'sent' && proposal.status !== 'viewed') {
-    // Still branded: the page shows who sent it and how to reach them.
-    const settings = await getCachedSettings()
-    return res.json({ data: {
-      decided: true,
-      status: proposal.status,
-      title: proposal.title,
-      code: proposal.code,
-      agency: {
-        name: settings?.agency_display_name || settings?.agency_legal_name || 'Francis Web Agency',
-        email: settings?.agency_support_email || null,
-        logo_url: settings?.agency_logo_url || null
-      }
-    } })
+    return res.json({ data: await decidedProposalView(proposal) })
   }
-  res.json({ data: { decided: false, ...(await publicView(proposal)) } })
+  res.json({ data: { decided: false, ...(await proposalView(proposal)) } })
 })
 
 // The decision endpoints are the expensive ones — they generate a contract,

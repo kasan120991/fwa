@@ -447,7 +447,13 @@ Persistent left sidebar (collapsible) + top bar + main content. Nav groups (✓ 
 section rail driven by a `?section=` query param.
 
 `/p/:token` is the one **unauthenticated** page in the portal (whitelisted in `auth.global.ts`) —
-the public proposal, for a prospect who has no account and never will.
+the public proposal, for a prospect who has no account and never will. A signed-in client sees the
+**same proposal view** at `/agreements/proposal-:id` (shared `PortalProposalView.vue`; the server
+view lives in `services/proposalView.js`) and can accept or decline there —
+`POST /portal/proposals/:id/accept|decline` go through the same `proposalAcceptance` service,
+scoped to `req.clientId`. The portal's Agreements page reads `GET /portal/deals` (one row per deal,
+care plans included, allow-listed) and Home's band shows the one most urgent action (sign > review >
+add card > pay). Signed contracts download at `GET /portal/agreements/contract/:id/pdf`.
 
 Portal nav (`portal/app/layouts/default.vue`): Home · Projects · Invoices · Agreements ·
 **Care Plan** (only once the client has one) · Files · Support · Websites, with Account / Sign out
