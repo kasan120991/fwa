@@ -5,7 +5,7 @@
 // the left picks a stage; the list shows that stage with the action that moves
 // a deal inline. Replaces the old Proposals and Contracts pages.
 import type { StatRowItem } from '~/components/StatRow.vue'
-import { type ApiDeal, type Stage, STAGES, STAGE_META, IN_FLIGHT, stageOf, nextFor, whenFor, waitingDays, closedLabel } from '~/utils/deals'
+import { type ApiDeal, type Stage, STAGES, STAGE_META, IN_FLIGHT, stageOf, nextFor, whenFor, waitingDays, chipFor } from '~/utils/deals'
 
 useHead({ title: 'Sales · Francis Web Agency' })
 
@@ -42,7 +42,8 @@ async function load() {
 onMounted(load)
 
 const socket = useSocket()
-const EVENTS = ['proposal:changed', 'contract:changed', 'project:created']
+const EVENTS = ['proposal:changed', 'contract:changed', 'project:created', 'care-plan:changed']
+const carePlanFormOpen = ref(false)
 onMounted(() => {
   for (const ev of EVENTS) socket.on(ev, load)
 })
@@ -115,9 +116,12 @@ const attention = computed(() => {
   if (!waiting.length) return null
   const d = waiting.sort((a, b) => (b.waiting ?? 0) - (a.waiting ?? 0))[0]!
   const days = `${d.waiting} ${d.waiting === 1 ? 'day' : 'days'}`
+  if (d.kind === 'care_plan' && d.care_plan_status === 'awaiting_card') {
+    return { deal: d, text: `has been waiting ${days} for a card.`, hint: 'Re-send the card link or give the client a call.', action: 'Re-send Card Link', run: () => sendCardLink(d) }
+  }
   return d.stage === 'contract'
-    ? { deal: d, text: `has been out for signature for ${days}.`, hint: 'Nudge the client or open the contract.', action: 'Open Contract' }
-    : { deal: d, text: `was sent ${days} ago and hasn't been answered.`, hint: 'Follow up, or re-send the link.', action: 'Re-send Link' }
+    ? { deal: d, text: `has been out for signature for ${days}.`, hint: 'Nudge the client or open the contract.', action: 'Open Contract', run: () => navigateTo(`/contracts/${d.contract_id}`) }
+    : { deal: d, text: `was sent ${days} ago and hasn't been answered.`, hint: 'Follow up, or re-send the link.', action: 'Re-send Link', run: () => sendProposal(d) }
 })
 
 /* --------------------------------------------------------------- actions */
@@ -171,6 +175,30 @@ function voidContract(d: Deal) {
     toast.add({ title: 'Contract voided', color: 'neutral' })
   })
 }
+function sendCarePlanAgreement(d: Deal) {
+  return run(d, async () => {
+    await api(`/care-plans/${d.care_plan_id}/send-agreement`, { method: 'POST' })
+    toast.add({ title: 'Agreement sent', color: 'success' })
+  })
+}
+function sendCardLink(d: Deal) {
+  return run(d, async () => {
+    await api(`/care-plans/${d.care_plan_id}/invite`, { method: 'POST' })
+    toast.add({ title: 'Card link sent', description: 'The client can add their card in the portal.', color: 'success' })
+  })
+}
+function cancelCarePlan(d: Deal, atPeriodEnd: boolean) {
+  return run(d, async () => {
+    await api(`/care-plans/${d.care_plan_id}/cancel`, { method: 'POST', body: { at_period_end: atPeriodEnd } })
+    toast.add({ title: atPeriodEnd ? 'Plan ends at period end' : 'Plan cancelled', color: 'neutral' })
+  })
+}
+function deleteCarePlan(d: Deal) {
+  return run(d, async () => {
+    await api(`/care-plans/${d.care_plan_id}`, { method: 'DELETE' })
+    toast.add({ title: 'Plan removed', color: 'neutral' })
+  })
+}
 function deleteProposal(d: Deal) {
   return run(d, async () => {
     await api(`/proposals/${d.proposal_id}`, { method: 'DELETE' })
@@ -181,7 +209,8 @@ function deleteProposal(d: Deal) {
 // Where a row goes when clicked: the proposal editor while the proposal is
 // the live object, the contract viewer once a contract exists.
 function openDeal(d: Deal) {
-  if (d.contract_id && (d.stage === 'accepted' || d.stage === 'contract' || d.stage === 'signed' || d.kind === 'care_plan')) {
+  if (d.kind === 'care_plan') return navigateTo(`/clients/${d.client_id}?tab=money`)
+  if (d.contract_id && (d.stage === 'accepted' || d.stage === 'contract' || d.stage === 'signed')) {
     return navigateTo(`/contracts/${d.contract_id}`)
   }
   if (d.proposal_id) return navigateTo(`/proposals/${d.proposal_id}`)
@@ -190,11 +219,19 @@ function openDeal(d: Deal) {
 
 // The one inline action per stage. Everything else lives in the row menu.
 function primary(d: Deal): { label: string, icon: string, run: () => unknown } | null {
+  if (d.kind === 'care_plan') {
+    switch (d.care_plan_status) {
+      case 'pending_signature': return d.contract_status === 'draft'
+        ? { label: 'Send Agreement', icon: 'i-lucide-send', run: () => sendCarePlanAgreement(d) }
+        : { label: 'Open Agreement', icon: 'i-lucide-file-signature', run: () => navigateTo(`/contracts/${d.contract_id}`) }
+      case 'awaiting_card': return { label: 'Send Card Link', icon: 'i-lucide-credit-card', run: () => sendCardLink(d) }
+      case 'active': case 'past_due': return { label: 'Open Client', icon: 'i-lucide-user', run: () => navigateTo(`/clients/${d.client_id}?tab=money`) }
+      default: return null
+    }
+  }
   switch (d.stage) {
     case 'draft':
-      return d.kind === 'care_plan'
-        ? (d.contract_id ? { label: 'Send Contract', icon: 'i-lucide-send', run: () => sendContract(d) } : null)
-        : { label: 'Send', icon: 'i-lucide-send', run: () => sendProposal(d) }
+      return { label: 'Send', icon: 'i-lucide-send', run: () => sendProposal(d) }
     case 'sent': return { label: 'Mark Accepted', icon: 'i-lucide-handshake', run: () => markAccepted(d) }
     case 'accepted': return d.contract_id
       ? (d.contract_status === 'draft'
@@ -212,6 +249,18 @@ function primary(d: Deal): { label: string, icon: string, run: () => unknown } |
 const apiBase = String(config.public.apiBase || '').replace(/\/$/, '')
 function menu(d: Deal) {
   const groups: { label: string, icon: string, color?: 'error', onSelect?: () => unknown, to?: string, target?: string }[][] = []
+  if (d.kind === 'care_plan') {
+    const cp: typeof groups[number] = [{ label: 'Open Client', icon: 'i-lucide-user', onSelect: () => navigateTo(`/clients/${d.client_id}?tab=money`) }]
+    if (d.contract_id) cp.push({ label: 'View Agreement', icon: 'i-lucide-file-signature', onSelect: () => navigateTo(`/contracts/${d.contract_id}`) })
+    if (d.care_plan_status === 'awaiting_card') cp.push({ label: 'Re-send Card Link', icon: 'i-lucide-send', onSelect: () => sendCardLink(d) })
+    groups.push(cp)
+    const danger: typeof groups[number] = []
+    if ((d.care_plan_status === 'active' || d.care_plan_status === 'past_due') && !d.cancel_at_period_end) danger.push({ label: 'Cancel At Period End', icon: 'i-lucide-calendar-x', onSelect: () => cancelCarePlan(d, true) })
+    if (d.care_plan_status === 'active' || d.care_plan_status === 'past_due') danger.push({ label: 'Cancel Now', icon: 'i-lucide-ban', color: 'error', onSelect: () => cancelCarePlan(d, false) })
+    if (['draft', 'pending_signature', 'awaiting_card'].includes(d.care_plan_status ?? '')) danger.push({ label: 'Remove Plan', icon: 'i-lucide-trash-2', color: 'error', onSelect: () => deleteCarePlan(d) })
+    if (danger.length) groups.push(danger)
+    return groups
+  }
   const first: typeof groups[number] = []
   if (d.proposal_id && (d.stage === 'draft' || d.stage === 'sent')) first.push({ label: 'Edit Scope', icon: 'i-lucide-pencil', onSelect: () => navigateTo(`/proposals/${d.proposal_id}`) })
   if (d.proposal_id && d.stage !== 'draft') first.push({ label: 'View Proposal', icon: 'i-lucide-file-text', onSelect: () => navigateTo(`/proposals/${d.proposal_id}`) })
@@ -246,9 +295,17 @@ function filled(stage: Stage) {
       icon="i-lucide-handshake"
       title="Sales"
       :count="rows.length"
-      subtitle="Every proposal and the contract it produced, one row per deal. Pick a stage on the left and work the list."
+      subtitle="Proposals, their contracts and care plans — one row per deal."
     >
       <template #actions>
+        <UButton
+          icon="i-lucide-heart-pulse"
+          color="neutral"
+          variant="outline"
+          @click="carePlanFormOpen = true"
+        >
+          New Care Plan
+        </UButton>
         <UButton
           icon="i-lucide-plus"
           color="primary"
@@ -258,6 +315,11 @@ function filled(stage: Stage) {
         </UButton>
       </template>
     </PageHeader>
+
+    <CarePlanForm
+      v-model:open="carePlanFormOpen"
+      @saved="load"
+    />
 
     <StatRow :items="metrics" />
 
@@ -316,7 +378,7 @@ function filled(stage: Stage) {
           <button
             type="button"
             class="inline-flex flex-none items-center gap-1 text-[13px] font-semibold text-primary"
-            @click="attention.deal.stage === 'contract' ? navigateTo(`/contracts/${attention.deal.contract_id}`) : sendProposal(attention.deal)"
+            @click="attention.run()"
           >
             {{ attention.action }}
             <UIcon
@@ -403,8 +465,8 @@ function filled(stage: Stage) {
 
             <!-- stage -->
             <div class="flex flex-col gap-1.5">
-              <StatusChip :status="STAGE_META[d.stage].chip">
-                {{ d.stage === 'closed' ? closedLabel(d) : STAGE_META[d.stage].label }}
+              <StatusChip :status="chipFor(d, d.stage).status">
+                {{ chipFor(d, d.stage).label }}
               </StatusChip>
               <span class="flex w-24 items-center">
                 <template

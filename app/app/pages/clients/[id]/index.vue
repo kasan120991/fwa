@@ -201,6 +201,7 @@ async function inviteToPortal() {
 
 // ---- forms (owned here; opened from the header menu and area components) ----
 const projectFormOpen = ref(false)
+const carePlanFormOpen = ref(false)
 function openProjectForm() {
   projectFormOpen.value = true
 }
@@ -209,6 +210,7 @@ const ticketFormOpen = ref(false)
 
 const headerMenu = computed(() => [[
   { label: 'New Invoice', icon: 'i-lucide-receipt-text', onSelect: () => showArea('money') },
+  { label: 'New Care Plan', icon: 'i-lucide-heart-pulse', onSelect: () => { carePlanFormOpen.value = true } },
   { label: 'New Ticket', icon: 'i-lucide-life-buoy', onSelect: () => { ticketFormOpen.value = true } },
   { label: 'Add Website', icon: 'i-lucide-globe', onSelect: () => { websiteFormOpen.value = true } },
   { label: portalAccount.value.invited ? 'Re-send Portal Invite' : 'Invite to Portal', icon: 'i-lucide-user-plus', onSelect: inviteToPortal }
@@ -472,6 +474,7 @@ const STAGE_META: Record<Stage, { status: 'success' | 'neutral', label: string }
           <ClientsClientMoneyTab
             v-if="visited.money"
             :client-id="clientId"
+            @new-care-plan="carePlanFormOpen = true"
           />
         </div>
         <div v-show="activeArea === 'comms'">
@@ -498,6 +501,13 @@ const STAGE_META: Record<Stage, { status: 'success' | 'neutral', label: string }
       :edit-to="`/clients/${clientId}/edit`"
       @save-notes="saveNotes"
       @invite="inviteToPortal"
+    />
+
+    <CarePlanForm
+      v-model:open="carePlanFormOpen"
+      :client-id="clientId"
+      :client-label="client?.name"
+      @saved="showArea('money')"
     />
 
     <ProjectForm

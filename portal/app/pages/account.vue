@@ -78,6 +78,24 @@ async function saveFields(keys: readonly (keyof typeof form)[], busy: Ref<boolea
   }
 }
 
+// ---- card on file (care plan) ----
+interface PortalPlan { id: number, name: string, status: string, pm_brand: string | null, pm_last4: string | null }
+const livePlan = ref<PortalPlan | null>(null)
+const changingCard = ref(false)
+async function loadCard() {
+  try {
+    const { data } = await api<{ data: PortalPlan[] }>('/portal/care-plans')
+    livePlan.value = data.find(p => p.status === 'active' || p.status === 'past_due') ?? null
+  } catch { /* non-fatal */ }
+}
+onMounted(loadCard)
+const BRANDS: Record<string, string> = { visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express', discover: 'Discover', diners: 'Diners Club', jcb: 'JCB', unionpay: 'UnionPay', link: 'Link' }
+const cardLabel = computed(() => livePlan.value?.pm_last4 ? `${BRANDS[String(livePlan.value.pm_brand || '').toLowerCase()] || 'Card'} ending ${livePlan.value.pm_last4}` : 'No card on file')
+function onCardSaved() {
+  changingCard.value = false
+  setTimeout(loadCard, 800)
+}
+
 // ---- change password ----
 const currentPw = ref('')
 const newPw = ref('')
@@ -243,6 +261,57 @@ async function changePassword() {
               Save Address
             </UButton>
           </div>
+        </div>
+      </section>
+
+      <!-- Payment method (only with a live care plan) -->
+      <section
+        v-if="livePlan"
+        class="mt-6 grid gap-x-10 gap-y-4 border-t border-default pt-7 lg:grid-cols-[280px_1fr]"
+      >
+        <div>
+          <h2 class="text-[15px] font-semibold text-highlighted">
+            Payment Method
+          </h2>
+          <p class="mt-1 text-[12.5px] leading-relaxed text-muted">
+            The card your {{ livePlan.name }} is charged to each month.
+          </p>
+        </div>
+        <div>
+          <div
+            v-if="!changingCard"
+            class="flex flex-wrap items-center justify-between gap-3 rounded-card bg-default p-5 ring ring-default"
+          >
+            <div class="flex items-center gap-3 text-[13.5px]">
+              <UIcon
+                name="i-lucide-credit-card"
+                class="size-5 text-muted"
+              />
+              <span class="font-semibold text-highlighted">{{ cardLabel }}</span>
+            </div>
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="sm"
+              @click="changingCard = true"
+            >
+              Update Card
+            </UButton>
+          </div>
+          <template v-else>
+            <PortalCardSetupElement
+              :plan-id="livePlan.id"
+              mode="update"
+              @saved="onCardSaved"
+            />
+            <button
+              type="button"
+              class="mt-3 text-[13px] font-semibold text-muted hover:text-highlighted"
+              @click="changingCard = false"
+            >
+              Keep current card
+            </button>
+          </template>
         </div>
       </section>
 

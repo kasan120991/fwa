@@ -151,6 +151,11 @@ export function emitContractChanged(id) {
 export function emitPaymentCreated(id) {
   io?.to('role:admin').emit('payment:created', { id })
 }
+// Fired on any care-plan lifecycle move (created, agreement sent/signed, card
+// saved, Stripe status sync, cancelled) so the client page and Sales refresh.
+export function emitCarePlanChanged(id) {
+  io?.to('role:admin').emit('care-plan:changed', { id })
+}
 // Fired on any expense create/update/delete/cancel so the Expenses page and the
 // dashboard's Needs Attention card refresh live.
 export function emitExpenseChanged(id = null) {
@@ -215,6 +220,9 @@ export function emitClientFileChanged(clientId, id = null) {
 }
 export function emitClientAgreementChanged(clientId, id = null) {
   if (clientId) io?.to(`client:${clientId}`).emit('agreement:changed', { id })
+}
+export function emitClientCarePlanChanged(clientId, id = null) {
+  if (clientId) io?.to(`client:${clientId}`).emit('care-plan:changed', { id })
 }
 
 // Delivery. Until ClickUp started driving task state, the portal's project

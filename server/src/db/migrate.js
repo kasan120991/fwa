@@ -211,6 +211,11 @@ const ENUM_COLUMNS = {
     // project is its own kind of event, and the one an admin most wants to see.
     ['category', 'project',
       "ENUM('lead','call','proposal','contract','invoice','payment','project','task','ticket','expense','website','system') NOT NULL"]
+  ],
+  invoices: [
+    // Care-plan subscription invoices arrive from Stripe, not from the app.
+    ['kind', 'care_plan',
+      "ENUM('deposit', 'balance', 'custom', 'care_plan') NOT NULL DEFAULT 'custom'"]
   ]
 }
 

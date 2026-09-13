@@ -22,7 +22,14 @@ export const TEMPLATES = {
   // Client-facing: the proposal is ready to review, with its public
   // accept/decline link. Variables:
   // { name, proposal_title, proposal_code, total, proposal_url }.
-  proposalSent: 'proposal-sent'
+  proposalSent: 'proposal-sent',
+  // Client-facing, care plans. Variables:
+  // { name, plan_name, price, start_date, portal_url }
+  carePlanCard: 'care-plan-card',
+  // { name, plan_name, price, next_charge, card, portal_url }
+  carePlanActive: 'care-plan-active',
+  // { name, plan_name, price, portal_url }
+  carePlanPaymentFailed: 'care-plan-payment-failed'
 }
 
 export const isConfigured = () => !!config.resend.apiKey

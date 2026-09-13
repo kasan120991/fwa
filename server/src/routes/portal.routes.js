@@ -5,6 +5,8 @@ import { listInvoices, getInvoice } from '../repositories/invoices.repo.js'
 import { listAgreements } from '../repositories/agreements.repo.js'
 import { getProposal, updateProposal } from '../repositories/proposals.repo.js'
 import { getContract, updateContract } from '../repositories/contracts.repo.js'
+import { listCarePlans, getCarePlan } from '../repositories/carePlans.repo.js'
+import { activateCarePlan, updateCarePlanCard } from '../services/carePlans.service.js'
 import { listFiles, createFile } from '../repositories/files.repo.js'
 import {
   listTickets, getTicket, listMessages, listAttachments, getMessage, ticketCode, TICKET_TYPES
@@ -18,7 +20,8 @@ import {
   listOwnNotifications, setOwnRead, markAllOwnRead, clearOwnNotifications
 } from '../repositories/notifications.repo.js'
 import {
-  updateStripeCustomer, stripeEnabled, publishableKey, getInvoicePaymentSecret
+  updateStripeCustomer, stripeEnabled, publishableKey, getInvoicePaymentSecret,
+  createSetupIntent, createStripeCustomer
 } from '../services/stripe.js'
 import { notify } from '../services/notifications.service.js'
 import { pandadocEnabled, getDocumentStatus, createDocumentSession } from '../services/pandadoc.js'
@@ -165,6 +168,73 @@ portalRouter.post('/invoices/:id/payment-intent', async (req, res) => {
     return res.status(409).json({ error: { message: 'Online payments are not available right now.' } })
   }
   res.json({ data: { clientSecret, publishableKey: publishableKey() } })
+})
+
+// ---- care plans ---------------------------------------------------------
+// The client's side of the lifecycle: see the plan, save a card (which is what
+// creates the Stripe subscription), swap the card later. Every read is scoped
+// to req.clientId; a foreign id is a 404.
+
+async function ownPlan(req, res) {
+  const plan = await getCarePlan(parseId(req))
+  if (!plan || Number(plan.client_id) !== req.clientId) {
+    res.status(404).json({ error: { message: 'Care plan not found' } })
+    return null
+  }
+  return plan
+}
+const PORTAL_PLAN_FIELDS = [
+  'id', 'name', 'description', 'price', 'currency', 'billing_interval', 'status', 'requires_agreement',
+  'contract_id', 'contract_status', 'start_date', 'cancel_at_period_end', 'activated_at', 'cancelled_at',
+  'pm_brand', 'pm_last4', 'current_period_end', 'next_charge_at', 'created_at'
+]
+const portalPlan = p => Object.fromEntries(PORTAL_PLAN_FIELDS.map(k => [k, p[k] ?? null]))
+
+// GET /api/portal/care-plans
+portalRouter.get('/care-plans', async (req, res) => {
+  const plans = await listCarePlans({ client_id: req.clientId })
+  res.json({ data: plans.filter(p => p.status !== 'draft').map(portalPlan) })
+})
+
+// POST /api/portal/care-plans/:id/setup-intent — a SetupIntent for the Payment
+// Element in setup mode. Same response shape as the invoice payment-intent.
+portalRouter.post('/care-plans/:id/setup-intent', async (req, res) => {
+  const plan = await ownPlan(req, res)
+  if (!plan) return
+  if (!['awaiting_card', 'active', 'past_due'].includes(plan.status)) {
+    return res.status(409).json({ error: { message: 'This plan isn’t ready for a card yet.' } })
+  }
+  if (!stripeEnabled() || !publishableKey()) {
+    return res.status(409).json({ error: { message: 'Online billing is not available right now.' } })
+  }
+  let client = await getClient(req.clientId)
+  if (!client.stripe_customer_id) {
+    const id = await createStripeCustomer(client)
+    if (id) client = await updateClient(client.id, { stripe_customer_id: id })
+  }
+  if (!client.stripe_customer_id) {
+    return res.status(409).json({ error: { message: 'Online billing is not available right now.' } })
+  }
+  const si = await createSetupIntent(client.stripe_customer_id, { fwa_client_id: String(client.id), fwa_care_plan_id: String(plan.id) })
+  res.json({ data: { clientSecret: si.clientSecret, publishableKey: publishableKey() } })
+})
+
+// POST /api/portal/care-plans/:id/activate  { setup_intent_id }
+portalRouter.post('/care-plans/:id/activate', async (req, res) => {
+  const plan = await ownPlan(req, res)
+  if (!plan) return
+  const client = await getClient(req.clientId)
+  const fresh = await activateCarePlan(plan, client, req.body?.setup_intent_id)
+  res.json({ data: portalPlan(fresh) })
+})
+
+// POST /api/portal/care-plans/:id/update-card  { setup_intent_id }
+portalRouter.post('/care-plans/:id/update-card', async (req, res) => {
+  const plan = await ownPlan(req, res)
+  if (!plan) return
+  const client = await getClient(req.clientId)
+  const fresh = await updateCarePlanCard(plan, client, req.body?.setup_intent_id)
+  res.json({ data: portalPlan(fresh) })
 })
 
 // ---- agreements (proposals + contracts union; read-only this phase) ----

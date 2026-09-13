@@ -8,15 +8,24 @@ const api = useApi()
 const socket = useSocket()
 const toast = useToast()
 
-const nav = [
+// Care Plan appears once the client has one (any status but draft).
+const hasCarePlan = ref(false)
+async function loadCarePlanFlag() {
+  try {
+    const { data } = await api<{ data: unknown[] }>('/portal/care-plans')
+    hasCarePlan.value = data.length > 0
+  } catch { /* non-fatal */ }
+}
+const nav = computed(() => [
   { label: 'Home', to: '/', icon: 'i-lucide-home' },
   { label: 'Projects', to: '/projects', icon: 'i-lucide-folder-kanban' },
   { label: 'Invoices', to: '/invoices', icon: 'i-lucide-receipt-text' },
   { label: 'Agreements', to: '/agreements', icon: 'i-lucide-file-signature' },
+  ...(hasCarePlan.value ? [{ label: 'Care Plan', to: '/care-plan', icon: 'i-lucide-heart-pulse' }] : []),
   { label: 'Files', to: '/files', icon: 'i-lucide-folder' },
   { label: 'Support', to: '/support', icon: 'i-lucide-life-buoy' },
   { label: 'Websites', to: '/websites', icon: 'i-lucide-globe' }
-]
+])
 function isActive(to: string) {
   return to === '/' ? route.path === '/' : route.path === to || route.path.startsWith(to + '/')
 }
@@ -82,6 +91,8 @@ async function openNotification(n: PortalNotification) {
 
 onMounted(() => {
   loadNotifications()
+  loadCarePlanFlag()
+  socket.on('care-plan:changed', loadCarePlanFlag)
   socket.on('notification:new', onNotificationNew)
 })
 onBeforeUnmount(() => socket.off('notification:new', onNotificationNew))

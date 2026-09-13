@@ -4,7 +4,7 @@
 import { INV_STATUS, AGREEMENT_STATUS, type InvStatus, type AgreementStatus, type ChipStatus } from '~/utils/clientDetail'
 
 const props = defineProps<{ clientId: number }>()
-const emit = defineEmits<{ 'new-invoice': [] }>()
+const emit = defineEmits<{ 'new-invoice': [], 'new-care-plan': [] }>()
 
 const api = useApi()
 
@@ -126,12 +126,14 @@ onMounted(() => {
   socket.on('payment:created', onInvoiceChanged)
   socket.on('contract:changed', onAgreementChanged)
   socket.on('proposal:changed', onAgreementChanged)
+  socket.on('care-plan:changed', loadHosting)
 })
 onBeforeUnmount(() => {
   socket.off('invoice:changed', onInvoiceChanged)
   socket.off('payment:created', onInvoiceChanged)
   socket.off('contract:changed', onAgreementChanged)
   socket.off('proposal:changed', onAgreementChanged)
+  socket.off('care-plan:changed', loadHosting)
 })
 </script>
 
@@ -311,6 +313,12 @@ onBeforeUnmount(() => {
         </template>
       </div>
     </div>
+
+    <!-- care plan -->
+    <ClientsClientCarePlanCard
+      :client-id="clientId"
+      @new="emit('new-care-plan')"
+    />
 
     <!-- hosting margin -->
     <div class="rounded-card bg-default ring ring-default">

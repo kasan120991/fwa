@@ -1,6 +1,6 @@
 import { isConfigured, listDroplets } from './digitalocean.js'
 import { listClientDropletIds, listHostedDropletIds } from '../repositories/websites.repo.js'
-import { careplanMrr } from '../repositories/contracts.repo.js'
+import { careplanMrr } from '../repositories/carePlans.repo.js'
 
 export const hostingConfigured = isConfigured
 

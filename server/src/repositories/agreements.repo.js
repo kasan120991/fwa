@@ -83,9 +83,9 @@ export async function agreementsSummary() {
 // The Sales page: ONE row per deal — the proposal with the contract it
 // produced folded in (the latest project contract for that proposal, so a
 // voided-and-regenerated one doesn't double the row) plus the project the
-// signature created. Care plans have no proposal, so they ride along as their
-// own rows with kind = 'care_plan'. Stage derivation lives in the app
-// (utils/deals.ts); this is just the flat join.
+// signature created. Care plans (care_plans, with their optional agreement)
+// ride along as their own rows with kind = 'care_plan'. Stage derivation lives
+// in the app (utils/deals.ts); this is just the flat join.
 const DEALS = `
   SELECT 'deal' AS kind, p.id AS proposal_id, p.code, p.title, p.client_id,
          p.status AS proposal_status, p.total, p.deposit_pct, p.expires_at,
@@ -95,24 +95,26 @@ const DEALS = `
          ct.sent_at AS contract_sent_at, ct.viewed_at AS contract_viewed_at,
          ct.signed_at, ct.updated_at AS contract_updated_at, 'one_time' AS billing_interval,
          pr.id AS project_id, pr.code AS project_code, pr.status AS project_status,
-         c.company AS client_company, c.name AS client_name
+         c.company AS client_company, c.name AS client_name,
+         NULL AS care_plan_id, NULL AS care_plan_status, NULL AS next_charge_at, NULL AS cancel_at_period_end
   FROM proposals p
   JOIN clients c ON c.id = p.client_id
   LEFT JOIN contracts ct ON ct.id = (SELECT MAX(x.id) FROM contracts x WHERE x.proposal_id = p.id)
   LEFT JOIN projects pr ON pr.id = ct.project_id
   UNION ALL
-  SELECT 'care_plan' AS kind, NULL AS proposal_id, CONCAT('CON-', LPAD(ct.id, 4, '0')) AS code, ct.title, ct.client_id,
-         NULL AS proposal_status, ct.total, NULL AS deposit_pct, ct.expires_at,
+  SELECT 'care_plan' AS kind, NULL AS proposal_id, CONCAT('CP-', LPAD(cp.id, 4, '0')) AS code, cp.name AS title, cp.client_id,
+         NULL AS proposal_status, cp.price AS total, NULL AS deposit_pct, NULL AS expires_at,
          NULL AS sent_at, NULL AS viewed_at, NULL AS accepted_at, NULL AS declined_at, NULL AS accept_source,
-         ct.created_at, ct.updated_at,
-         ct.id AS contract_id, ct.status AS contract_status,
+         cp.created_at, cp.updated_at,
+         cp.contract_id, ct.status AS contract_status,
          ct.sent_at AS contract_sent_at, ct.viewed_at AS contract_viewed_at,
-         ct.signed_at, ct.updated_at AS contract_updated_at, ct.billing_interval,
+         ct.signed_at, ct.updated_at AS contract_updated_at, 'monthly' AS billing_interval,
          NULL AS project_id, NULL AS project_code, NULL AS project_status,
-         c.company AS client_company, c.name AS client_name
-  FROM contracts ct
-  JOIN clients c ON c.id = ct.client_id
-  WHERE ct.proposal_id IS NULL
+         c.company AS client_company, c.name AS client_name,
+         cp.id AS care_plan_id, cp.status AS care_plan_status, cp.next_charge_at, cp.cancel_at_period_end
+  FROM care_plans cp
+  JOIN clients c ON c.id = cp.client_id
+  LEFT JOIN contracts ct ON ct.id = cp.contract_id
 `
 
 export async function listDeals(opts = {}) {
@@ -127,6 +129,7 @@ export async function listDeals(opts = {}) {
     total: r.total == null ? null : Number(r.total),
     deposit_pct: r.deposit_pct == null ? null : Number(r.deposit_pct),
     recurring: r.billing_interval === 'monthly',
+    cancel_at_period_end: r.cancel_at_period_end == null ? null : !!r.cancel_at_period_end,
     client: r.client_company || r.client_name || 'Unknown'
   }))
 }

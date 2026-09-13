@@ -29,6 +29,10 @@ import {
   getContractByDocumentId, getContract, updateContract
 } from '../repositories/contracts.repo.js'
 import { ensureProjectForContract, onContractSigned, hasNoDeposit } from '../services/contractToProject.js'
+import { getCarePlanBySubscription } from '../repositories/carePlans.repo.js'
+import {
+  syncFromSubscription, onCarePlanInvoicePaid, onCarePlanPaymentFailed, onCarePlanContractSigned, carePlanInvoiceDescription
+} from '../services/carePlans.service.js'
 import { ensureContractForProposal } from '../services/proposalContract.js'
 import { acceptProposal } from '../services/proposalAcceptance.js'
 import { notify, clientNotify } from '../services/notifications.service.js'
@@ -161,6 +165,14 @@ async function localInvoiceFor(inv) {
   return !row.stripe_invoice_id || row.stripe_invoice_id === inv.id ? row : null
 }
 
+// A subscription invoice belongs to a care plan iff its subscription id is one
+// we created. Resolved from OUR row (stripe_subscription_id), never from the
+// invoice's metadata, for the same reason localInvoiceFor distrusts metadata.
+async function carePlanFor(inv) {
+  const subId = typeof inv.subscription === 'string' ? inv.subscription : (inv.subscription?.id ?? inv.parent?.subscription_details?.subscription ?? null)
+  return subId ? getCarePlanBySubscription(typeof subId === 'string' ? subId : subId.id) : null
+}
+
 // POST /api/webhooks/stripe — receives Stripe events. Authenticated by signature
 // (not the session cookie), so it's mounted outside requireAuth. Needs the raw
 // request body, which app.js parses as a Buffer for this path before JSON.
@@ -202,9 +214,11 @@ webhooksRouter.post('/stripe', async (req, res) => {
         const m = mapStripeInvoice(inv)
         const client = inv.customer ? await getClientByStripeCustomerId(inv.customer) : null
         const hint = inv.metadata?.fwa_invoice_id ? Number(inv.metadata.fwa_invoice_id) : null
+        const plan = await carePlanFor(inv)
         const local = await upsertFromStripe(inv.id, client?.id, {
           number: m.number, hosted_invoice_url: m.hosted_invoice_url, invoice_pdf: m.invoice_pdf,
-          status: 'open', finalized_at: new Date(), due_date: m.due_date, amount_due: m.amount_due
+          status: 'open', finalized_at: new Date(), due_date: m.due_date, amount_due: m.amount_due,
+          ...(plan ? { kind: 'care_plan', contract_id: plan.contract_id, description: carePlanInvoiceDescription(plan, inv) } : {})
         }, hint)
         if (local) emitInvoiceChanged(local.id)
         break
@@ -214,11 +228,23 @@ webhooksRouter.post('/stripe', async (req, res) => {
         const inv = event.data.object
         const m = mapStripeInvoice(inv)
         const client = inv.customer ? await getClientByStripeCustomerId(inv.customer) : null
-        const local = await localInvoiceFor(inv)
+        const plan = await carePlanFor(inv)
+        let local = await localInvoiceFor(inv)
+        if (!local && client) {
+          // A subscription (or dashboard-born) invoice whose `finalized` event
+          // never landed: create the row now so the payment has an invoice to
+          // sit under, rather than recording a payment against nothing.
+          local = await upsertFromStripe(inv.id, client.id, {
+            number: m.number, hosted_invoice_url: m.hosted_invoice_url, invoice_pdf: m.invoice_pdf,
+            due_date: m.due_date, amount_due: m.amount_due, finalized_at: new Date(),
+            ...(plan ? { kind: 'care_plan', contract_id: plan.contract_id, description: carePlanInvoiceDescription(plan, inv) } : {})
+          })
+        }
         if (local) {
           await updateInvoice(local.id, { status: 'paid', amount_paid: m.amount_paid, paid_at: new Date() })
           emitInvoiceChanged(local.id)
         }
+        if (plan) await onCarePlanInvoicePaid(plan, inv)
         // Record the card payment (dedup on the PaymentIntent). Only when a PI is
         // present: an out-of-band pay (admin "mark paid") carries no PI and records
         // its own payment row, so requiring a PI here avoids a duplicate/no-PI row.
@@ -306,12 +332,14 @@ webhooksRouter.post('/stripe', async (req, res) => {
         const inv = event.data.object
         const client = inv.customer ? await getClientByStripeCustomerId(inv.customer) : null
         const who = client?.company || client?.name || 'A client'
+        const plan = await carePlanFor(inv)
+        if (plan) await onCarePlanPaymentFailed(plan, client)
         try {
           await notify({
             category: 'invoice', tone: 'warning', icon: 'i-lucide-triangle-alert',
-            title: 'Invoice payment failed',
-            body: `A payment from ${who} failed.`,
-            link: '/invoices'
+            title: plan ? 'Care plan payment failed' : 'Invoice payment failed',
+            body: plan ? `${who}’s ${plan.name} charge failed — they’ve been asked to update their card.` : `A payment from ${who} failed.`,
+            link: plan ? `/clients/${plan.client_id}?tab=money` : '/invoices'
           })
         } catch (err) {
           console.error('invoice.payment_failed notification failed:', err.message)
@@ -340,6 +368,13 @@ webhooksRouter.post('/stripe', async (req, res) => {
           await updateInvoice(local.id, { status: 'uncollectible' })
           emitInvoiceChanged(local.id)
         }
+        break
+      }
+      case 'customer.subscription.updated':
+      case 'customer.subscription.deleted': {
+        const sub = event.data.object
+        const plan = await getCarePlanBySubscription(sub.id)
+        if (plan) await syncFromSubscription(plan, sub)
         break
       }
       default:
@@ -546,6 +581,14 @@ async function handleDocumentEvent(doc) {
         if (contract.project_id) {
           await advanceProject(contract.project_id, hasNoDeposit(contract) ? 'in_progress' : 'awaiting_deposit')
         }
+      }
+    } else if (contract.type === 'care_plan' && internal === 'signed') {
+      // The care plan's own flow: a signed agreement means the plan may take a
+      // card. Idempotent — a replayed webhook finds the plan already moved.
+      try {
+        await onCarePlanContractSigned(contract)
+      } catch (err) {
+        console.error(`Care-plan post-signature handling failed for contract ${contract.id}:`, err.message)
       }
     }
     return

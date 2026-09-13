@@ -1,7 +1,7 @@
 import { query, withTransaction } from '../db/pool.js'
 
 export const INVOICE_STATUSES = new Set(['draft', 'open', 'paid', 'uncollectible', 'void'])
-export const INVOICE_KINDS = new Set(['deposit', 'balance', 'custom'])
+export const INVOICE_KINDS = new Set(['deposit', 'balance', 'custom', 'care_plan'])
 
 // Columns a status/sync update may touch (business columns + line items are set
 // at creation). Mirrors the contracts repo's UPDATABLE pattern.
@@ -152,21 +152,31 @@ export async function updateInvoice(id, data) {
  *  born in the Stripe dashboard — creates a bare row against the resolved
  *  contact. Always writes `stripe_invoice_id` so the link is set exactly once. */
 export async function upsertFromStripe(stripeInvoiceId, clientId, fields, localIdHint = null) {
+  // kind/description aren't UPDATABLE (kind must never be PATCH-able), so a
+  // Stripe-born row — a care-plan subscription invoice — sets them here, once,
+  // on the row it creates, or on a bare 'custom' row an earlier event created.
+  const { kind, description, ...rest } = fields
   let existing = await getInvoiceByStripeId(stripeInvoiceId)
   if (!existing && localIdHint) existing = await getInvoice(localIdHint)
-  if (existing) return updateInvoice(existing.id, { stripe_invoice_id: stripeInvoiceId, ...fields })
+  if (existing) {
+    if (kind && existing.kind === 'custom' && kind !== 'custom') {
+      await query('UPDATE invoices SET kind = :kind, description = COALESCE(:description, description) WHERE id = :id', { id: existing.id, kind, description: description ?? null })
+    }
+    return updateInvoice(existing.id, { stripe_invoice_id: stripeInvoiceId, ...rest })
+  }
   if (!clientId) return null
   const created = await createInvoice({
     client_id: clientId,
+    contract_id: rest.contract_id ?? null,
     stripe_invoice_id: stripeInvoiceId,
-    kind: 'custom',
-    amount_due: fields.amount_due ?? 0,
-    due_date: fields.due_date ?? null,
-    status: fields.status ?? 'open',
-    description: fields.description ?? null,
+    kind: kind && INVOICE_KINDS.has(kind) ? kind : 'custom',
+    amount_due: rest.amount_due ?? 0,
+    due_date: rest.due_date ?? null,
+    status: rest.status ?? 'open',
+    description: description ?? null,
     items: []
   })
-  return updateInvoice(created.id, fields)
+  return updateInvoice(created.id, rest)
 }
 
 export async function invoiceStats() {

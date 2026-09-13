@@ -8,6 +8,7 @@ import { servicesRouter } from './services.routes.js'
 import { proposalsRouter } from './proposals.routes.js'
 import { contractsRouter } from './contracts.routes.js'
 import { agreementsRouter } from './agreements.routes.js'
+import { carePlansRouter } from './carePlans.routes.js'
 import { projectsRouter } from './projects.routes.js'
 import { tasksRouter } from './tasks.routes.js'
 import { milestonesRouter } from './milestones.routes.js'
@@ -50,6 +51,7 @@ apiRouter.use('/services', requireAdmin, servicesRouter) // price book / catalog
 apiRouter.use('/proposals', requireAdmin, proposalsRouter) // Sales — proposals
 apiRouter.use('/contracts', requireAdmin, contractsRouter) // Sales — contracts
 apiRouter.use('/agreements', requireAdmin, agreementsRouter) // Agreements (merged view)
+apiRouter.use('/care-plans', requireAdmin, carePlansRouter) // Care plans (recurring)
 apiRouter.use('/projects', requireAdmin, projectsRouter) // Projects (SOW hub)
 apiRouter.use('/tasks', requireAdmin, tasksRouter) // Tasks
 apiRouter.use('/milestones', requireAdmin, milestonesRouter) // Delivery milestones (over tasks)

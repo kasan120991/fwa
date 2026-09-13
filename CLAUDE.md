@@ -63,8 +63,8 @@ Both are Nuxt 4 SPAs on Nuxt UI 4 hitting the same Express API, distinguished by
   care-plan-MRR margins, infra alerts
 - **Files**: the Workspace file library (local disk storage), shareable into the portal
 - **Support Tickets**: cross-client list + threaded detail with attachments
-- **Settings**: agency identity/branding, billing defaults, notification prefs, project
-  templates, integration status, portal access
+- **Settings**: agency identity/branding, **price book** (care-plan tiers, packages, add-ons),
+  billing defaults, notification prefs, project templates, integration status, portal access
 - **The whole client portal**
 
 **Still deferred (stub route, build when asked):** **Calendar** — and that's the only one. It
@@ -180,10 +180,23 @@ append-only table. Links via **nullable `lead_id`** *or* **`client_id`** (`ON DE
   gate). Note `project_id` is a **soft link with no FK**. Expenses are *not* connected to hosting
   costs — DO hosting spend is computed live from the API and never written here.
 - **`services`** — the price book (website packages, care plans, add-ons).
-- **Care plans have no recurring-billing flow yet.** They exist only as `contracts` rows with
-  `type='care_plan'`; MRR is derived from them (`careplanMrr`) and the UI only *displays* that.
-  Assigning a plan and provisioning recurring Stripe invoicing is unbuilt — the Stripe service
-  knows one-off invoices only (no products/prices/subscriptions).
+- **Care plans** (`care_plans`, built 2026-09-13) are the recurring side: a client's plan is a
+  **Stripe Subscription charged to a card on file**, monthly on the start-date anniversary. The
+  row snapshots its tier (name/price/description) from the `services` price book (category
+  `care_plan`, managed under Settings → Price Book) so a later edit never re-prices a live plan.
+  Lifecycle is forward-only and event-driven, every move a conditional-UPDATE claim
+  (`claimCarePlanStatus`): `draft → pending_signature → awaiting_card → active ⇄ past_due →
+  cancelled` (no agreement = born at `awaiting_card`). **`awaiting_card → active` is the one place
+  a subscription is created**: the portal confirms a SetupIntent, `activateCarePlan()` verifies it
+  belongs to that customer, sets it as the default payment method, creates a monthly Price and a
+  Subscription (`trial_end` = start date when it's in the future). Stripe then drives it:
+  `invoice.finalized/paid/payment_failed` tag the local row `kind='care_plan'` and flip
+  `past_due`/`active`; `customer.subscription.updated/deleted` mirror status and period. The
+  optional agreement is a `contracts` row (`type='care_plan'`, `care_plans.contract_id`); its
+  PandaDoc signature moves the plan to `awaiting_card`. MRR = `SUM(price)` over active + past-due
+  plans (`carePlans.repo.careplanMrr`). The whole flow lives in `services/carePlans.service.js`;
+  `server/src/db/care-plan-flow-check.mjs` proves it (23 checks, Stripe stubbed, self-cleaning).
+  Emails: Resend `care-plan-card`, `care-plan-active`, `care-plan-payment-failed`.
 
 ### The sales flow (proposal → contract → deposit → project)
 
@@ -423,8 +436,9 @@ Persistent left sidebar (collapsible) + top bar + main content. Nav groups (✓ 
 - **(top)** Dashboard ✓ · AI Receptionist ✓
 - **Clients & Work** — Leads ✓ · Clients ✓ · Projects ✓ · Tasks ✓
 - **Sales** — Sales ✓ (one page, one row per deal: the proposal with its contract folded in as a
-  stage. `/proposals` and `/agreements` redirect there; the editor at `/proposals/:id` and the
-  contract viewer at `/contracts/:id` stay)
+  stage, plus care plans as their own rows. `/proposals` and `/agreements` redirect there; the
+  editor at `/proposals/:id` and the contract viewer at `/contracts/:id` stay; New Care Plan
+  opens the assignment form, which the client page's header menu also offers)
 - **Billing** — Invoices ✓ · Payments ✓ · Expenses ✓
 - **Workspace** — Files ✓ · **Calendar (stub)** · Websites ✓
 - **(pinned bottom)** Support Tickets ✓
@@ -435,8 +449,10 @@ section rail driven by a `?section=` query param.
 `/p/:token` is the one **unauthenticated** page in the portal (whitelisted in `auth.global.ts`) —
 the public proposal, for a prospect who has no account and never will.
 
-Portal nav (`portal/app/layouts/default.vue`): Home · Projects · Invoices · Agreements · Files ·
-Support · Websites, with Account / Sign out in a menu.
+Portal nav (`portal/app/layouts/default.vue`): Home · Projects · Invoices · Agreements ·
+**Care Plan** (only once the client has one) · Files · Support · Websites, with Account / Sign out
+in a menu. `/care-plan` is where a client saves the card that starts their plan (SetupIntent +
+Payment Element in setup mode, `PortalCardSetupElement.vue`) and updates it later.
 
 App chrome (page titles, labels, buttons, chips) is **Title Case**; prose and messages are
 sentence case.
@@ -628,6 +644,10 @@ Full build rules (design conversion, motion, content voice) live in **`website/C
 - **Every portal query scopes to `req.clientId`, never to a URL param.** Foreign ids 404 rather
   than 403. Never trust a client-supplied id, and never trust the Vapi model's args for identity —
   resolve the client server-side from the caller's number.
+- **A care plan's status only moves through `claimCarePlanStatus`**, and the Stripe subscription
+  is created in exactly one place (`activateCarePlan`, after a verified SetupIntent). Never set
+  `care_plans.status` directly and never create a subscription from an admin route — the card
+  belongs to the client and is saved in the portal.
 - **Stripe webhooks: drop anything from the other livemode, and never trust `fwa_invoice_id`
   metadata on its own.** Endpoints are registered per mode, so a test-mode endpoint aimed at the
   production URL feeds test events into live data — and the metadata hint (which exists to close

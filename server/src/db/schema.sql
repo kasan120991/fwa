@@ -586,6 +586,60 @@ CREATE TABLE IF NOT EXISTS contract_line_items (
 -- document_templates — maps a PandaDoc template UUID to its purpose,
 --   so templates can change without a redeploy.
 -- ---------------------------------------------------------------------
+-- care_plans — a client's recurring plan: the SUBSCRIPTION record. The optional
+-- agreement stays a contracts row (type='care_plan', contract_id below). One
+-- forward-only lifecycle, event-driven like projects.status:
+--   draft -> pending_signature -> awaiting_card -> active <-> past_due -> cancelled
+--   (a plan with no agreement is born straight at awaiting_card)
+-- awaiting_card -> active is the ONE place a Stripe Subscription is created:
+-- the client saves a card in the portal (SetupIntent), the server sets it as
+-- the customer's default payment method, creates a monthly Price for the plan
+-- and a Subscription anchored to start_date. MRR = SUM(price) over
+-- active + past_due rows (see carePlans.repo.careplanMrr).
+CREATE TABLE IF NOT EXISTS care_plans (
+  id                     BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  client_id              BIGINT UNSIGNED NOT NULL,
+  service_id             BIGINT UNSIGNED NULL,           -- the tier it was assigned from (snapshot below)
+  contract_id            BIGINT UNSIGNED NULL,           -- the agreement, when one was required
+  name                   VARCHAR(255)    NOT NULL,
+  description            TEXT            NULL,           -- what's included, snapshotted from the tier
+  price                  DECIMAL(10,2)   NOT NULL,
+  currency               CHAR(3)         NOT NULL DEFAULT 'USD',
+  billing_interval       ENUM('monthly') NOT NULL DEFAULT 'monthly',
+  status                 ENUM('draft', 'pending_signature', 'awaiting_card',
+                              'active', 'past_due', 'cancelled')
+                                         NOT NULL DEFAULT 'draft',
+  requires_agreement     BOOLEAN         NOT NULL DEFAULT FALSE,
+  start_date             DATE            NOT NULL,
+  cancel_at_period_end   BOOLEAN         NOT NULL DEFAULT FALSE,
+  activated_at           DATETIME        NULL,
+  cancelled_at           DATETIME        NULL,
+  stripe_price_id        VARCHAR(100)    NULL,
+  stripe_subscription_id VARCHAR(100)    NULL,
+  pm_brand               VARCHAR(40)     NULL,           -- card on file, display only
+  pm_last4               CHAR(4)         NULL,
+  current_period_start   DATETIME        NULL,
+  current_period_end     DATETIME        NULL,
+  next_charge_at         DATETIME        NULL,
+  created_at             TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at             TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP
+                                         ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_care_plans_subscription (stripe_subscription_id),
+  KEY idx_care_plans_client (client_id),
+  KEY idx_care_plans_status (status),
+  KEY idx_care_plans_contract (contract_id),
+  CONSTRAINT fk_care_plans_client
+    FOREIGN KEY (client_id) REFERENCES clients (id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_care_plans_service
+    FOREIGN KEY (service_id) REFERENCES services (id)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_care_plans_contract
+    FOREIGN KEY (contract_id) REFERENCES contracts (id)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS document_templates (
   id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   purpose       ENUM('proposal', 'project_contract', 'care_plan') NOT NULL,
@@ -1014,7 +1068,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   number             VARCHAR(50)     NULL,             -- Stripe number, set on finalize
   status             ENUM('draft', 'open', 'paid', 'uncollectible', 'void')
                                      NOT NULL DEFAULT 'draft',
-  kind               ENUM('deposit', 'balance', 'custom') NOT NULL DEFAULT 'custom',
+  kind               ENUM('deposit', 'balance', 'custom', 'care_plan') NOT NULL DEFAULT 'custom',
   currency           CHAR(3)         NOT NULL DEFAULT 'USD',
   amount_due         DECIMAL(10,2)   NOT NULL DEFAULT 0.00,
   amount_paid        DECIMAL(10,2)   NOT NULL DEFAULT 0.00,

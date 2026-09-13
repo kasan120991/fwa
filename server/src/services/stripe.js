@@ -188,6 +188,87 @@ export async function getInvoicePaymentSecret(stripeInvoiceId) {
  * Verify + parse an incoming Stripe webhook. Throws if Stripe or the webhook
  * secret isn't configured, or if the signature doesn't validate.
  */
+/* ---------------------------------------------------------- care plans */
+// Card on file + subscription. Every helper is a no-op `null` when Stripe is
+// disabled, like the rest of this file. The sequence lives in
+// services/carePlans.service.js (activateCarePlan); these are the primitives.
+
+/** A SetupIntent the portal confirms with the Payment Element in setup mode. */
+export async function createSetupIntent(customerId, metadata = {}) {
+  if (!stripe) return null
+  const si = await stripe.setupIntents.create({
+    customer: customerId,
+    usage: 'off_session',
+    automatic_payment_methods: { enabled: true },
+    metadata
+  })
+  return { id: si.id, clientSecret: si.client_secret }
+}
+
+export async function retrieveSetupIntent(id) {
+  if (!stripe) return null
+  return stripe.setupIntents.retrieve(id, { expand: ['payment_method'] })
+}
+
+/** Make a saved payment method the customer's default for invoices; returns
+ *  the card's brand/last4 for display. */
+export async function setDefaultPaymentMethod(customerId, paymentMethodId) {
+  if (!stripe) return null
+  await stripe.customers.update(customerId, { invoice_settings: { default_payment_method: paymentMethodId } })
+  const pm = await stripe.paymentMethods.retrieve(paymentMethodId)
+  return { brand: pm.card?.brand ?? pm.type ?? null, last4: pm.card?.last4 ?? null }
+}
+
+/** One recurring monthly Price per care plan, with its Product created inline. */
+export async function createRecurringPrice({ name, amountCents, currency = 'usd', metadata = {} }) {
+  if (!stripe) return null
+  const price = await stripe.prices.create({
+    currency,
+    unit_amount: amountCents,
+    recurring: { interval: 'month' },
+    product_data: { name, metadata },
+    metadata
+  })
+  return price.id
+}
+
+/**
+ * Subscribe the customer, charging the saved card automatically. `trialEnd`
+ * (unix seconds) defers the first charge to the plan's start date and anchors
+ * the cycle to it, which is what "billed on the anniversary" means in Stripe.
+ */
+export async function createSubscription({ customerId, priceId, paymentMethodId, trialEnd = null, metadata = {} }) {
+  if (!stripe) return null
+  return stripe.subscriptions.create({
+    customer: customerId,
+    items: [{ price: priceId }],
+    default_payment_method: paymentMethodId,
+    collection_method: 'charge_automatically',
+    proration_behavior: 'none',
+    ...(trialEnd ? { trial_end: trialEnd } : {}),
+    payment_behavior: 'error_if_incomplete',
+    metadata
+  })
+}
+
+export async function updateSubscriptionPaymentMethod(subscriptionId, paymentMethodId) {
+  if (!stripe) return null
+  return stripe.subscriptions.update(subscriptionId, { default_payment_method: paymentMethodId })
+}
+
+export async function retrieveSubscription(id) {
+  if (!stripe) return null
+  return stripe.subscriptions.retrieve(id)
+}
+
+/** Cancel at the end of the paid period (default) or immediately. */
+export async function cancelSubscription(id, { atPeriodEnd = true } = {}) {
+  if (!stripe) return null
+  return atPeriodEnd
+    ? stripe.subscriptions.update(id, { cancel_at_period_end: true })
+    : stripe.subscriptions.cancel(id)
+}
+
 export function constructWebhookEvent(rawBody, signature) {
   if (!stripe) throw new Error('Stripe is not configured')
   if (!config.stripe.webhookSecret) throw new Error('Stripe webhook secret is not configured')
