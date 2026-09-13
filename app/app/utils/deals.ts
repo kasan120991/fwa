@@ -102,6 +102,9 @@ export function chipFor(d: ApiDeal, stage: Stage): { label: string, status: Chip
       default: return { label: 'Draft', status: 'neutral' }
     }
   }
+  // An accepted proposal whose contract exists but hasn't gone out: name the
+  // document, not the acceptance, so the chip matches the contract viewer.
+  if (stage === 'accepted' && d.contract_id && d.contract_status === 'draft') return { label: 'Contract Drafted', status: 'info' }
   return { label: stage === 'closed' ? closedLabel(d) : STAGE_META[stage].label, status: STAGE_META[stage].chip }
 }
 
